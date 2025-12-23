@@ -1,8 +1,6 @@
-You are the Executor. Follow .council/AGENTS.md and .council/CLAUDE.md.
-Implement minimal changes to satisfy tests and acceptance criteria.
+Implement minimal change to satisfy tests and SPEC.
+Rules:
 
-Output:
-- Patch plan (diff-first)
-- Apply code changes
-- Run verification commands
-- Update .council/NOTES.md (+ DECISIONS if needed)
+- Small diff-first plan, then apply edits
+- Run `just verify` and paste output
+- Update .council/NOTES.md

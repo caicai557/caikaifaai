@@ -1,112 +1,95 @@
-# Agent Council Governance (2025.12 六步自愈循环)
+# Agent Council SOP (Lean v2 可执行版)
 
-> **SSOT**: 多智能体协同开发标准操作程序
+> 针对 Claude Token 不足优化，Gemini 3 Flash 承担快速实现
 
-## 模型能力矩阵 (Token 优先分配)
+## 角色分配 (Token 优化)
 
-| 模型 | 最强能力 | 角色 | Token 策略 |
-|------|----------|------|:----------:|
-| **Codex (GPT-5.2)** | 逻辑拆解/任务分发 | Orchestrator | 高密集 |
-| **Gemini 3 Pro** | 2M 长上下文/全库审计 | Architect | 长文档 |
-| **Claude 4.5 Opus** | 物理执行/写文件 | Executor | Code Mode 98.7% 节省 |
-| **Gemini 3 Flash** | 快速代码生成 | TDD 实现 | 高频迭代 |
+| Step | 角色 | 模型 | 动作 |
+|:----:|------|------|------|
+| 0 | - | 手动 | BRIEF + CODEMAP |
+| 1 | Orchestrator | **Codex** | PRD → SPEC.md |
+| 2 | Auditor | Gemini Pro | 按条件触发 → AUDIT.md |
+| 3 | QA | **Gemini Flash** | TDD → 测试文件 |
+| 4 | Executor | **Gemini Flash** | 实现 + verify |
+| 5 | Gate | `just verify` | 三条硬门禁 |
+| 6 | - | Gemini | NOTES + /clear |
 
-## 六步自愈循环 SOP
-
-```text
-┌─────────────────────────────────────────────────────────────────┐
-│  1. PM      2. 架构师    3. QA      4. 执行    5. 裁决   6. 总结  │
-│  Codex  →  Gemini Pro → Claude  →  Claude  → verify → Gemini   │
-│  PRD        全库审计     TDD先行    Code Mode  自愈循环  NOTES    │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-### 阶段 1: 需求代码化 (PM)
-
-- **主控**: Codex (GPT-5.2)
-- **输入**: 模糊用户指令
-- **输出**: 结构化 PRD + 任务树
-- **产物**: `BRIEF.md` 更新
-
-### 阶段 2: 全库审计与设计 (架构师)
-
-- **主控**: Gemini 3 Pro (2M tokens)
-- **动作**: 扫描整个代码库，发现冲突
-- **输出**: 技术设计文档
-- **产物**: `implementation_plan.md`
-
-### 阶段 3: TDD 强制约束 (QA)
-
-- **主控**: Claude Code
-- **规则**: 测试覆盖率 < 90% 禁止进入执行
-- **输出**: 测试用例
-- **产物**: `tests/test_*.py`
-
-### 阶段 4: 程序化并行执行 (执行官)
-
-- **主控**: Claude Code (Code Mode)
-- **核心技巧**: 编写 Python 脚本批量执行
-- **Token 节省**: 约 98.7%
-- **输出**: 实现代码
-
-### 阶段 5: 自愈校验 (裁决)
-
-- **动作**: `just verify`
-- **失败处理**: 自愈循环 (错误日志 → 修复 → 重试)
-- **共识算法**: Wald 序列分析
-- **规则**: 分歧过大 → 人在回路审计
-
-### 阶段 6: 总结与回滚 (收尾)
-
-- **主控**: Gemini
-- **动作**:
-  1. `/rewind` 建立快照
-  2. 更新 `NOTES.md`
-  3. `/clear` 重置会话
-
-## 资源分担策略 (Token 优先)
-
-| 角色 | 模型 | 负责 | Token 消耗 |
-|------|------|------|:----------:|
-| **PM** | Codex | 逻辑拆解、任务分发 | 高 |
-| **审计** | Gemini Pro | 长文档、跨文件、历史回溯 | 高 |
-| **执行** | Claude Code | 写文件、跑命令、Git 提交 | 低 (Code Mode) |
-
-## 工程化配置
-
-### 环境隔离
+## Step 0｜上下文治理 (30-90秒)
 
 ```bash
-# Docker 沙箱 (强制)
-docker run --rm -v $(pwd):/workspace -w /workspace python:3.12 pytest
+# 更新 BRIEF
+vim .council/BRIEF.md  # Goal/Constraints/Acceptance/Verify
+
+# 生成 CODEMAP
+just codemap
 ```
 
-### 并行加速 (Git Worktrees)
+**门禁**: BRIEF 必须有可测试验收标准 + `just verify`
 
-```bash
-git worktree add ../project-feature-a feature-a
-git worktree add ../project-bugfix bugfix-123
-# 不同 Claude 会话在不同工作树并行
+## Step 1｜需求代码化 (Codex)
+
+**输入**: BRIEF + CODEMAP + 任务一句话
+**输出**: `SPEC.md`
+
+```markdown
+SPEC 必须包含:
+- 任务树（小步）
+- 文件清单
+- 验收标准
+- 验证命令: just verify
+- 风险点 ≤5条
 ```
 
-### MCP 协议
+## Step 2｜全库审计 (Gemini Pro，按条件触发)
 
-统一接口挂载:
+**触发条件** (满足任一):
 
-- GitHub
-- 数据库
-- Slack
+- [ ] 影响 ≥3 模块
+- [ ] 接口契约不确定
+- [ ] 不确定"改 A 会不会炸 B"
 
-## Hard Safety Boundaries
+**输出**: `AUDIT.md`
 
-- ❌ rm -rf, format disk, chmod -R
-- ❌ 读取 .env, *.pem, credentials
-- ✅ Docker 沙箱执行
+## Step 3｜TDD (Gemini Flash)
+
+**输入**: SPEC.md (+ AUDIT.md)
+**输出**: 测试文件
+
+**门禁**:
+
+- 新逻辑必须有新测试
+- 不强求 90% 覆盖率（项目稳定后再加）
+
+## Step 4｜实现 (Gemini Flash)
+
+**输入**: 已存在的测试
+**输出**: 最小 patch + NOTES 更新
+
+**门禁**: `just verify` 全绿
+
+## Step 5｜三条硬门禁 (替代 Wald)
+
+1. ✅ `just verify` 必须通过
+2. ✅ 契约测试必须存在且通过
+3. ✅ 触及契约/接口 → DECISIONS.md 留条目
+
+## Step 6｜收尾
+
+- `/rewind` 回滚（如需）
+- 更新 `NOTES.md`
+- `/clear` 清理上下文
+
+## 终极调优 (按需启用)
+
+| 工具 | 启用条件 |
+|------|----------|
+| Docker 沙箱 | 不可信脚本/复杂依赖 |
+| Git Worktree | 同时 2 条线 |
+| MCP | 需要统一工具入口 |
+
+## Safety
+
+- ❌ rm -rf, chmod -R
+- ❌ .env, *.pem
+- ✅ Docker 沙箱
 - ✅ Git 可回滚
-
-## Definition of Done
-
-- [ ] Tests pass (coverage ≥ 90%)
-- [ ] `just verify` pass
-- [ ] NOTES updated
-- [ ] Snapshot created

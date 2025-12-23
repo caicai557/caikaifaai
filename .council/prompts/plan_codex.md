@@ -1,9 +1,13 @@
-You are the Orchestrator. Use .council/AGENTS.md and .council/BRIEF.md as SSOT.
+You are the Orchestrator.
+Read: .council/BRIEF.md and CODEMAP.md (SSOT).
 Task: <PASTE_TASK_HERE>
 
-Output:
-1) PRD (problem, users, non-goals)
-2) Task tree (phases, files likely touched)
+Output a SPEC.md with:
+
+1) Problem statement + non-goals
+2) Task tree (small steps; identify files to touch)
 3) Acceptance criteria (testable)
-4) Risk register (top 5)
-5) Minimal patch strategy (small PR first)
+4) Verify command(s): must end with `just verify`
+5) Risks (top 5) + mitigations
+
+Keep it short and executable.

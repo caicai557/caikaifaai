@@ -22,7 +22,19 @@ impl:
   @echo "Open Claude Code and paste: .council/prompts/implement_claude.md"
 
 verify:
-  @echo "Run your project's test/build commands here (edit Justfile to wire real commands)."
+  @echo "=== Running tests ==="
+  @source .venv/bin/activate && pytest tests/ -q
+  @echo "=== Compile check ==="
+  @python3 -m py_compile src/*.py
+  @echo "✅ All checks passed"
 
 ship:
-  @echo "Checklist: .council/CHECKLIST.md"
+  @echo "=== Shipping Checklist ==="
+  @cat .council/CHECKLIST.md
+  @echo ""
+  @echo "=== Git Status ==="
+  @git status --short
+  @echo ""
+  @echo "=== Recent Commits ==="
+  @git log --oneline -3
+

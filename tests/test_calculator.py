@@ -27,7 +27,34 @@ class TestCalculator:
         assert divide(0, 5) == 0
     
     def test_divide_by_zero(self):
-        """Test that dividing by zero raises ValueError."""
+        """Test that dividing by zero raises ValueError.
+        
+        Contract: divide(a, b) raises ValueError when b==0.
+        """
         with pytest.raises(ValueError, match="Cannot divide by zero"):
             divide(5, 0)
-
+        with pytest.raises(ValueError, match="Cannot divide by zero"):
+            divide(-5, 0)
+        with pytest.raises(ValueError, match="Cannot divide by zero"):
+            divide(0, 0)
+    
+    def test_divide_zero_numerator(self):
+        """Test divide(0, b) returns 0 when b != 0."""
+        assert divide(0, 5) == 0
+        assert divide(0, -5) == 0
+        assert divide(0, 0.5) == 0
+    
+    def test_divide_negative_numbers(self):
+        """Test sign correctness for negative operands."""
+        assert divide(-10, 2) == -5      # -a / b = negative
+        assert divide(10, -2) == -5      # a / -b = negative
+        assert divide(-10, -2) == 5      # -a / -b = positive
+    
+    def test_divide_floats(self):
+        """Test float inputs and precision.
+        
+        Contract: divide() accepts float inputs and returns float.
+        """
+        assert divide(1.5, 0.5) == 3.0
+        assert divide(0.1, 0.1) == pytest.approx(1.0)  # 浮点精度
+        assert divide(1, 3) == pytest.approx(0.333333, rel=1e-5)

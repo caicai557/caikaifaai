@@ -12,6 +12,20 @@
 - [ ] 需要 /sandbox 执行不可信脚本
 - [ ] 需要 /rewind 回滚
 
+## 自动 Slash Commands
+
+当需要写测试时，运行：
+
+```
+/tdd <scope>
+```
+
+当需要实现时，运行：
+
+```
+/impl <scope>
+```
+
 ## Token 节省策略
 
 ```text
@@ -25,6 +39,8 @@
 ## 仅限命令
 
 ```bash
+/tdd      # TDD 门禁
+/impl     # 实现
 /sandbox  # 安全执行
 /rewind   # 回滚
 /clear    # 清理

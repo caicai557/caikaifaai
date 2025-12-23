@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neon Particle Lab | Antigravity</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+
+    <div class="ui-container">
+        <h1>NEON LAB</h1>
+        <p>Explore the fluid dynamics of light. Interaction is encouraged: hover to guide, click to unleash.</p>
+        
+        <div class="controls">
+            <div class="control-group">
+                <label for="particleCount">Particle Density</label>
+                <input type="range" id="particleCount" min="50" max="1000" value="300">
+            </div>
+            <div class="control-group">
+                <label for="forceField">Attraction Force</label>
+                <input type="range" id="forceField" min="1" max="20" value="8">
+            </div>
+            <div class="control-group">
+                <label for="speed">Expansion Rate</label>
+                <input type="range" id="speed" min="1" max="10" value="3">
+            </div>
+        </div>
+    </div>
+
+    <div class="stats" id="stats">
+        SYSTEM_STATUS: ACTIVE<br>
+        TEMP: 32°C<br>
+        CORE_LOAD: OPTIMAL
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

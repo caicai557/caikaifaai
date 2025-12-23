@@ -1,287 +1,85 @@
-# \# 项目：E:\\caicai（Electron | Multi-BrowserView | Telegram Web-A 多开隔离 + 自动翻译 + 客服线性流程自动回复）
-
-# 
-
-# 本文件用于指导 Claude Code 在此仓库内工作时的行为边界、工程闸门与常用命令。
-
-# 
-
-# ---
-
-# 
-
-# \## 项目说明
-
-# 
-
-# 用途：
-
-# \- 收到消息 → 自动翻译 → 在“线性客服流程（状态机）”中做节点判定 → 从固定话术库选择模板回复（仅变量填充）
-
-# 
-
-# 强调：
-
-# \- 多开隔离：多账号并行，cookie/session/缓存/日志/状态必须隔离
-
-# \- 稳定性优先：异常重连、幂等去重、乱序与重入控制必须先于功能扩展
-
-# 
-
-# ---
-
-# 
-
-# \## 技术栈（TBD 用 /onboard 自动识别补齐）
-
-# \- Node.js: TBD
-
-# \- Electron: TBD（主进程 + 多 BrowserView）
-
-# \- 前端框架/构建工具：TBD（Vue/React/Vite 等）
-
-# \- 翻译：Google 翻译（建议优先使用 Google Cloud Translation API；若使用网页翻译，必须承认不稳定并加更强兜底）
-
-# 
-
-# ---
-
-# 
-
-# \## 常用开发命令（按你的项目脚本改成真实存在的）
-
-# ```bash
-
-# npm install
-
-# npm run dev
-
-# npm run lint
-
-# npm run typecheck
-
-# npm test
-
-# npm run build
-
-
-
-核心架构（建议按“管理器模式”对标）
-===
-
-# 
-
-# 主进程建议采用管理器模式（目录可对标参考结构）：
-
-# 
-
-# WindowManager：窗口管理
-
-# 
-
-# ViewManager：BrowserView 生命周期管理（创建/销毁/挂载/切换）
-
-# 
-
-# AccountManager：账号/实例管理（instanceId、accountId、启动/停止）
-
-# 
-
-# SessionManager：隔离分区（partition/persist）与目录策略
-
-# 
-
-# FlowManager：线性流程状态机（节点表驱动）
-
-# 
-
-# TranslationManager：翻译调用（缓存/限流/失败策略）
-
-# 
-
-# DedupeManager：幂等去重（dedupeKey、TTL）
-
-# 
-
-# ReconnectManager：异常重连（退避/抖动/熔断）
-
-# 
-
-# TelemetryManager：日志与指标（统一字段）
-
-# 
-
-# 多开隔离（必须遵守的硬约束）
-
-# 
-
-# 每个账号实例必须使用独立 session partition：
-
-# 
-
-# 推荐：persist:acc\_<accountId>
-
-# 
-
-# 禁止：多个账号共用 default session 或共用同一 partition
-
-# 
-
-# 每个账号实例必须隔离：
-
-# 
-
-# 浏览器存储（cookie/localStorage/indexedDB）
-
-# 
-
-# 缓存/下载/临时目录
-
-# 
-
-# 日志文件（按 accountId/instanceId 分桶）
-
-# 
-
-# IPC 路由必须携带 accountId/instanceId，禁止“全局单例状态”导致串线
-
-# 
-
-# 翻译子系统（必须实现）
-
-# 
-
-# 必须：超时、重试、限流、缓存（同一句话重复出现必须命中缓存）
-
-# 
-
-# 必须：失败策略（翻译失败时进入 fallback/提示人工接管/原文直通的明确选择）
-
-# 
-
-# 禁止：翻译失败时“猜测语义”或编造内容
-
-# 
-
-# 建议：翻译结果用于匹配（matchOn=translatedText），原文保留用于审计/定位（脱敏/截断）
-
-# 
-
-# 可靠性（必须实现）
-
-# 幂等/去重（必须）
-
-# 
-
-# 同一 message 在同一 chat 中最多处理一次
-
-# 
-
-# dedupeKey：accountId + chatId + messageId
-
-# 
-
-# messageId 缺失时兜底：hash(text + senderId + ts)
-
-# 
-
-# 必须记录：dedupeKey、是否命中、命中原因、TTL
-
-# 
-
-# 异常重连（必须）
-
-# 
-
-# 网络错误/页面崩溃/注入失效：必须自动恢复
-
-# 
-
-# 重连策略：指数退避 + 抖动；最大重试；熔断冷却
-
-# 
-
-# 恢复后严格去重，避免重复回复
-
-# 
-
-# 乱序与重入（必须）
-
-# 
-
-# 同一 chatId 的状态更新必须串行（队列/锁）
-
-# 
-
-# 未匹配输入必须走 fallback（不允许卡死）
-
-# 
-
-# 可观测性（必须）
-
-# 
-
-# 最小日志字段：
-
-# 
-
-# ts, accountId, instanceId, chatId, messageId, nodeId, event, reason, latencyMs, retryCount
-
-# 敏感信息处理：
-
-# 
-
-# 禁止记录验证码/密码/token/隐私内容（必须脱敏/截断）
-
-# 
-
-# 全局开关：
-
-# 
-
-# 全局停机、账号级停机、会话级停机（人工接管）
-
-# 
-
-# 工程闸门（每次改动必须过）
-
-# 
-
-# /spec：输出可测验收（含失败兜底）
-
-# 
-
-# /flow：输出状态机 JSON（含 fallback、翻译/去重/重连策略）
-
-# 
-
-# /step：先计划后改文件（一次一件事）
-
-# 
-
-# /test：产出可复现证据（命令或手动回归脚本）
-
-# 
-
-# /review\_gate：必审 幂等/重连/乱序/隔离边界
-
-# 
-
-# /pr：必须包含回滚步骤与监控点
-
-# 
-
-# 合规边界（必须遵守）
-
-# 
-
-# 不做批量骚扰、群发营销、刷量
-
-# 
-
-# 不做绕平台风控、隐匿自动化痕迹、对抗检测
-
-# 
-
-# 本项目定位为“自有账号/自有业务”的客服自动化与效率工具
+# 项目协作契约（Claude Code）
+
+> [!IMPORTANT]
+> **必须严格遵循**: 在执行任何任务前,请先阅读并遵守 [AGENTS.md](file:///home/dabah123/projects/caicai/AGENTS.md) 中的所有规则和模型分工。AGENTS.md 是智能体理事会的"单一事实来源"。
+
+## 目标
+- 小步交付（Small Diffs）
+- 任何改动必须可验证、可回滚
+- 默认不做大重构
+
+## 工作流（强制）
+1) 先输出 plan（≤30行）+ 验收命令
+2) 再改代码（尽量 ≤200 行 diff）
+3) 跑验收命令并贴结果
+4) 输出交接（YAML/JSON）
+
+## 何时调用谁
+- 快速草稿/样板/简单实现：优先 Gemini Flash（gpf）
+- 前端复杂交互/状态机/架构权衡：用 Gemini Pro（gpp）做评审
+- 生产加固/边界条件/测试：交给 Codex（通过 MCP codex 工具或 cm）
+
+## MCP 工具
+- `/codex_review` - 风险扫描
+- `/codex_patch_plan <目标>` - 最小补丁计划
+- `council-memory` - 会话持久化和知识图谱
+
+## 智能体理事会 (Agent Council)
+
+> [!TIP]
+> 使用 `council` 模块协调多智能体协作
+
+```python
+from council.agents import Architect, Coder, SecurityAuditor
+from council.facilitator import Facilitator, ConsensusDecision
+from council.governance import GovernanceGateway, ActionType
+```
+
+### 专家角色
+| 角色 | 职责 | 立场 |
+|------|------|------|
+| Architect | 顶层设计、架构评审 | 长期可维护性 |
+| Coder | 代码实现、TDD | Small Diffs |
+| SecurityAuditor | 漏洞扫描、攻击面分析 | 怀疑论者 |
+
+### Wald 共识算法
+- **π ≥ 0.95**: 自动提交 (AUTO_COMMIT)
+- **π ≤ 0.30**: 拒绝 (REJECT)
+- **其他**: 人工审核 (HOLD_FOR_HUMAN)
+
+## HITL 治理流程
+
+> [!CAUTION]
+> 以下操作**必须经过人工审批**:
+
+| 操作类型 | 风险级别 | 审批要求 |
+|----------|----------|----------|
+| DEPLOY | Critical | 强制 |
+| DATABASE | Critical | 强制 |
+| SECURITY | Critical | 强制 |
+| FILE_DELETE | High | 强制 |
+| CONFIG_CHANGE | Medium | 推荐 |
+
+### 审批流程
+```
+1. 检查是否需要审批
+   → GovernanceGateway.requires_approval(action_type, paths)
+
+2. 创建审批请求
+   → gateway.create_approval_request(...)
+
+3. 等待董事长签字
+   → gateway.approve(request_id) 或 gateway.reject(request_id)
+```
+
+### 受保护路径 (自动触发审批)
+- `deploy/**`, `config/production/**`
+- `.env*`, `secrets/**`
+- `*.key`, `*.pem`
+
+## 硬性约束
+1. 所有交接 → 一律 YAML/JSON
+2. 所有改动 → 一律 Small diffs（≤200行）
+3. 所有任务 → 一律带 verification
+4. **高风险操作 → 一律经 HITL 网关审批**
 

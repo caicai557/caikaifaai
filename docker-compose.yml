@@ -1,0 +1,91 @@
+version: '3.8'
+
+services:
+  # Node.js 开发环境沙箱
+  nodejs-sandbox:
+    image: node:20-alpine
+    container_name: caicai-nodejs-sandbox
+    working_dir: /workspace
+    volumes:
+      - ./:/workspace
+      - node_modules:/workspace/node_modules
+      # 排除敏感文件
+      - /workspace/.env
+      - /workspace/.secrets
+    environment:
+      - NODE_ENV=development
+      - PNPM_HOME=/pnpm
+      - PATH=/pnpm:$PATH
+    command: sh -c "corepack enable && tail -f /dev/null"
+    networks:
+      - dev-network
+    security_opt:
+      - no-new-privileges:true
+    read_only: false
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+      - SETGID
+      - SETUID
+
+  # Python 执行环境沙箱
+  python-sandbox:
+    image: python:3.11-slim
+    container_name: caicai-python-sandbox
+    working_dir: /workspace
+    volumes:
+      - ./:/workspace
+      # 排除敏感文件
+      - /workspace/.env
+      - /workspace/.secrets
+    environment:
+      - PYTHONUNBUFFERED=1
+    command: tail -f /dev/null
+    networks:
+      - dev-network
+    security_opt:
+      - no-new-privileges:true
+    read_only: false
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+
+  # 测试运行器沙箱
+  test-runner:
+    image: node:20-alpine
+    container_name: caicai-test-runner
+    working_dir: /workspace
+    volumes:
+      - ./:/workspace:ro # 只读挂载
+      - test_results:/workspace/test-results
+    environment:
+      - NODE_ENV=test
+      - CI=true
+    networks:
+      - dev-network
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /workspace/.npm
+    cap_drop:
+      - ALL
+
+volumes:
+  node_modules:
+    driver: local
+  test_results:
+    driver: local
+
+networks:
+  dev-network:
+    driver: bridge

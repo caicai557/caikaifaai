@@ -98,6 +98,10 @@ class AICouncilServer:
         """
         self.models = models or DEFAULT_MODELS
         self._validate_api_keys()
+        
+        # Initialize Governance Gateway for output filtering
+        from council.governance.gateway import GovernanceGateway
+        self.gateway = GovernanceGateway()
     
     def _validate_api_keys(self) -> None:
         """Check which models have valid API keys"""
@@ -120,7 +124,7 @@ class AICouncilServer:
             genai.configure(api_key=api_key)
             
             model = genai.GenerativeModel(config.model_name)
-            response = model.generate_content(prompt)
+            response = await model.generate_content_async(prompt)
             
             latency = (datetime.now() - start_time).total_seconds() * 1000
             return ModelResponse(
@@ -145,10 +149,10 @@ class AICouncilServer:
         """Query OpenAI API"""
         start_time = datetime.now()
         try:
-            from openai import OpenAI
+            from openai import AsyncOpenAI
             
-            client = OpenAI(api_key=os.environ.get(config.api_key_env))
-            response = client.chat.completions.create(
+            client = AsyncOpenAI(api_key=os.environ.get(config.api_key_env))
+            response = await client.chat.completions.create(
                 model=config.model_name,
                 messages=[{"role": "user", "content": prompt}],
             )
@@ -246,29 +250,42 @@ class AICouncilServer:
         agreement = max(0, 1 - normalized_variance)
         return min(1.0, agreement)
     
-    def _synthesize_responses(
+    async def _synthesize_responses(
         self, 
         prompt: str, 
         responses: List[ModelResponse]
     ) -> str:
         """
-        Synthesize multiple model responses into a single answer
-        
-        For now, this returns the response from the first successful model.
-        In production, this would use an LLM to synthesize.
+        Synthesize multiple model responses into a single answer using an LLM
         """
         successful = [r for r in responses if r.success]
         if not successful:
             return "No models returned successful responses."
         
-        # Simple strategy: return first successful response
-        # TODO: Implement actual synthesis using an LLM
+        # Construct synthesis prompt
+        synthesis_prompt = f"Original Task: {prompt}\n\nModels have provided the following responses. Please synthesize them into a single, high-quality response. If there are conflicts, resolve them by choosing the safest and most robust option.\n\n"
+        
+        for i, resp in enumerate(successful):
+            synthesis_prompt += f"--- Model {i+1} ({resp.model_name}) ---\n{resp.content}\n\n"
+            
+        synthesis_prompt += "--- End of Responses ---\n\nSynthesized Response:"
+        
+        # Use the first available Gemini model for synthesis (or OpenAI)
+        try:
+            # Quick hack to reuse query logic for synthesis
+            # In a real system, we'd have a dedicated synthesizer config
+            enabled = self.get_enabled_models()
+            synthesizer_config = next((m for m in enabled if m.provider == ModelProvider.GEMINI), None) or enabled[0]
+            
+            synthesis_resp = await self._query_model(synthesis_prompt, synthesizer_config)
+            if synthesis_resp.success:
+                return synthesis_resp.content
+        except Exception:
+            pass
+            
+        # Fallback to simple concatenation if synthesis fails
         best = successful[0]
-        
-        synthesis = f"[Synthesized from {len(successful)} model(s)]\n\n"
-        synthesis += best.content
-        
-        return synthesis
+        return f"[Synthesized (Fallback)]\n{best.content}"
     
     async def query(self, prompt: str) -> ConsensusResponse:
         """
@@ -287,17 +304,23 @@ class AICouncilServer:
         successful = [r for r in responses if r.success]
         failed = [r for r in responses if not r.success]
         
-        synthesis = self._synthesize_responses(prompt, responses)
+        synthesis = await self._synthesize_responses(prompt, responses)
+        
+        # Governance Check: Output Filtering
+        from council.governance.gateway import RiskLevel
+        risk = self.gateway._scan_content(synthesis)
+        if risk in [RiskLevel.CRITICAL, RiskLevel.HIGH]:
+            if risk == RiskLevel.CRITICAL:
+                 synthesis = f"⚠️ [GOVERNANCE BLOCKED] The synthesized response was blocked due to detected CRITICAL risk pattern."
+            else:
+                 synthesis = f"⚠️ [GOVERNANCE BLOCKED] The synthesized response was blocked due to detected {risk.name} risk pattern.\n\nBlocked Content Preview (Safe): {synthesis[:50]}..."
+        
         agreement = self._calculate_agreement(responses)
         
         # Calculate consensus using Wald (SPRT)
         wald_result = self.evaluate_votes(responses)
         
         total_latency = (datetime.now() - start_time).total_seconds() * 1000
-        
-        # If Wald result is conclusive, use it (or add to metadata)
-        # For now we'll just return standard response but you could act on
-        # wald_result.decision here (e.g., short circuit if AUTO_COMMIT)
         
         return ConsensusResponse(
             synthesis=synthesis,

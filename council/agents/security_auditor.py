@@ -63,18 +63,52 @@ class SecurityAuditor(BaseAgent):
         """
         从安全角度分析任务 - 强制提出问题
         """
-        concerns = [
-            "需要验证输入数据的安全性",
-            "需要检查权限边界",
-            "需要评估敏感数据处理方式",
-        ]
+        prompt = f"""
+任务: {task}
+上下文: {context or {}}
+
+作为安全审计员，请进行"零信任"分析。必须找出可能的安全隐患。
+提供：
+1. 攻击面分析 (Analysis)
+2. 安全隐患 (Concerns) - 必须至少列出 3 点
+3. 加固建议 (Suggestions)
+4. 置信度 (Confidence) - 保持保守
+
+返回格式：
+[Analysis]
+...
+[Concerns]
+...
+[Suggestions]
+...
+[Confidence]
+0.6
+"""
+        response = self._call_llm(prompt)
         
-        analysis = f"[Security Audit] 任务: {task}\n"
-        analysis += "⚠️ 安全审计视角分析...\n"
-        analysis += "强制检查项:\n"
-        for i, c in enumerate(concerns, 1):
-            analysis += f"  {i}. {c}\n"
+        analysis = ""
+        concerns = []
+        suggestions = []
+        confidence = 0.5
         
+        current_section = None
+        for line in response.split('\n'):
+            line = line.strip()
+            if not line: continue
+            
+            if line.startswith("[Analysis]"): current_section = "analysis"
+            elif line.startswith("[Concerns]"): current_section = "concerns"
+            elif line.startswith("[Suggestions]"): current_section = "suggestions"
+            elif line.startswith("[Confidence]"): current_section = "confidence"
+            elif current_section == "analysis": analysis += line + "\n"
+            elif current_section == "concerns": 
+                if line.startswith("-") or line[0].isdigit(): concerns.append(line.lstrip("- 1234567890."))
+            elif current_section == "suggestions":
+                if line.startswith("-") or line[0].isdigit(): suggestions.append(line.lstrip("- 1234567890."))
+            elif current_section == "confidence":
+                try: confidence = float(line)
+                except: pass
+
         self.add_to_history({
             "action": "think",
             "task": task,
@@ -83,10 +117,10 @@ class SecurityAuditor(BaseAgent):
         })
         
         return ThinkResult(
-            analysis=analysis,
+            analysis=analysis.strip() or response,
             concerns=concerns,
-            suggestions=["建议增加安全测试", "建议进行渗透测试"],
-            confidence=0.7,  # 安全审计员应该保持保守
+            suggestions=suggestions,
+            confidence=confidence,
             context={"perspective": "security", "forced_debate": True},
         )
     
@@ -94,23 +128,53 @@ class SecurityAuditor(BaseAgent):
         """
         对提案进行安全评审投票 - 保持怀疑态度
         """
+        prompt = f"""
+提案: {proposal}
+上下文: {context or {}}
+
+作为安全审计员，评估此提案是否存在漏洞（注入、权限、数据泄露）。
+默认倾向于 HOLD 或 REJECT，除非确信安全。
+
+返回格式：
+Vote: [DECISION]
+Confidence: [0.0-1.0]
+Rationale: [理由]
+"""
+        response = self._call_llm(prompt)
+        
+        import re
+        decision = VoteDecision.HOLD
+        confidence = 0.5
+        rationale = response
+        
+        decision_match = re.search(r"Vote:\s*(APPROVE_WITH_CHANGES|APPROVE|HOLD|REJECT)", response, re.IGNORECASE)
+        if decision_match:
+            d_str = decision_match.group(1).upper()
+            if d_str == "APPROVE": decision = VoteDecision.APPROVE
+            elif d_str == "APPROVE_WITH_CHANGES": decision = VoteDecision.APPROVE_WITH_CHANGES
+            elif d_str == "HOLD": decision = VoteDecision.HOLD
+            elif d_str == "REJECT": decision = VoteDecision.REJECT
+            
+        conf_match = re.search(r"Confidence:\s*(\d*\.?\d+)", response)
+        if conf_match:
+            try: confidence = float(conf_match.group(1))
+            except: pass
+            
+        rationale_match = re.search(r"Rationale:\s*(.+)", response, re.DOTALL | re.IGNORECASE)
+        if rationale_match:
+            rationale = rationale_match.group(1).strip()
+            
         self.add_to_history({
             "action": "vote",
             "proposal": proposal,
             "context": context,
         })
         
-        # 安全审计员倾向于 HOLD，除非明确安全
         return Vote(
             agent_name=self.name,
-            decision=VoteDecision.HOLD,
-            confidence=0.6,  # 保持保守的置信度
-            rationale="需要进一步安全审查，建议增加安全测试覆盖",
-            suggested_changes=[
-                "添加输入验证",
-                "增加安全日志",
-                "验证权限检查",
-            ],
+            decision=decision,
+            confidence=confidence,
+            rationale=rationale,
         )
     
     def execute(self, task: str, plan: Optional[Dict[str, Any]] = None) -> ExecuteResult:

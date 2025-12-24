@@ -53,20 +53,63 @@ class Coder(BaseAgent):
         """
         从实现角度分析任务
         """
-        analysis = f"[Coder Analysis] 任务: {task}\n"
-        analysis += "正在分析实现方案...\n"
+        prompt = f"""
+任务: {task}
+上下文: {context or {}}
+
+作为高级工程师，请分析实现方案。请提供：
+1. 实现计划 (Plan) - 步骤列表
+2. 潜在问题 (Concerns) - 每行一个
+3. 建议 (Suggestions) - 每行一个
+4. 置信度 (Confidence) - 0.0 到 1.0
+
+返回格式：
+[Plan]
+...
+[Concerns]
+...
+[Suggestions]
+...
+[Confidence]
+0.9
+"""
+        response = self._call_llm(prompt)
         
+        # 解析逻辑 (与 Architect 类似，复用结构)
+        analysis = ""
+        concerns = []
+        suggestions = []
+        confidence = 0.5
+        
+        current_section = None
+        for line in response.split('\n'):
+            line = line.strip()
+            if not line: continue
+            
+            if line.startswith("[Plan]"): current_section = "analysis"
+            elif line.startswith("[Concerns]"): current_section = "concerns"
+            elif line.startswith("[Suggestions]"): current_section = "suggestions"
+            elif line.startswith("[Confidence]"): current_section = "confidence"
+            elif current_section == "analysis": analysis += line + "\n"
+            elif current_section == "concerns": 
+                if line.startswith("-") or line[0].isdigit(): concerns.append(line.lstrip("- 1234567890."))
+            elif current_section == "suggestions":
+                if line.startswith("-") or line[0].isdigit(): suggestions.append(line.lstrip("- 1234567890."))
+            elif current_section == "confidence":
+                try: confidence = float(line)
+                except: pass
+
         self.add_to_history({
             "action": "think",
             "task": task,
-            "context": context,
+            "context": context
         })
         
         return ThinkResult(
-            analysis=analysis,
-            concerns=["需要确认测试覆盖率要求"],
-            suggestions=["建议先编写单元测试"],
-            confidence=0.85,
+            analysis=analysis.strip() or response,
+            concerns=concerns,
+            suggestions=suggestions,
+            confidence=confidence,
             context={"perspective": "implementation"},
         )
     
@@ -74,17 +117,53 @@ class Coder(BaseAgent):
         """
         对提案进行实现可行性投票
         """
+        prompt = f"""
+提案: {proposal}
+上下文: {context or {}}
+
+作为工程师，请评估实现的可行性、复杂度和测试可测性。
+投票选项: APPROVE, APPROVE_WITH_CHANGES, HOLD, REJECT
+
+返回格式：
+Vote: [DECISION]
+Confidence: [0.0-1.0]
+Rationale: [理由]
+"""
+        response = self._call_llm(prompt)
+        
+        import re
+        decision = VoteDecision.HOLD
+        confidence = 0.5
+        rationale = response
+        
+        decision_match = re.search(r"Vote:\s*(APPROVE_WITH_CHANGES|APPROVE|HOLD|REJECT)", response, re.IGNORECASE)
+        if decision_match:
+            d_str = decision_match.group(1).upper()
+            if d_str == "APPROVE": decision = VoteDecision.APPROVE
+            elif d_str == "APPROVE_WITH_CHANGES": decision = VoteDecision.APPROVE_WITH_CHANGES
+            elif d_str == "HOLD": decision = VoteDecision.HOLD
+            elif d_str == "REJECT": decision = VoteDecision.REJECT
+            
+        conf_match = re.search(r"Confidence:\s*(\d*\.?\d+)", response)
+        if conf_match:
+            try: confidence = float(conf_match.group(1))
+            except: pass
+            
+        rationale_match = re.search(r"Rationale:\s*(.+)", response, re.DOTALL | re.IGNORECASE)
+        if rationale_match:
+            rationale = rationale_match.group(1).strip()
+            
         self.add_to_history({
             "action": "vote",
             "proposal": proposal,
-            "context": context,
+            "decision": decision.value
         })
         
         return Vote(
             agent_name=self.name,
-            decision=VoteDecision.APPROVE,
-            confidence=0.9,
-            rationale="实现方案可行，符合 Small Diffs 原则",
+            decision=decision,
+            confidence=confidence,
+            rationale=rationale,
         )
     
     def execute(self, task: str, plan: Optional[Dict[str, Any]] = None) -> ExecuteResult:

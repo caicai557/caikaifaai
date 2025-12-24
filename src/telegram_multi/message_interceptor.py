@@ -96,6 +96,45 @@ class MessageInterceptor:
 
         return message
 
+    def translate_bidirectional(self, message: Message) -> Message:
+        """Translate a message based on its direction (incoming/outgoing).
+
+        Bidirectional Translation Logic:
+        - INCOMING: Translate FROM target_lang TO source_lang
+          (So user reads their native language)
+        - OUTGOING: Translate FROM source_lang TO target_lang
+          (So recipient reads their native language)
+
+        Args:
+            message: Message to translate
+
+        Returns:
+            Message with translated_content field populated
+        """
+        if not self.config.enabled or not self.translator:
+            return message
+
+        try:
+            if message.message_type == MessageType.INCOMING:
+                # Received message: translate TO user's language
+                translated = self.translator.translate(
+                    message.content,
+                    src_lang=self.config.target_lang,  # From foreign
+                    dest_lang=self.config.source_lang,  # To user's lang
+                )
+            else:
+                # Sending message: translate FROM user's language
+                translated = self.translator.translate(
+                    message.content,
+                    src_lang=self.config.source_lang,  # From user's lang
+                    dest_lang=self.config.target_lang,  # To foreign
+                )
+            message.translated_content = translated
+        except Exception:
+            pass
+
+        return message
+
     def get_injection_script(self) -> str:
         """Get JavaScript injection script for DOM integration.
 

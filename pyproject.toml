@@ -1,0 +1,51 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cesi-telegram-multi"
+version = "0.1.0"
+description = "Telegram Web A multi-instance runner with automatic message translation"
+readme = "README.md"
+requires-python = ">=3.12"
+authors = [
+    {name = "CESI Team"}
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+    "ruff>=0.1.0",
+]
+
+telegram = [
+    "playwright>=1.40.0",
+    "googletrans>=4.0.0rc1",
+    "pyyaml>=6.0",
+    "pydantic>=2.5.0",
+]
+
+telegram-full = [
+    "playwright>=1.40.0",
+    "googletrans>=4.0.0rc1",
+    "deepl>=1.17.0",
+    "argostranslate>=1.9.0",
+    "pyyaml>=6.0",
+    "pydantic>=2.5.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py"
+addopts = "-v --tb=short"
+
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["src"]

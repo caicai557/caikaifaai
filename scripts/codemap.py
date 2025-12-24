@@ -30,9 +30,11 @@ for p in sorted(
 
 print("\n## Largest Files (tracked)\n")
 try:
-    out = sh(
-        "git ls-files -z | xargs -0 -I{} bash -lc 'wc -c \"{}\"' | sort -nr | head -n 25"
+    cmd = (
+        "git ls-files -z | xargs -0 -I{} bash -lc 'wc -c \"{}\"' | "
+        "sort -nr | head -n 25"
     )
+    out = sh(cmd)
     print("```")
     print(out.strip())
     print("```")

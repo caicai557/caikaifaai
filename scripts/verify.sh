@@ -42,3 +42,11 @@ if [[ -f "package.json" ]]; then
 fi
 
 echo "== verify: PASS =="
+
+# 自动更新 NOTES.md
+echo "" >> .council/NOTES.md
+echo "## $(date +%Y-%m-%d) Verify" >> .council/NOTES.md
+echo "- Status: PASS" >> .council/NOTES.md
+echo '```' >> .council/NOTES.md
+git diff --stat HEAD 2>/dev/null | head -10 >> .council/NOTES.md || true
+echo '```' >> .council/NOTES.md

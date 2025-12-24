@@ -15,7 +15,9 @@ from enum import Enum
 import asyncio
 import json
 import os
+import re
 from datetime import datetime
+from council.facilitator.wald_consensus import WaldConsensus, ConsensusResult, ConsensusDecision
 
 
 class ModelProvider(Enum):
@@ -288,7 +290,14 @@ class AICouncilServer:
         synthesis = self._synthesize_responses(prompt, responses)
         agreement = self._calculate_agreement(responses)
         
+        # Calculate consensus using Wald (SPRT)
+        wald_result = self.evaluate_votes(responses)
+        
         total_latency = (datetime.now() - start_time).total_seconds() * 1000
+        
+        # If Wald result is conclusive, use it (or add to metadata)
+        # For now we'll just return standard response but you could act on
+        # wald_result.decision here (e.g., short circuit if AUTO_COMMIT)
         
         return ConsensusResponse(
             synthesis=synthesis,
@@ -298,6 +307,59 @@ class AICouncilServer:
             successful_models=len(successful),
             failed_models=len(failed),
         )
+
+    def _parse_vote(self, content: str, agent_name: str) -> Dict[str, Any]:
+        """
+        Parse vote decision and confidence from model response
+        
+        Expected format:
+        Vote: APPROVE | REJECT | HOLD
+        Confidence: 0.0 - 1.0
+        """
+        content_lower = content.lower()
+        
+        # Decision
+        decision = "hold"
+        if "vote: approve" in content_lower:
+            decision = "approve"
+        elif "vote: reject" in content_lower:
+            decision = "reject"
+        elif "vote: hold" in content_lower:
+            decision = "hold"
+            
+        # Confidence
+        confidence = 0.5
+        match = re.search(r"confidence:\s*(\d*\.?\d+)", content_lower)
+        if match:
+            try:
+                conf_val = float(match.group(1))
+                confidence = max(0.0, min(1.0, conf_val))
+            except ValueError:
+                pass
+                
+        return {
+            "agent": agent_name,
+            "decision": decision,
+            "confidence": confidence,
+            "rationale": content[:200]
+        }
+
+    def evaluate_votes(self, responses: List[ModelResponse]) -> ConsensusResult:
+        """
+        Evaluate votes using Wald Consensus
+        """
+        votes = []
+        for resp in responses:
+            if not resp.success:
+                continue
+            
+            # Use model name as agent name
+            agent_name = f"{resp.provider.value}/{resp.model_name}"
+            vote = self._parse_vote(resp.content, agent_name)
+            votes.append(vote)
+            
+        detector = WaldConsensus()
+        return detector.evaluate(votes)
     
     def get_status(self) -> Dict[str, Any]:
         """Get server status and model availability"""

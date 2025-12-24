@@ -205,6 +205,87 @@ class PatchGenerator:
             confidence=0.3,  # Low confidence without LLM
         )
     
+    async def _call_llm(self, prompt: str) -> str:
+        """
+        Call LLM (Gemini preferred, fallback to OpenAI)
+        
+        Args:
+            prompt: The prompt to send
+            
+        Returns:
+            The raw text response
+        """
+        system_prompt = "You are an expert Python developer tasked with fixing code bugs. Return ONLY the fixed code block."
+        
+        # Try Gemini
+        if self._has_gemini:
+            try:
+                import google.generativeai as genai
+                genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
+                model = genai.GenerativeModel(
+                    self.model,
+                    system_instruction=system_prompt,
+                )
+                response = await model.generate_content_async(prompt)
+                return response.text
+            except Exception as e:
+                # Log error or continue to fallback
+                pass
+                
+        # Try OpenAI
+        if self._has_openai:
+            try:
+                from openai import AsyncOpenAI
+                client = AsyncOpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+                response = await client.chat.completions.create(
+                    model="gpt-4o-mini",
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": prompt}
+                    ]
+                )
+                return response.choices[0].message.content
+            except Exception:
+                pass
+                
+        return ""
+
+    def _extract_code_block(self, text: str) -> str:
+        """Extract code from markdown code blocks"""
+        # Match ```python ... ``` or just ``` ... ```
+        pattern = r"```(?:\w+)?\n(.*?)```"
+        matches = re.findall(pattern, text, re.DOTALL)
+        if matches:
+            return matches[0].strip()
+        
+        # If no blocks, assumes the whole text is code if it looks like code
+        # But safer to return original text if no blocks found, or try to be smart
+        # For this implementation, we'll assume valid LLM output has blocks or is raw code
+        if "def " in text or "import " in text or "class " in text:
+             return text.strip()
+             
+        return ""
+
+    def _construct_prompt(self, diagnosis: Diagnosis, file_content: str) -> str:
+        """Construct the prompt for the LLM"""
+        return f"""Fix the following test failure:
+
+Error Type: {diagnosis.error_type}
+Failed Test: {diagnosis.failed_test}
+Error Message: {diagnosis.error_message}
+File: {diagnosis.suspected_file}
+Line: {diagnosis.suspected_line}
+Root Cause: {diagnosis.root_cause}
+
+Current file content:
+```python
+{file_content}
+```
+
+Provide ONLY the valid Python code for the entire file (with the fix applied). 
+Do not include any explanations, markers, or text outside the code block.
+"""
+
     async def generate_patch_with_llm(self, diagnosis: Diagnosis) -> Patch:
         """
         Generate a patch using LLM
@@ -237,33 +318,33 @@ class PatchGenerator:
                 confidence=0.0,
             )
         
-        # Build prompt for LLM
-        prompt = f"""Fix the following test failure:
-
-Error Type: {diagnosis.error_type}
-Failed Test: {diagnosis.failed_test}
-Error Message: {diagnosis.error_message}
-File: {diagnosis.suspected_file}
-Line: {diagnosis.suspected_line}
-Root Cause: {diagnosis.root_cause}
-
-Current file content:
-```python
-{file_content}
-```
-
-Provide only the fixed code, no explanations.
-"""
+        # Build prompt
+        prompt = self._construct_prompt(diagnosis, file_content)
         
-        # Call LLM (placeholder - would use actual API)
-        # patched_content = await self._call_llm(prompt)
+        # Call LLM
+        raw_response = await self._call_llm(prompt)
+        
+        if not raw_response:
+             return Patch(
+                file_path=diagnosis.suspected_file,
+                original_content=file_content,
+                patched_content=file_content,
+                diagnosis=diagnosis,
+                confidence=0.0,
+            )
+            
+        # Parse response
+        patched_content = self._extract_code_block(raw_response)
+        
+        # Calculate naive confidence (if content changed)
+        confidence = 0.8 if patched_content != file_content else 0.0
         
         return Patch(
             file_path=diagnosis.suspected_file,
             original_content=file_content,
-            patched_content=file_content,  # No change without LLM
+            patched_content=patched_content,
             diagnosis=diagnosis,
-            confidence=0.3,
+            confidence=confidence,
         )
 
 

@@ -27,9 +27,7 @@ class TranslationConfig(BaseModel):
         """Validate that provider is one of supported types."""
         valid_providers = {"google", "deepl", "local"}
         if v not in valid_providers:
-            raise ValueError(
-                f"provider must be one of {valid_providers}, got {v}"
-            )
+            raise ValueError(f"provider must be one of {valid_providers}, got {v}")
         return v
 
 

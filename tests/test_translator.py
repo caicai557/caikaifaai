@@ -20,10 +20,7 @@ class TestTranslator:
         """Contract: Can translate text from source to target language."""
         translator = TranslatorFactory.create(
             TranslationConfig(
-                enabled=True,
-                source_lang="en",
-                target_lang="zh-CN",
-                provider="google"
+                enabled=True, source_lang="en", target_lang="zh-CN", provider="google"
             )
         )
         # Interface contract: method exists and returns string
@@ -32,23 +29,17 @@ class TestTranslator:
     def test_translator_translate_signature(self):
         """Contract: translate() accepts text, src_lang, dest_lang."""
         translator = TranslatorFactory.create(
-            TranslationConfig(
-                enabled=True,
-                provider="google"
-            )
+            TranslationConfig(enabled=True, provider="google")
         )
         # Method signature: translate(text: str, src_lang: str, dest_lang: str) -> str
-        assert hasattr(translator, 'translate')
+        assert hasattr(translator, "translate")
 
     def test_translator_batch_translate_signature(self):
         """Contract: batch_translate() accepts list of texts."""
         translator = TranslatorFactory.create(
-            TranslationConfig(
-                enabled=True,
-                provider="google"
-            )
+            TranslationConfig(enabled=True, provider="google")
         )
-        assert hasattr(translator, 'batch_translate')
+        assert hasattr(translator, "batch_translate")
 
     def test_translator_enabled_flag(self):
         """Contract: Translator respects enabled flag."""
@@ -64,9 +55,7 @@ class TestTranslator:
     def test_translator_provider_config(self):
         """Contract: Translator stores provider configuration."""
         config = TranslationConfig(
-            provider="google",
-            source_lang="en",
-            target_lang="zh-CN"
+            provider="google", source_lang="en", target_lang="zh-CN"
         )
         translator = TranslatorFactory.create(config)
         assert translator.config.provider == "google"
@@ -80,10 +69,7 @@ class TestTranslatorFactory:
     def test_factory_create_google_translator(self):
         """Contract: Can create Google Translate provider."""
         config = TranslationConfig(
-            enabled=True,
-            provider="google",
-            source_lang="en",
-            target_lang="zh-CN"
+            enabled=True, provider="google", source_lang="en", target_lang="zh-CN"
         )
         translator = TranslatorFactory.create(config)
         assert translator is not None
@@ -92,17 +78,14 @@ class TestTranslatorFactory:
     def test_factory_create_multiple_providers(self):
         """Contract: Factory can be extended with additional providers."""
         # Verify factory has mechanism to register providers
-        assert hasattr(TranslatorFactory, 'register_provider')
+        assert hasattr(TranslatorFactory, "register_provider")
         assert callable(TranslatorFactory.register_provider)
 
     def test_factory_provider_registry(self):
         """Contract: Factory maintains provider registry."""
         # Check that at least google is registered
         config = TranslationConfig(
-            enabled=True,
-            provider="google",
-            source_lang="en",
-            target_lang="zh-CN"
+            enabled=True, provider="google", source_lang="en", target_lang="zh-CN"
         )
         translator = TranslatorFactory.create(config)
         assert translator is not None
@@ -113,6 +96,7 @@ class TestTranslatorFactory:
         # TranslationConfig should validate provider at init time
         # Invalid provider should be caught by Pydantic
         from pydantic import ValidationError
+
         with pytest.raises(ValidationError):
             TranslationConfig(provider="invalid_unknown_provider")
 
@@ -130,31 +114,22 @@ class TestTranslationCaching:
     def test_translator_has_cache(self):
         """Contract: Translator can cache translations."""
         translator = TranslatorFactory.create(
-            TranslationConfig(
-                enabled=True,
-                provider="google"
-            )
+            TranslationConfig(enabled=True, provider="google")
         )
-        assert hasattr(translator, 'cache')
+        assert hasattr(translator, "cache")
 
     def test_cache_is_dict(self):
         """Contract: Cache is a dictionary-like structure."""
         translator = TranslatorFactory.create(
-            TranslationConfig(
-                enabled=True,
-                provider="google"
-            )
+            TranslationConfig(enabled=True, provider="google")
         )
         # Cache should be dict or have dict-like interface
-        assert hasattr(translator.cache, '__getitem__')
-        assert hasattr(translator.cache, '__setitem__')
+        assert hasattr(translator.cache, "__getitem__")
+        assert hasattr(translator.cache, "__setitem__")
 
     def test_translator_clear_cache(self):
         """Contract: Can clear translation cache."""
         translator = TranslatorFactory.create(
-            TranslationConfig(
-                enabled=True,
-                provider="google"
-            )
+            TranslationConfig(enabled=True, provider="google")
         )
         assert callable(translator.clear_cache)

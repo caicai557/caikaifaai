@@ -27,7 +27,7 @@ class TestMessage:
             message_type=MessageType.INCOMING,
             content="Hello world",
             sender="Alice",
-            timestamp="2025-12-24T10:30:00Z"
+            timestamp="2025-12-24T10:30:00Z",
         )
         assert msg.message_type == MessageType.INCOMING
         assert msg.content == "Hello world"
@@ -48,21 +48,19 @@ class TestMessage:
         msg = Message(
             message_type=MessageType.INCOMING,
             content="Hello",
-            translated_content="你好"
+            translated_content="你好",
         )
         assert msg.translated_content == "你好"
 
     def test_message_translated_defaults_to_none(self):
         """Contract: Translation is optional."""
-        msg = Message(
-            message_type=MessageType.INCOMING,
-            content="Hello"
-        )
+        msg = Message(message_type=MessageType.INCOMING, content="Hello")
         assert msg.translated_content is None
 
     def test_message_requires_type_and_content(self):
         """Contract: Message requires type and content."""
         from pydantic import ValidationError
+
         with pytest.raises(ValidationError):
             Message(content="Hello")  # missing message_type
 
@@ -76,10 +74,7 @@ class TestMessageInterceptor:
     def test_create_interceptor(self):
         """Contract: Can create MessageInterceptor."""
         config = TranslationConfig(
-            enabled=True,
-            source_lang="en",
-            target_lang="zh-CN",
-            provider="google"
+            enabled=True, source_lang="en", target_lang="zh-CN", provider="google"
         )
         interceptor = MessageInterceptor(config)
         assert interceptor is not None
@@ -148,10 +143,7 @@ class TestMessageInterceptorWithTranslator:
         from src.telegram_multi.translator import TranslatorFactory
 
         config = TranslationConfig(
-            enabled=True,
-            source_lang="en",
-            target_lang="zh-CN",
-            provider="google"
+            enabled=True, source_lang="en", target_lang="zh-CN", provider="google"
         )
         translator = TranslatorFactory.create(config)
         interceptor = MessageInterceptor(config, translator=translator)
@@ -164,38 +156,23 @@ class TestMessageInterceptorWithTranslator:
         from src.telegram_multi.translator import TranslatorFactory
 
         config = TranslationConfig(
-            enabled=True,
-            source_lang="en",
-            target_lang="zh-CN",
-            provider="google"
+            enabled=True, source_lang="en", target_lang="zh-CN", provider="google"
         )
         translator = TranslatorFactory.create(config)
         interceptor = MessageInterceptor(config, translator=translator)
 
-        msg = Message(
-            message_type=MessageType.INCOMING,
-            content="Hello",
-            sender="Alice"
-        )
-
         # Should be able to translate
-        assert hasattr(interceptor, 'translate_message')
+        assert hasattr(interceptor, "translate_message")
         assert callable(interceptor.translate_message)
 
     def test_interceptor_translate_disabled(self):
         """Contract: When disabled, interceptor returns original."""
         config = TranslationConfig(
-            enabled=False,
-            source_lang="en",
-            target_lang="zh-CN",
-            provider="google"
+            enabled=False, source_lang="en", target_lang="zh-CN", provider="google"
         )
         interceptor = MessageInterceptor(config)
 
-        msg = Message(
-            message_type=MessageType.INCOMING,
-            content="Hello"
-        )
+        msg = Message(message_type=MessageType.INCOMING, content="Hello")
 
         # When disabled, should return original content
         result = interceptor.translate_message(msg)

@@ -26,13 +26,9 @@ class Message(BaseModel):
 
     model_config = ConfigDict(use_enum_values=False)
 
-    message_type: MessageType = Field(
-        ..., description="Incoming or outgoing message"
-    )
+    message_type: MessageType = Field(..., description="Incoming or outgoing message")
     content: str = Field(..., description="Message text content")
-    sender: Optional[str] = Field(
-        default=None, description="Sender name/ID"
-    )
+    sender: Optional[str] = Field(default=None, description="Sender name/ID")
     timestamp: Optional[str] = Field(
         default=None, description="Message timestamp (ISO 8601)"
     )
@@ -44,11 +40,7 @@ class Message(BaseModel):
 class MessageInterceptor:
     """Message interceptor for capturing and translating messages."""
 
-    def __init__(
-        self,
-        config: TranslationConfig,
-        translator=None
-    ):
+    def __init__(self, config: TranslationConfig, translator=None):
         """Initialize message interceptor.
 
         Args:
@@ -60,10 +52,7 @@ class MessageInterceptor:
         self._on_message_received_callback: Optional[Callable] = None
         self._on_message_sending_callback: Optional[Callable] = None
 
-    def on_message_received(
-        self,
-        callback: Callable[[Message], None]
-    ) -> None:
+    def on_message_received(self, callback: Callable[[Message], None]) -> None:
         """Register callback for incoming messages.
 
         Args:
@@ -71,10 +60,7 @@ class MessageInterceptor:
         """
         self._on_message_received_callback = callback
 
-    def on_message_sending(
-        self,
-        callback: Callable[[Message], Message]
-    ) -> None:
+    def on_message_sending(self, callback: Callable[[Message], Message]) -> None:
         """Register callback for outgoing messages.
 
         Args:
@@ -101,7 +87,7 @@ class MessageInterceptor:
             translated = self.translator.translate(
                 message.content,
                 src_lang=self.config.source_lang,
-                dest_lang=self.config.target_lang
+                dest_lang=self.config.target_lang,
             )
             message.translated_content = translated
         except Exception:
@@ -128,7 +114,7 @@ def _get_injection_script() -> str:
         - Adds translation overlay to messages
         - Monitors textarea for outgoing messages
     """
-    return '''
+    return """
 (function() {
   // Message interception script for Telegram Web A
 
@@ -173,7 +159,10 @@ def _get_injection_script() -> str:
             );
             messageElements.forEach(function(element) {
               const textContent = element.textContent || element.innerText;
-              if (textContent && !element.querySelector('.telegram-translation-overlay')) {
+              const hasOverlay = element.querySelector(
+                '.telegram-translation-overlay'
+              );
+              if (textContent && !hasOverlay) {
                 addTranslationOverlay(element, textContent);
               }
             });
@@ -214,4 +203,4 @@ def _get_injection_script() -> str:
 
   console.log('Telegram message interception script loaded');
 })();
-'''
+"""

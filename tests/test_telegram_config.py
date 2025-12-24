@@ -22,25 +22,17 @@ class TestInstanceConfig:
 
     def test_create_instance_config_minimal(self):
         """Contract: Can create InstanceConfig with instance_id and profile_path."""
-        config = InstanceConfig(
-            id="test-instance",
-            profile_path="/tmp/profiles/test"
-        )
+        config = InstanceConfig(id="test-instance", profile_path="/tmp/profiles/test")
         assert config.id == "test-instance"
         assert config.profile_path == "/tmp/profiles/test"
 
     def test_create_instance_config_with_translation(self):
         """Contract: InstanceConfig supports translation configuration."""
         translation = TranslationConfig(
-            enabled=True,
-            source_lang="en",
-            target_lang="zh-CN",
-            provider="google"
+            enabled=True, source_lang="en", target_lang="zh-CN", provider="google"
         )
         config = InstanceConfig(
-            id="work",
-            profile_path="/tmp/profiles/work",
-            translation=translation
+            id="work", profile_path="/tmp/profiles/work", translation=translation
         )
         assert config.id == "work"
         assert config.translation.enabled is True
@@ -50,21 +42,20 @@ class TestInstanceConfig:
 
     def test_instance_config_translation_disabled_by_default(self):
         """Contract: Translation is disabled by default."""
-        config = InstanceConfig(
-            id="test",
-            profile_path="/tmp/profiles/test"
-        )
+        config = InstanceConfig(id="test", profile_path="/tmp/profiles/test")
         assert config.translation.enabled is False
 
     def test_instance_config_requires_id(self):
         """Contract: InstanceConfig requires instance_id."""
         from pydantic import ValidationError
+
         with pytest.raises(ValidationError):
             InstanceConfig(profile_path="/tmp/profiles/test")
 
     def test_instance_config_requires_profile_path(self):
         """Contract: InstanceConfig requires profile_path."""
         from pydantic import ValidationError
+
         with pytest.raises(ValidationError):
             InstanceConfig(id="test")
 
@@ -102,10 +93,7 @@ class TestTranslationConfig:
 
     def test_translation_config_with_source_and_target(self):
         """Contract: Can set source and target languages."""
-        config = TranslationConfig(
-            source_lang="en",
-            target_lang="zh-CN"
-        )
+        config = TranslationConfig(source_lang="en", target_lang="zh-CN")
         assert config.source_lang == "en"
         assert config.target_lang == "zh-CN"
 
@@ -143,8 +131,8 @@ class TestTelegramConfig:
                     "translation": {
                         "enabled": True,
                         "source_lang": "en",
-                        "target_lang": "zh-CN"
-                    }
+                        "target_lang": "zh-CN",
+                    },
                 }
             ]
         )
@@ -179,10 +167,7 @@ class TestTelegramConfig:
     def test_telegram_config_browser_override(self):
         """Contract: Can override browser settings."""
         config = TelegramConfig(
-            browser={
-                "headless": True,
-                "executable_path": "/usr/bin/chrome"
-            }
+            browser={"headless": True, "executable_path": "/usr/bin/chrome"}
         )
         assert config.browser.headless is True
         assert config.browser.executable_path == "/usr/bin/chrome"

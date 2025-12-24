@@ -38,9 +38,7 @@ class InstanceManager:
         self._next_port += 1
 
         context = BrowserContext(
-            instance_id=config.id,
-            profile_path=config.profile_path,
-            port=port
+            instance_id=config.id, profile_path=config.profile_path, port=port
         )
         self.instances[config.id] = context
         return context

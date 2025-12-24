@@ -21,13 +21,11 @@ class BrowserContext(BaseModel):
     profile_path: str = Field(..., description="Browser profile directory path")
     browser_config: BrowserConfig = Field(
         default_factory=BrowserConfig,
-        description="Browser settings (headless, executable_path)"
+        description="Browser settings (headless, executable_path)",
     )
     target_url: str = Field(
-        default="https://web.telegram.org/a/",
-        description="Target URL to navigate to"
+        default="https://web.telegram.org/a/", description="Target URL to navigate to"
     )
     port: Optional[int] = Field(
-        default=None,
-        description="Debugging port for browser instance (optional)"
+        default=None, description="Debugging port for browser instance (optional)"
     )

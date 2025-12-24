@@ -76,16 +76,14 @@ class TestInstanceManager:
         for config in configs:
             manager.add_instance(config)
 
-        ports = [
-            manager.get_instance(f"instance{i}").port
-            for i in range(3)
-        ]
+        ports = [manager.get_instance(f"instance{i}").port for i in range(3)]
 
         # All ports should be allocated and unique (or None)
         allocated_ports = [p for p in ports if p is not None]
         if allocated_ports:
-            assert len(allocated_ports) == len(set(allocated_ports)), \
+            assert len(allocated_ports) == len(set(allocated_ports)), (
                 "Ports must be unique"
+            )
 
     def test_instance_manager_remove_instance(self, tmp_path):
         """Contract: Can remove instance from manager."""

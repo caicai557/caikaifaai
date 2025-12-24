@@ -26,12 +26,7 @@ class Translator(ABC):
         self.cache: Dict[str, str] = {}
 
     @abstractmethod
-    def translate(
-        self,
-        text: str,
-        src_lang: str,
-        dest_lang: str
-    ) -> str:
+    def translate(self, text: str, src_lang: str, dest_lang: str) -> str:
         """Translate text from source to destination language.
 
         Args:
@@ -46,10 +41,7 @@ class Translator(ABC):
 
     @abstractmethod
     def batch_translate(
-        self,
-        texts: List[str],
-        src_lang: str,
-        dest_lang: str
+        self, texts: List[str], src_lang: str, dest_lang: str
     ) -> List[str]:
         """Translate multiple texts at once.
 
@@ -74,11 +66,7 @@ class TranslatorFactory:
     _providers = {}
 
     @classmethod
-    def register_provider(
-        cls,
-        name: str,
-        provider_class: type
-    ) -> None:
+    def register_provider(cls, name: str, provider_class: type) -> None:
         """Register a translator provider.
 
         Args:

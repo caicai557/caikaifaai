@@ -2,6 +2,7 @@
 Feature flags and configuration management.
 """
 
+
 class Config:
     """Application configuration with feature flags."""
 

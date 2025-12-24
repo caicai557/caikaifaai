@@ -29,12 +29,7 @@ class GoogleTranslator(Translator):
         self.max_retries = 3
         self.backoff_factor = 0.5  # Exponential backoff multiplier
 
-    def translate(
-        self,
-        text: str,
-        src_lang: str = None,
-        dest_lang: str = None
-    ) -> str:
+    def translate(self, text: str, src_lang: str = None, dest_lang: str = None) -> str:
         """Translate text using Google Translate.
 
         Args:
@@ -52,7 +47,7 @@ class GoogleTranslator(Translator):
         dest_lang = dest_lang or self.config.target_lang
 
         # Create cache key using MD5 hash of full text to avoid collisions
-        text_hash = hashlib.md5(text.encode('utf-8')).hexdigest()
+        text_hash = hashlib.md5(text.encode("utf-8")).hexdigest()
         cache_key = f"{src_lang}:{dest_lang}:{text_hash}"
         if cache_key in self.cache:
             return self.cache[cache_key]
@@ -64,12 +59,10 @@ class GoogleTranslator(Translator):
 
                 translator = GoogleTransLib()
                 result = translator.translate(
-                    text,
-                    src_language=src_lang,
-                    dest_language=dest_lang
+                    text, src_language=src_lang, dest_language=dest_lang
                 )
                 trans_text = (
-                    result.get('text', text)
+                    result.get("text", text)
                     if isinstance(result, dict)
                     else result.text
                 )
@@ -81,7 +74,7 @@ class GoogleTranslator(Translator):
             except Exception:
                 if attempt < self.max_retries - 1:
                     # Exponential backoff
-                    wait_time = self.backoff_factor * (2 ** attempt)
+                    wait_time = self.backoff_factor * (2**attempt)
                     time.sleep(wait_time)
                 else:
                     # Final attempt failed, return original text
@@ -90,10 +83,7 @@ class GoogleTranslator(Translator):
         return text
 
     def batch_translate(
-        self,
-        texts: List[str],
-        src_lang: str = None,
-        dest_lang: str = None
+        self, texts: List[str], src_lang: str = None, dest_lang: str = None
     ) -> List[str]:
         """Translate multiple texts.
 

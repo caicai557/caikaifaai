@@ -1,70 +1,44 @@
 set shell := ["bash", "-lc"]
 
-# === Environment ===
+# === 上下文治理 ===
 
-doctor:
-  @command -v python3 >/dev/null || (echo "python3 missing" && exit 1)
-  @command -v git >/dev/null || (echo "git missing" && exit 1)
-  @echo "OK: base tools"
+codemap:
+  @bash scripts/codemap.sh
 
-# === Code Quality ===
+# === 理事会命令 ===
 
-# Format code (requires ruff)
-fmt:
-  @if command -v ruff >/dev/null 2>&1; then ruff format .; else echo "skip: ruff not installed"; fi
+plan TASK:
+  @bash scripts/plan_codex.sh "{{TASK}}"
 
-# Lint code (requires ruff)
-lint:
-  @if command -v ruff >/dev/null 2>&1; then ruff check .; else echo "skip: ruff not installed"; fi
+audit:
+  @bash scripts/audit_gemini.sh
 
-# Type check (requires mypy)
-type:
-  @if command -v mypy >/dev/null 2>&1; then mypy src --ignore-missing-imports; else echo "skip: mypy not installed"; fi
+# === 测试与验证 ===
 
-# Compile check (cheap sanity)
-compile:
-  @python3 -m py_compile src/*.py
-
-# === Testing ===
-
-# Run all tests
 test:
   @source .venv/bin/activate && pytest tests/ -q
 
-# Run contract tests only
-test-contracts:
-  @source .venv/bin/activate && pytest tests/test_contracts.py -v
+compile:
+  @python3 -m py_compile src/*.py
 
-# === Gates ===
+lint:
+  @if command -v ruff >/dev/null 2>&1; then ruff check .; else echo "skip: ruff not installed"; fi
 
-# Single source of truth gate (before commit)
+# === 门禁 ===
+
 verify: compile lint test
   @echo "✅ VERIFY PASS"
 
-# === Workflow ===
-
-codemap:
-  @python3 scripts/codemap.py > CODEMAP.md
-  @echo "Generated CODEMAP.md"
-
-plan:
-  @echo "Open Codex CLI and paste: .council/prompts/plan_codex.md (fill <PASTE_TASK_HERE>)"
-
-audit:
-  @echo "Open Gemini CLI and paste: .council/prompts/audit_gemini.md"
+# === 工作流 ===
 
 tdd:
-  @echo "Open Claude Code and paste: .council/prompts/tdd_claude.md"
+  @echo "运行 /tdd <scope> 在 Claude Code 中"
 
 impl:
-  @echo "Open Claude Code and paste: .council/prompts/implement_claude.md"
+  @echo "运行 /impl <scope> 在 Claude Code 中"
 
 ship:
-  @echo "=== Shipping Checklist ==="
-  @cat .council/CHECKLIST.md
-  @echo ""
-  @echo "=== Git Status ==="
+  @echo "=== Ship Checklist ==="
   @git status --short
   @echo ""
-  @echo "=== Recent Commits ==="
   @git log --oneline -3

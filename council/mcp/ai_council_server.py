@@ -102,6 +102,10 @@ class AICouncilServer:
         # Initialize Governance Gateway for output filtering
         from council.governance.gateway import GovernanceGateway
         self.gateway = GovernanceGateway()
+        
+        # Initialize Monitor
+        from council.mcp.monitor import SemanticEntropyMonitor
+        self.monitor = SemanticEntropyMonitor()
     
     def _validate_api_keys(self) -> None:
         """Check which models have valid API keys"""
@@ -321,6 +325,9 @@ class AICouncilServer:
         wald_result = self.evaluate_votes(responses)
         
         total_latency = (datetime.now() - start_time).total_seconds() * 1000
+        
+        # Monitor: Log semantic entropy
+        self.monitor.log_response(prompt, wald_result, total_latency)
         
         return ConsensusResponse(
             synthesis=synthesis,

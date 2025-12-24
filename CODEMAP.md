@@ -1,30 +1,40 @@
-# CODEMAP (Auto-generated)
+# CODEMAP
 
-## 目录结构
-```
-src/__init__.py
-src/config.py
-src/calculator.py
-tests/test_calculator.py
-tests/__init__.py
-tests/test_contracts.py
-```
+## Repo files (tracked)
 
-## 模块签名
+- .claude/commands/impl.md
+- .claude/commands/tdd.md
+- .council/AGENTS.md
+- .council/BRIEF.md
+- .council/CHECKLIST.md
+- .council/CLAUDE.md
+- .council/CODEX.md
+- .council/CONTRACTS.md
+- .council/DECISIONS.md
+- .council/GEMINI.md
+- .council/NOTES.md
+- .council/SOP.md
+- .council/prompts/audit_gemini.md
+- .council/prompts/implement_claude.md
+- .council/prompts/plan_codex.md
+- .council/prompts/tdd_claude.md
+- .cspell.json
+- .github/workflows/ci.yml
+- .gitignore
+- .mcp.json
+- .pre-commit-config.yaml
+- CODEMAP.md
+- Justfile
+- scripts/audit_gemini.sh
+- scripts/codemap.py
+- scripts/codemap.sh
+- scripts/council_bootstrap.sh
+- scripts/plan_codex.sh
+- src/__init__.py
+- src/calculator.py
+- src/config.py
+- tests/__init__.py
+- tests/test_calculator.py
+- tests/test_contracts.py
 
-### src/__init__.py
-```python
-```
-
-### src/calculator.py
-```python
-def add(a: float, b: float) -> float:
-def subtract(a: float, b: float) -> float:
-def multiply(a: float, b: float) -> float:
-def divide(a: float, b: float) -> float:
-```
-
-### src/config.py
-```python
-class Config:
-```
+## Entry candidates

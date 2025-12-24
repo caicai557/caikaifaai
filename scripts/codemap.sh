@@ -1,26 +1,22 @@
-#!/bin/bash
-# codemap.sh - 生成代码地图
+#!/usr/bin/env bash
+set -euo pipefail
 
-set -e
-
-echo "# CODEMAP (Auto-generated)" > CODEMAP.md
-echo "" >> CODEMAP.md
-echo "## 目录结构" >> CODEMAP.md
-echo '```' >> CODEMAP.md
-find src tests -type f -name "*.py" 2>/dev/null | head -50 >> CODEMAP.md
-echo '```' >> CODEMAP.md
-
-echo "" >> CODEMAP.md
-echo "## 模块签名" >> CODEMAP.md
-
-for f in src/*.py; do
-  if [ -f "$f" ]; then
-    echo "" >> CODEMAP.md
-    echo "### $f" >> CODEMAP.md
-    echo '```python' >> CODEMAP.md
-    grep -E "^(def |class |from |import )" "$f" 2>/dev/null | head -20 >> CODEMAP.md
-    echo '```' >> CODEMAP.md
+{
+  echo "# CODEMAP"
+  echo
+  echo "## Repo files (tracked)"
+  echo
+  if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    git ls-files | sed 's/^/- /'
+  else
+    find . -maxdepth 3 -type f \
+      -not -path "./.venv/*" -not -path "./.git/*" \
+      | sed 's#^\./#- #'
   fi
-done
+  echo
+  echo "## Entry candidates"
+  echo
+  rg -n "if __name__ == .__main__." -S src tests 2>/dev/null || true
+} > CODEMAP.md
 
-echo "Generated CODEMAP.md"
+echo "Wrote CODEMAP.md"

@@ -1,42 +1,52 @@
-# Codex CLI Rules (Reviewer)
+# Codex Rules
 
-> Follow `.council/AGENTS.md` for governance
+> **Strictly follow the rules in .council/AGENTS.md**
 
 ## 角色定位
 
-**GPT-5.2-Codex** - 审查官
+**Codex (GPT-5.2)** - Orchestrator / PM
 
-- PR 审查
-- 安全扫描
-- 重构建议
+负责：
 
-## 触发条件
+- 需求代码化
+- PRD 制定
+- 任务树拆分
+- SPEC.md 生成
 
-仅在以下情况使用 Codex：
+## 工作流程
 
-- 提交前代码审查
-- 安全漏洞扫描
-- 大规模重构/迁移
-- 跨模块依赖检查
+```
+输入: BRIEF + CODEMAP + 任务描述
+输出: SPEC.md
+```
 
-## 输出契约
+## SPEC.md 必须包含
 
-审查产出：
+1. 问题陈述 + 非目标
+2. 任务树（小步，标注文件）
+3. 验收标准（可测试）
+4. 验证命令: `just verify`
+5. 风险点 (≤5条) + 缓解措施
 
-1. 问题列表（按严重程度排序）
-2. 修复建议
-3. 通过/阻止决定
+## Prompt 模板
 
-## 审查维度
+```markdown
+You are the Orchestrator.
+Read: .council/BRIEF.md and CODEMAP.md (SSOT).
+Task: <paste task>
 
-- [ ] 逻辑正确性
-- [ ] 安全漏洞
-- [ ] 性能问题
-- [ ] 代码风格
-- [ ] 测试覆盖
+Output a SPEC.md with:
+1) Problem statement + non-goals
+2) Task tree (small steps; identify files to touch)
+3) Acceptance criteria (testable)
+4) Verify command(s): must end with `just verify`
+5) Risks (top 5) + mitigations
+
+Keep it short and executable.
+```
 
 ## 限制
 
 - 不做实现（交给 Gemini Flash）
-- 不做规划（交给 Claude）
-- 只读审查，不直接改代码
+- 不做审查（交给 Gemini Pro）
+- 输出精简可执行

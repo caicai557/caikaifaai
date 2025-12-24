@@ -1,10 +1,17 @@
-# Claude Code Rules (Token 节省模式)
+# Claude Code Rules
 
-> Claude Token 有限 - 仅在必要时使用
+> **Strictly follow the rules in .council/AGENTS.md**
+
+## 项目规范
+
+- **语言**: Python 3.12+
+- **类型**: 类型注解 (type hints)
+- **测试**: pytest + TDD
+- **门禁**: `just verify` 是唯一裁决
 
 ## 角色定位
 
-**Claude 4.5** - 备用执行者
+**Claude 4.5** - 备用执行者 (Token 节省模式)
 
 仅在以下情况使用 Claude:
 
@@ -12,18 +19,14 @@
 - [ ] 需要 /sandbox 执行不可信脚本
 - [ ] 需要 /rewind 回滚
 
-## 自动 Slash Commands
+## Slash Commands
 
-当需要写测试时，运行：
-
-```
-/tdd <scope>
-```
-
-当需要实现时，运行：
-
-```
-/impl <scope>
+```bash
+/tdd <scope>   # TDD 门禁 - 先写测试
+/impl <scope>  # 实现 - 最小 patch + verify
+/sandbox       # 安全执行
+/rewind        # 回滚
+/clear         # 清理上下文
 ```
 
 ## Token 节省策略
@@ -36,19 +39,13 @@
 ❌ 不用 Claude: 常规 TDD/实现
 ```
 
-## 仅限命令
+## 安全边界
 
-```bash
-/tdd      # TDD 门禁
-/impl     # 实现
-/sandbox  # 安全执行
-/rewind   # 回滚
-/clear    # 清理
-```
+- ❌ 禁止访问: .env, *.pem, credentials
+- ❌ 禁止执行: rm -rf, chmod -R
+- ✅ 使用 /sandbox 执行不可信脚本
 
 ## 输出契约
-
-当使用 Claude 时:
 
 1. 验收标准 (一句话)
 2. 最小 patch

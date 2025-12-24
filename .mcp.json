@@ -1,53 +1,27 @@
 {
   "mcpServers": {
+    "github": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"
+      }
+    },
     "filesystem": {
       "command": "npx",
-      "args": [
-        "-y",
-        "@modelcontextprotocol/server-filesystem",
-        "."
-      ]
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "."]
+    },
+    "memory": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-memory"]
     },
     "codex": {
       "command": "codex",
-      "args": [
-        "mcp-server"
-      ]
-    },
-    "gemini": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@google/gemini-cli",
-        "mcp-server"
-      ]
-    },
-    "council-memory": {
-      "command": "python",
-      "args": [
-        "-m",
-        "council.memory.mcp_server"
-      ],
-      "env": {
-        "COUNCIL_STORAGE_DIR": "./.council_sessions"
-      }
-    },
-    "github": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@modelcontextprotocol/server-github"
-      ],
-      "env": {
-        "GITHUB_PERSONAL_ACCESS_TOKEN": ""
-      }
+      "args": ["mcp-server"]
     },
     "fetch": {
       "command": "npx",
-      "args": [
-        "-y",
-        "@anthropics/mcp-server-fetch"
-      ]
+      "args": ["-y", "@anthropics/mcp-server-fetch"]
     }
   }
 }

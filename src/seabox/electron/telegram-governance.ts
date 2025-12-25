@@ -113,7 +113,12 @@ class SeaBoxOverlay extends HTMLElement {
     }
 }
 
-customElements.define('seabox-overlay', SeaBoxOverlay)
+// Register custom element only when DOM is available
+function registerSeaBoxOverlay() {
+    if (typeof customElements !== 'undefined' && customElements && !customElements.get('seabox-overlay')) {
+        customElements.define('seabox-overlay', SeaBoxOverlay)
+    }
+}
 
 // --- Translation Logic ---
 const cache = new Map<string, string>()
@@ -179,6 +184,9 @@ async function processMessage(element: Element) {
 // --- Observer ---
 export function initTelegramGovernance() {
     console.log('[SeaBox] Governance Module Loaded')
+
+    // Register the custom element first
+    registerSeaBoxOverlay()
 
     // Observer for Incoming Messages
     const observer = new MutationObserver((mutations) => {

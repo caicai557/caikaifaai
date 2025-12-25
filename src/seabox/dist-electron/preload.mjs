@@ -97,7 +97,11 @@ class SeaBoxOverlay extends HTMLElement {
     this.contentDiv.textContent = text;
   }
 }
-customElements.define("seabox-overlay", SeaBoxOverlay);
+function registerSeaBoxOverlay() {
+  if (typeof customElements !== "undefined" && customElements && !customElements.get("seabox-overlay")) {
+    customElements.define("seabox-overlay", SeaBoxOverlay);
+  }
+}
 const cache = /* @__PURE__ */ new Map();
 async function translateText(text, overrideTargetLang) {
   const targetLang = CONFIG.targetLang;
@@ -133,6 +137,7 @@ async function processMessage(element) {
 }
 function initTelegramGovernance() {
   console.log("[SeaBox] Governance Module Loaded");
+  registerSeaBoxOverlay();
   const observer = new MutationObserver((mutations) => {
     mutations.forEach((m) => {
       m.addedNodes.forEach((node) => {

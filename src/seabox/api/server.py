@@ -38,9 +38,29 @@ def get_stats():
         "active_instances": 3
     }
 
+import re
+
+def redact_pii(text: str) -> str:
+    """Simple Regex-based PII Redaction (Level 1 Governance)"""
+    # Email
+    text = re.sub(r'[\w\.-]+@[\w\.-]+\.\w+', '[EMAIL]', text)
+    # Phone (Simple international format)
+    text = re.sub(r'(\+\d{1,3}[- ]?)?\d{10,14}', '[PHONE]', text)
+    # Crypto Address (Simple ETH/BTC check - very basic)
+    text = re.sub(r'0x[a-fA-F0-9]{40}', '[CRYPTO_ETH]', text)
+    return text
+
+def has_chinese(text: str) -> bool:
+    """Check if text contains Chinese characters."""
+    return bool(re.search(r'[\u4e00-\u9fa5]', text))
+
 @app.post("/translate")
 def translate(req: TranslationRequest):
     try:
+        # 1. PII Redaction (Governance)
+        clean_text = redact_pii(req.text)
+        
+        # 2. Translation
         config = TranslationConfig(
             enabled=True,
             provider="google",
@@ -48,8 +68,21 @@ def translate(req: TranslationRequest):
             target_lang=req.target_lang
         )
         translator = TranslatorFactory.create(config)
-        result = translator.translate(req.text, "auto", req.target_lang)
-        return {"translated": result}
+        result = translator.translate(clean_text, "auto", req.target_lang)
+        
+        # 3. Quality Check (Outgoing Governance)
+        # If target is English-like but result still has Chinese, flag it
+        blocked = False
+        if req.target_lang in ('en', 'en-US', 'en-GB') and has_chinese(result):
+            blocked = True
+        
+        return {
+            "translated": result,
+            "original": req.text,
+            "clean_text": clean_text,
+            "blocked": blocked,
+            "reason": "Translation incomplete (Chinese detected)" if blocked else None
+        }
     except Exception as e:
         return {"error": str(e), "translated": req.text}
 

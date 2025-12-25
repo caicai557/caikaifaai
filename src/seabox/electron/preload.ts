@@ -1,4 +1,5 @@
 import { ipcRenderer, contextBridge } from 'electron'
+import { initTelegramGovernance } from './telegram-governance'
 
 // --------- Expose some API to the Renderer process ---------
 contextBridge.exposeInMainWorld('ipcRenderer', {
@@ -19,6 +20,15 @@ contextBridge.exposeInMainWorld('ipcRenderer', {
     return ipcRenderer.invoke(channel, ...omit)
   },
 
-  // You can expose other APTs you need here.
+  // You can expose other APIs you need here.
   // ...
+})
+
+// --------- Telegram Governance Injection ---------
+window.addEventListener('DOMContentLoaded', () => {
+  const host = window.location.hostname
+  if (host.includes('telegram') || host.includes('web.telegram.org')) {
+    console.log('[SeaBox] Telegram Detected - Governance Active')
+    initTelegramGovernance()
+  }
 })

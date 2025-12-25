@@ -1,4 +1,5 @@
-import { app, BrowserWindow } from 'electron'
+import { app, BrowserWindow, ipcMain } from 'electron'
+import { storeManager } from './StoreManager'
 
 // Fix GPU errors in VM/WSL/headless environments
 app.disableHardwareAcceleration()
@@ -30,12 +31,47 @@ process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL ? path.join(process.env.APP_ROOT, 
 let win: BrowserWindow | null
 
 function createWindow() {
+  // Restore window state from storage
+  const windowState = storeManager.getWindowState()
+
   win = new BrowserWindow({
     icon: path.join(process.env.VITE_PUBLIC, 'electron-vite.svg'),
+    x: windowState.x,
+    y: windowState.y,
+    width: windowState.width,
+    height: windowState.height,
     webPreferences: {
       preload: path.join(__dirname, 'preload.mjs'),
     },
   })
+
+  // Restore maximized state
+  if (windowState.isMaximized) {
+    win.maximize()
+  }
+
+  // Save window state on resize/move (debounced)
+  let saveTimeout: NodeJS.Timeout | null = null
+  const saveWindowState = () => {
+    if (saveTimeout) clearTimeout(saveTimeout)
+    saveTimeout = setTimeout(() => {
+      if (win && !win.isDestroyed()) {
+        const bounds = win.getBounds()
+        storeManager.setWindowState({
+          x: bounds.x,
+          y: bounds.y,
+          width: bounds.width,
+          height: bounds.height,
+          isMaximized: win.isMaximized()
+        })
+      }
+    }, 500)
+  }
+
+  win.on('resize', saveWindowState)
+  win.on('move', saveWindowState)
+  win.on('maximize', saveWindowState)
+  win.on('unmaximize', saveWindowState)
 
   // Test active push message to Renderer-process.
   win.webContents.on('did-finish-load', () => {
@@ -45,7 +81,6 @@ function createWindow() {
   if (VITE_DEV_SERVER_URL) {
     win.loadURL(VITE_DEV_SERVER_URL)
   } else {
-    // win.loadFile('dist/index.html')
     win.loadFile(path.join(RENDERER_DIST, 'index.html'))
   }
 }
@@ -112,6 +147,31 @@ app.on('will-quit', () => {
 })
 
 import { ViewManager } from './ViewManager'
+
+// IPC Handlers for settings persistence
+ipcMain.handle('get-settings', () => {
+  return storeManager.getAllSettings()
+})
+
+ipcMain.handle('set-settings', (_, settings: Partial<{ sidebar: { width: number }, telegrams: unknown[], window: unknown }>) => {
+  storeManager.updateSettings(settings as Parameters<typeof storeManager.updateSettings>[0])
+  return { success: true }
+})
+
+ipcMain.handle('translate', async (_, { text, targetLang }: { text: string, targetLang: string }) => {
+  try {
+    const response = await fetch('http://127.0.0.1:8000/translate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text, target_lang: targetLang || 'zh-CN' })
+    })
+    const data = await response.json()
+    return data
+  } catch (error) {
+    console.error('Translation error:', error)
+    return { error: 'Translation service unavailable' }
+  }
+})
 
 app.whenReady().then(() => {
   startPythonServer()

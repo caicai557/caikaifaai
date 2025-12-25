@@ -49,6 +49,7 @@ export function ContextMenu({
     }, [onClose])
 
     const handleAction = (action: string) => {
+        console.log('[ContextMenu] handleAction:', action, 'for target:', targetId)
         switch (action) {
             case 'refresh': onRefresh(targetId); break
             case 'hibernate': onHibernate(targetId); break

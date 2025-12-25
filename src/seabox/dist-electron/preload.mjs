@@ -3,6 +3,9 @@ var __defProp = Object.defineProperty;
 var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
 var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 const electron = require("electron");
+const getIPC = () => {
+  return window.ipcRenderer || null;
+};
 const CONFIG = {
   targetLang: "zh-CN"
 };
@@ -102,7 +105,9 @@ async function translateText(text, overrideTargetLang) {
   const cacheKey = `${text}:${targetLang}`;
   if (cache.has(cacheKey)) return cache.get(cacheKey);
   try {
-    const result = await electron.ipcRenderer.invoke("translate", { text, targetLang });
+    const ipc = getIPC();
+    if (!ipc) return null;
+    const result = await ipc.invoke("translate", { text, targetLang });
     if (result && result.translated) {
       cache.set(cacheKey, result.translated);
       return result.translated;
@@ -184,7 +189,9 @@ function handleInput(e) {
     return;
   }
   inputDebounceTimer = setTimeout(async () => {
-    const result = await electron.ipcRenderer.invoke("translate", { text, targetLang: "en" });
+    const ipc = getIPC();
+    if (!ipc) return;
+    const result = await ipc.invoke("translate", { text, targetLang: "en" });
     if (result && result.translated) {
       currentTranslation = result.translated;
       isBlocked = result.blocked || false;

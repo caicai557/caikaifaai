@@ -78,3 +78,13 @@
 - [x] **Overlay Scrollbar**：实现类似 macOS 的隐藏式滚动条，悬停可见，无轨道背景。
 - [x] **居中布局**：修复极窄模式下图标未居中的问题。
 - [x] **高对比度字体**：提升未选中状态文字的对比度和字号。
+- [x] **交互微调**：修复设置按钮的缩放动画，移除无效的滚动样式。
+- [x] **Window Controls**：移动红绿灯至右侧，并调整尺寸为 14px，优化点击区域。
+
+### Bug 修复 (2025-12-25)
+- [x] **右键菜单修复**：修复侧边栏右键菜单功能无响应问题。
+    - 问题原因：`TelegramInstance` 接口缺少 `isPinned`/`isHibernated` 属性。
+    - 解决方案：在 `App.tsx` 和 `Sidebar.tsx` 中补全接口定义，并确保 `menuItems` 正确传递这些属性。
+- [x] **Session 持久化确认**：Telegram 账号缓存使用 `persist:` 前缀的 partition，登录状态可跨重启保留。
+- [x] **Telegram 白屏修复**：`telegram-governance.ts` 错误直接导入 `electron.ipcRenderer`，在 contextIsolation=true 时失败。已改用 preload 暴露的 `getIPC()` 辅助函数。
+- [x] **EIO 错误修复**：添加 `safeLog`/`safeError` 函数包装 console 输出，防止写入错误导致崩溃。

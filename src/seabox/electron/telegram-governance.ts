@@ -1,4 +1,16 @@
-import { ipcRenderer } from 'electron'
+// Use window.ipcRenderer exposed by preload.ts (NOT direct electron import!)
+// Direct import fails when contextIsolation is enabled
+
+// Type for the preload-exposed IPC interface
+interface PreloadIPC {
+    invoke: (channel: string, ...args: unknown[]) => Promise<unknown>
+    send: (channel: string, ...args: unknown[]) => void
+}
+
+const getIPC = (): PreloadIPC | null => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return (window as any).ipcRenderer || null
+}
 
 const CONFIG = {
     targetLang: 'zh-CN',
@@ -113,8 +125,10 @@ async function translateText(text: string, overrideTargetLang?: string): Promise
     if (cache.has(cacheKey)) return cache.get(cacheKey)!
 
     try {
-        // Call Python Sidecar via Main Process
-        const result = await ipcRenderer.invoke('translate', { text, targetLang })
+        // Call Python Sidecar via Main Process (using preload-exposed ipcRenderer)
+        const ipc = getIPC()
+        if (!ipc) return null
+        const result = await ipc.invoke('translate', { text, targetLang }) as { translated?: string; error?: string }
         // Verify result format from server.py (it returns { translated: "..." } or { error: "..." })
         if (result && result.translated) {
             // If result is same as original (and not english), maybe ignore? 
@@ -240,7 +254,9 @@ function handleInput(e: Event) {
     }
 
     inputDebounceTimer = setTimeout(async () => {
-        const result = await ipcRenderer.invoke('translate', { text, targetLang: 'en' })
+        const ipc = getIPC()
+        if (!ipc) return
+        const result = await ipc.invoke('translate', { text, targetLang: 'en' }) as { translated?: string; blocked?: boolean }
         if (result && result.translated) {
             currentTranslation = result.translated
             isBlocked = result.blocked || false

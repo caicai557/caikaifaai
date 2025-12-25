@@ -40,10 +40,25 @@ function createWindow() {
     y: windowState.y,
     width: windowState.width,
     height: windowState.height,
+    frame: false, // Frameless for custom UI
+    titleBarStyle: 'hidden', // Unified look on macOS
+    trafficLightPosition: { x: 18, y: 18 }, // macOS traffic light position
+    backgroundColor: '#00000000', // Transparent bg for rounding
     webPreferences: {
       preload: path.join(__dirname, 'preload.mjs'),
     },
   })
+
+  // Start with no menu bar for clean look
+  win.setMenuBarVisibility(false)
+
+  // Window Controls IPC
+  ipcMain.on('window:minimize', () => win?.minimize())
+  ipcMain.on('window:maximize', () => {
+    if (win?.isMaximized()) win.unmaximize()
+    else win?.maximize()
+  })
+  ipcMain.on('window:close', () => win?.close())
 
   // Restore maximized state
   if (windowState.isMaximized) {
@@ -108,13 +123,30 @@ import { spawn, type ChildProcess } from 'node:child_process'
 
 let pythonProcess: ChildProcess | null = null
 
+// Safe logging to prevent EIO write errors
+function safeLog(...args: unknown[]) {
+  try {
+    console.log(...args)
+  } catch {
+    // Ignore write errors
+  }
+}
+
+function safeError(...args: unknown[]) {
+  try {
+    console.error(...args)
+  } catch {
+    // Ignore write errors
+  }
+}
+
 function startPythonServer() {
   // Assuming .venv is in the project root (2 levels up from src/seabox)
   // APP_ROOT is src/seabox
   const pythonExec = path.join(process.env.APP_ROOT, '../../.venv/bin/python')
   const scriptPath = path.join(process.env.APP_ROOT, 'api/server.py')
 
-  console.log('[Electron] Spawning Python Backend:', pythonExec, scriptPath)
+  safeLog('[Electron] Spawning Python Backend:', pythonExec, scriptPath)
 
   pythonProcess = spawn(pythonExec, [scriptPath], {
     env: { ...process.env, PORT: '8000', PYTHONUNBUFFERED: '1' },
@@ -122,19 +154,19 @@ function startPythonServer() {
   })
 
   pythonProcess.stdout?.on('data', (data) => {
-    console.log(`[Python]: ${data.toString().trim()}`)
+    safeLog(`[Python]: ${data.toString().trim()}`)
   })
 
   pythonProcess.stderr?.on('data', (data) => {
-    console.error(`[Python Err]: ${data.toString().trim()}`)
+    safeError(`[Python Err]: ${data.toString().trim()}`)
   })
 
   pythonProcess.on('error', (err) => {
-    console.error('[Electron] Failed to start Python process:', err)
+    safeError('[Electron] Failed to start Python process:', err)
   })
 
   pythonProcess.on('exit', (code) => {
-    console.log(`[Electron] Python process exited with code ${code}`)
+    safeLog(`[Electron] Python process exited with code ${code}`)
   })
 }
 

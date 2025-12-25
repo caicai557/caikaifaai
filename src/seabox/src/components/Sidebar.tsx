@@ -59,9 +59,14 @@ export default function Sidebar({ setView, width, onResizeStart, telegramInstanc
     } | null>(null)
 
     const handleContextMenu = (e: React.MouseEvent, item: MenuItem & { isHibernated?: boolean, isPinned?: boolean }) => {
+        console.log('[Sidebar] handleContextMenu called for:', item.id, item)
         // Only show context menu for telegram items
-        if (item.id === 'home') return
+        if (item.id === 'home') {
+            console.log('[Sidebar] Skipping context menu for home')
+            return
+        }
         e.preventDefault()
+        console.log('[Sidebar] Setting context menu state at:', e.clientX, e.clientY)
         setContextMenu({
             visible: true,
             x: e.clientX,
@@ -73,36 +78,48 @@ export default function Sidebar({ setView, width, onResizeStart, telegramInstanc
         })
     }
 
+    // Window Controls
+    const handleWindowControl = (action: 'minimize' | 'maximize' | 'close') => {
+        if (window.ipcRenderer) window.ipcRenderer.send(`window:${action}`)
+    }
+
     const handleRefresh = (id: string) => {
-        window.ipcRenderer.send('menu:refresh', id)
+        console.log('[Sidebar] handleRefresh:', id)
+        if (window.ipcRenderer) window.ipcRenderer.send('menu:refresh', id)
     }
     const handleHibernate = (id: string) => {
-        window.ipcRenderer.send('menu:hibernate', id)
+        console.log('[Sidebar] handleHibernate:', id)
+        if (window.ipcRenderer) window.ipcRenderer.send('menu:hibernate', id)
     }
     const handleDelete = (id: string) => {
+        console.log('[Sidebar] handleDelete:', id)
         if (confirm(`确定要删除 ${id} 吗？`)) {
-            window.ipcRenderer.send('menu:delete', id)
+            if (window.ipcRenderer) window.ipcRenderer.send('menu:delete', id)
         }
     }
     const handlePin = (id: string) => {
-        window.ipcRenderer.send('menu:pin', id)
+        console.log('[Sidebar] handlePin:', id)
+        if (window.ipcRenderer) window.ipcRenderer.send('menu:pin', id)
     }
     const handleRename = (id: string) => {
+        console.log('[Sidebar] handleRename:', id)
         const newName = prompt('输入新名称:')
         if (newName) {
-            window.ipcRenderer.send('menu:rename', { id, label: newName })
+            if (window.ipcRenderer) window.ipcRenderer.send('menu:rename', { id, label: newName })
         }
     }
 
-    // Build menu items from props
-    const menuItems: MenuItem[] = [
+    // Build menu items from props - include isPinned and isHibernated for context menu
+    const menuItems: (MenuItem & { isHibernated?: boolean; isPinned?: boolean })[] = [
         { id: 'home', label: '仪表盘', subLabel: '系统概览', icon: Icons.Home, color: 'bg-blue-600' },
         ...telegramInstances.map((instance, i) => ({
             id: instance.id,
             label: instance.label,
             subLabel: i === 0 ? '官方频道' : `备用账号 ${i}`,
             icon: Icons.Telegram,
-            color: 'bg-[#0088cc]'
+            color: 'bg-[#0088cc]',
+            isPinned: instance.isPinned,
+            isHibernated: instance.isHibernated
         }))
     ]
 
@@ -121,7 +138,21 @@ export default function Sidebar({ setView, width, onResizeStart, telegramInstanc
                 drag-region
                 p-3 @[150px]/sidebar:p-6 @[150px]/sidebar:pb-4 
                 transition-all duration-300
+                relative
             `}>
+                {/* Traffic Lights (Window Controls) */}
+                <div className="flex items-center gap-2 mb-4 pl-1 no-drag group/lights opacity-0 hover:opacity-100 transition-opacity absolute top-3 right-3 z-50 @[150px]/sidebar:relative @[150px]/sidebar:top-auto @[150px]/sidebar:right-auto @[150px]/sidebar:opacity-100 @[150px]/sidebar:mb-6 @[150px]/sidebar:pl-0 @[150px]/sidebar:justify-end">
+                    <button onClick={() => handleWindowControl('close')} className="w-3.5 h-3.5 rounded-full bg-[#FF5F56] border border-[#E0443E] flex items-center justify-center group/btn shadow-sm active:scale-90 transition-transform">
+                        <svg className="w-2.5 h-2.5 text-black/50 opacity-0 group-hover/btn:opacity-100" viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" /></svg>
+                    </button>
+                    <button onClick={() => handleWindowControl('minimize')} className="w-3.5 h-3.5 rounded-full bg-[#FFBD2E] border border-[#DEA123] flex items-center justify-center group/btn shadow-sm active:scale-90 transition-transform">
+                        <svg className="w-2.5 h-2.5 text-black/50 opacity-0 group-hover/btn:opacity-100" viewBox="0 0 24 24" fill="currentColor"><path d="M19 13H5v-2h14v2z" /></svg>
+                    </button>
+                    <button onClick={() => handleWindowControl('maximize')} className="w-3.5 h-3.5 rounded-full bg-[#27C93F] border border-[#1AAB29] flex items-center justify-center group/btn shadow-sm active:scale-90 transition-transform">
+                        <svg className="w-2.5 h-2.5 text-black/50 opacity-0 group-hover/btn:opacity-100" viewBox="0 0 24 24" fill="currentColor"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z" /></svg>
+                    </button>
+                </div>
+
                 <div className="flex items-center justify-center @[150px]/sidebar:justify-start gap-3 mb-2 min-w-0">
                     <div className="w-8 h-8 @[150px]/sidebar:w-10 @[150px]/sidebar:h-10 bg-gradient-to-b from-blue-500 to-blue-600 rounded-[10px] flex items-center justify-center text-white shadow-lg shadow-blue-500/20 shrink-0 transition-all duration-300">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 @[150px]/sidebar:w-6 @[150px]/sidebar:h-6 drop-shadow-sm">
@@ -136,7 +167,7 @@ export default function Sidebar({ setView, width, onResizeStart, telegramInstanc
             </div>
 
             {/* Menu List - iPadOS STYLE */}
-            <nav className="flex-1 px-2 @[150px]/sidebar:px-3 space-y-1 overflow-y-auto overflow-x-hidden no-drag hover:overflow-y-overlay">
+            <nav className="flex-1 px-2 @[150px]/sidebar:px-3 space-y-1 overflow-y-auto overflow-x-hidden no-drag">
                 {menuItems.map((item) => {
                     const isActive = activeId === item.id
                     return (
@@ -207,7 +238,7 @@ export default function Sidebar({ setView, width, onResizeStart, telegramInstanc
                     flex items-center justify-center @[150px]/sidebar:justify-start
                     p-1.5 @[150px]/sidebar:px-2.5 @[150px]/sidebar:py-2
                     rounded-lg
-                    hover:bg-[var(--bg-sidebar-active)] transition-colors apple-ease active:scale-[0.98]
+                    hover:bg-[var(--bg-sidebar-active)] transition-all duration-200 apple-ease active:scale-[0.98]
                 ">
                     <div className="
                         w-7 h-7 

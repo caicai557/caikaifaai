@@ -7,6 +7,8 @@ interface TelegramInstance {
     id: string
     label: string
     partition: string
+    isPinned?: boolean
+    isHibernated?: boolean
 }
 
 interface AppSettings {
@@ -26,6 +28,13 @@ function App(): React.ReactElement {
     useEffect(() => {
         const loadSettings = async () => {
             try {
+                // Check if running in Electron environment
+                if (!window.ipcRenderer) {
+                    console.warn('[App] Not in Electron environment, using defaults')
+                    setTelegramInstances([{ id: 'telegram', label: 'Telegram', partition: 'persist:telegram-default' }])
+                    setIsLoaded(true)
+                    return
+                }
                 const settings: AppSettings = await window.ipcRenderer.invoke('get-settings')
                 setSidebarWidth(settings.sidebar.width)
                 setTelegramInstances(settings.telegrams)

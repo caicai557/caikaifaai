@@ -1,0 +1,4 @@
+{
+  "mcp_config_version": "2025-06-18",
+  "notes": "Core servers live in .mcp.json; optional servers belong to user/local scope."
+}

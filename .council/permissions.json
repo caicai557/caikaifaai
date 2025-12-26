@@ -1,7 +1,7 @@
 {
   "roles": {
     "codex": {
-      "description": "Orchestrator - Planning & Architecture",
+      "description": "Fix/Alignment - Review, vulnerability discovery, large refactors, boundary alignment (Codex 5.2)",
       "permissions": [
         "read_ledger",
         "plan_task",
@@ -13,7 +13,7 @@
       ]
     },
     "claude": {
-      "description": "Executor - Implementation & Testing",
+      "description": "High-stakes only - hardest, most important tasks and high-risk decisions (Claude Opus 4.5)",
       "permissions": [
         "read_ledger",
         "update_task",
@@ -31,7 +31,7 @@
       ]
     },
     "gemini": {
-      "description": "Advisor - Audit & Memory",
+      "description": "Frontend/Audit + Rapid implementation - UI/UX and cross-module audits (Gemini 3 Pro), fast TDD/iteration (Gemini 3 Flash)",
       "permissions": [
         "read_ledger",
         "audit_code",

@@ -9,6 +9,15 @@ from datetime import datetime
 from enum import Enum
 import json
 from pathlib import Path
+from copy import deepcopy
+
+try:
+    import networkx as nx
+except ImportError:  # pragma: no cover - optional dependency
+    nx = None
+
+
+DEFAULT_STORAGE_PATH = Path(".council/knowledge_graph.gml")
 
 
 class RelationType(Enum):
@@ -21,6 +30,7 @@ class RelationType(Enum):
     APPROVED_BY = "approved_by"     # A 被 B 批准
     CREATED_BY = "created_by"       # A 由 B 创建
     SUPERSEDES = "supersedes"       # A 取代 B
+    IMPORTS = "imports"             # A 导入 B (代码依赖)
 
 
 class EntityType(Enum):
@@ -84,12 +94,12 @@ class KnowledgeGraph:
     核心功能:
     1. 存储实体和关系
     2. 支持语义查询
-    3. 持久化到文件
+    3. 持久化到文件 (.gml 或 .json)
     
     可扩展为连接 Neo4j / FalkorDB
     
     使用示例:
-        kg = KnowledgeGraph()
+        kg = KnowledgeGraph()  # 默认使用 .council/knowledge_graph.gml
         
         # 添加实体
         kg.add_entity("file_1", EntityType.FILE, "auth.py", {"path": "src/auth.py"})
@@ -102,21 +112,65 @@ class KnowledgeGraph:
         related = kg.get_related("file_1", RelationType.IMPLEMENTS)
     """
     
-    def __init__(self, storage_path: Optional[str] = None):
+    def __init__(self, storage_path: Optional[str] = None, auto_load: bool = True):
         """
         初始化知识图谱
         
         Args:
-            storage_path: 持久化路径
+            storage_path: 持久化路径，默认 .council/knowledge_graph.gml
+            auto_load: 是否在初始化时自动加载已有文件
         """
         self.entities: Dict[str, Entity] = {}
         self.relations: List[Relation] = []
-        self.storage_path = Path(storage_path) if storage_path else None
+        self.storage_path = (
+            Path(storage_path) if storage_path is not None else DEFAULT_STORAGE_PATH
+        )
         
         # 索引
         self._entity_by_type: Dict[EntityType, Set[str]] = {}
         self._relations_from: Dict[str, List[Relation]] = {}
         self._relations_to: Dict[str, List[Relation]] = {}
+
+        if auto_load:
+            self.load()
+
+    @staticmethod
+    def _parse_datetime(value: Any) -> datetime:
+        """解析日期字符串，失败时返回当前时间"""
+        if isinstance(value, datetime):
+            return value
+        if isinstance(value, str):
+            try:
+                return datetime.fromisoformat(value)
+            except ValueError:
+                pass
+        return datetime.now()
+
+    @staticmethod
+    def _serialize_properties(properties: Dict[str, Any]) -> str:
+        """将属性序列化为 JSON 字符串，确保 GML 兼容"""
+        try:
+            return json.dumps(properties, ensure_ascii=False)
+        except TypeError:
+            safe_props = {k: str(v) for k, v in properties.items()}
+            return json.dumps(safe_props, ensure_ascii=False)
+
+    @staticmethod
+    def _require_networkx() -> None:
+        if nx is None:
+            raise ImportError("networkx 未安装，无法使用 GML 持久化。请安装 networkx>=3.2.0")
+
+    @property
+    def storage_format(self) -> str:
+        """返回持久化格式 (gml/json/unknown)"""
+        if not self.storage_path:
+            return "none"
+        suffix = self.storage_path.suffix.lower()
+        if suffix == ".gml":
+            return "gml"
+        if suffix == ".json":
+            return "json"
+        return "unknown"
     
     def add_entity(
         self, 
@@ -124,6 +178,8 @@ class KnowledgeGraph:
         entity_type: EntityType, 
         name: str,
         properties: Optional[Dict[str, Any]] = None,
+        created_at: Optional[datetime] = None,
+        updated_at: Optional[datetime] = None,
     ) -> Entity:
         """
         添加实体
@@ -133,6 +189,8 @@ class KnowledgeGraph:
             entity_type: 实体类型
             name: 实体名称
             properties: 属性
+            created_at: 创建时间（用于持久化恢复）
+            updated_at: 更新时间（用于持久化恢复）
             
         Returns:
             创建的实体
@@ -142,6 +200,8 @@ class KnowledgeGraph:
             entity_type=entity_type,
             name=name,
             properties=properties or {},
+            created_at=created_at or datetime.now(),
+            updated_at=updated_at or datetime.now(),
         )
         self.entities[entity_id] = entity
         
@@ -163,6 +223,7 @@ class KnowledgeGraph:
         relation_type: RelationType,
         properties: Optional[Dict[str, Any]] = None,
         weight: float = 1.0,
+        created_at: Optional[datetime] = None,
     ) -> Optional[Relation]:
         """
         添加关系
@@ -173,6 +234,7 @@ class KnowledgeGraph:
             relation_type: 关系类型
             properties: 属性
             weight: 权重
+            created_at: 创建时间（用于持久化恢复）
             
         Returns:
             创建的关系，如果实体不存在则返回None
@@ -186,6 +248,7 @@ class KnowledgeGraph:
             relation_type=relation_type,
             properties=properties or {},
             weight=weight,
+            created_at=created_at or datetime.now(),
         )
         self.relations.append(relation)
         
@@ -320,6 +383,48 @@ class KnowledgeGraph:
         
         return decision
     
+    def _reset(self) -> None:
+        """清空现有数据"""
+        self.entities.clear()
+        self.relations.clear()
+        self._entity_by_type.clear()
+        self._relations_from.clear()
+        self._relations_to.clear()
+
+    def _save_json(self) -> None:
+        data = {
+            "entities": [e.to_dict() for e in self.entities.values()],
+            "relations": [r.to_dict() for r in self.relations],
+        }
+        with open(self.storage_path, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+
+    def _save_gml(self) -> None:
+        self._require_networkx()
+        graph = nx.MultiDiGraph()
+
+        for entity in self.entities.values():
+            graph.add_node(
+                entity.id,
+                type=entity.entity_type.value,
+                name=entity.name,
+                properties=self._serialize_properties(deepcopy(entity.properties)),
+                created_at=entity.created_at.isoformat(),
+                updated_at=entity.updated_at.isoformat(),
+            )
+
+        for rel in self.relations:
+            graph.add_edge(
+                rel.source_id,
+                rel.target_id,
+                type=rel.relation_type.value,
+                properties=self._serialize_properties(deepcopy(rel.properties)),
+                weight=rel.weight,
+                created_at=rel.created_at.isoformat(),
+            )
+
+        nx.write_gml(graph, self.storage_path)
+
     def save(self) -> bool:
         """保存到文件"""
         if not self.storage_path:
@@ -327,16 +432,101 @@ class KnowledgeGraph:
         
         try:
             self.storage_path.parent.mkdir(parents=True, exist_ok=True)
-            data = {
-                "entities": [e.to_dict() for e in self.entities.values()],
-                "relations": [r.to_dict() for r in self.relations],
-            }
-            with open(self.storage_path, "w", encoding="utf-8") as f:
-                json.dump(data, f, ensure_ascii=False, indent=2)
+            if self.storage_format == "gml":
+                self._save_gml()
+            else:
+                self._save_json()
             return True
         except Exception as e:
             print(f"保存知识图谱失败: {e}")
             return False
+    
+    def _load_json(self) -> None:
+        with open(self.storage_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        for e in data.get("entities", []):
+            self.add_entity(
+                entity_id=e["id"],
+                entity_type=EntityType(e["type"]),
+                name=e["name"],
+                properties=e.get("properties", {}),
+                created_at=self._parse_datetime(e.get("created_at")),
+                updated_at=self._parse_datetime(e.get("updated_at")),
+            )
+        
+        for r in data.get("relations", []):
+            relation_type = r.get("type", RelationType.RELATED_TO.value)
+            try:
+                rel_enum = RelationType(relation_type)
+            except ValueError:
+                rel_enum = RelationType.RELATED_TO
+            self.add_relation(
+                source_id=r["source"],
+                target_id=r["target"],
+                relation_type=rel_enum,
+                properties=r.get("properties", {}),
+                weight=r.get("weight", 1.0),
+                created_at=self._parse_datetime(r.get("created_at")),
+            )
+
+    def _load_gml(self) -> None:
+        self._require_networkx()
+        graph = nx.read_gml(self.storage_path)
+
+        for node_id, attrs in graph.nodes(data=True):
+            entity_type_value = attrs.get("type", EntityType.TASK.value)
+            try:
+                entity_type = EntityType(entity_type_value)
+            except ValueError:
+                entity_type = EntityType.TASK
+
+            raw_props = attrs.get("properties", "{}")
+            if isinstance(raw_props, str):
+                try:
+                    properties = json.loads(raw_props)
+                except json.JSONDecodeError:
+                    properties = {"raw_properties": raw_props}
+            elif isinstance(raw_props, dict):
+                properties = raw_props
+            else:
+                properties = {}
+
+            self.add_entity(
+                entity_id=str(node_id),
+                entity_type=entity_type,
+                name=attrs.get("name", str(node_id)),
+                properties=properties,
+                created_at=self._parse_datetime(attrs.get("created_at")),
+                updated_at=self._parse_datetime(attrs.get("updated_at")),
+            )
+
+        for source, target, attrs in graph.edges(data=True):
+            rel_type_value = attrs.get("type", RelationType.RELATED_TO.value)
+            try:
+                rel_type = RelationType(rel_type_value)
+            except ValueError:
+                rel_type = RelationType.RELATED_TO
+
+            raw_props = attrs.get("properties", "{}")
+            if isinstance(raw_props, str):
+                try:
+                    properties = json.loads(raw_props)
+                except json.JSONDecodeError:
+                    properties = {"raw_properties": raw_props}
+            elif isinstance(raw_props, dict):
+                properties = raw_props
+            else:
+                properties = {}
+
+            self.add_relation(
+                source_id=str(source),
+                target_id=str(target),
+                relation_type=rel_type,
+                properties=properties,
+                weight=float(attrs.get("weight", 1.0)),
+                created_at=self._parse_datetime(attrs.get("created_at")),
+            )
     
     def load(self) -> bool:
         """从文件加载"""
@@ -344,35 +534,11 @@ class KnowledgeGraph:
             return False
         
         try:
-            with open(self.storage_path, "r", encoding="utf-8") as f:
-                data = json.load(f)
-            
-            # 清空现有数据
-            self.entities.clear()
-            self.relations.clear()
-            self._entity_by_type.clear()
-            self._relations_from.clear()
-            self._relations_to.clear()
-            
-            # 加载实体
-            for e in data.get("entities", []):
-                self.add_entity(
-                    entity_id=e["id"],
-                    entity_type=EntityType(e["type"]),
-                    name=e["name"],
-                    properties=e.get("properties", {}),
-                )
-            
-            # 加载关系
-            for r in data.get("relations", []):
-                self.add_relation(
-                    source_id=r["source"],
-                    target_id=r["target"],
-                    relation_type=RelationType(r["type"]),
-                    properties=r.get("properties", {}),
-                    weight=r.get("weight", 1.0),
-                )
-            
+            self._reset()
+            if self.storage_format == "gml":
+                self._load_gml()
+            else:
+                self._load_json()
             return True
         except Exception as e:
             print(f"加载知识图谱失败: {e}")

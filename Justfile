@@ -32,12 +32,7 @@ impl:
 # === 测试与验证 ===
 
 test:
-  @source .venv/bin/activate && \
-    if python -c 'import importlib.util,sys; sys.exit(0 if importlib.util.find_spec("pytest_cov") else 1)'; then \
-      pytest -q --cov=src --cov-report=xml tests/; \
-    else \
-      pytest tests/ -q; \
-    fi
+  @source .venv/bin/activate && pytest -q --cov=src --cov-report=xml tests/
 
 compile:
   @python3 -m py_compile src/*.py
@@ -50,6 +45,7 @@ lint:
 # === 门禁 ===
 
 verify: compile lint test
+  @source .venv/bin/activate && coverage report --fail-under=90
   @echo "✅ VERIFY PASS"
 
 # === 交付 ===

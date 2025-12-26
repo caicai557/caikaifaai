@@ -56,10 +56,11 @@ def command_exists(cmd: str) -> bool:
     return result.returncode == 0
 
 def run_verify() -> dict:
-    if not command_exists("just"):
-        return {"status": "missing", "stderr": "just not found in PATH", "code": 127}
+    verify_script = os.path.join("scripts", "verify.sh")
+    if not os.path.exists(verify_script):
+        return {"status": "missing", "stderr": f"{verify_script} not found", "code": 127}
     result = subprocess.run(
-        ["just", "verify"],
+        ["bash", verify_script],
         capture_output=True,
         text=True,
     )

@@ -24,12 +24,11 @@ Rules:
 - Minimal change principle
 - Make tests pass (green state)
 - Follow existing code style
-
-After implementation, run: just verify
+- Verification runs via system hook (just verify); do not claim success if it fails
 PROMPT_EOF
 )
 
 gemini "$PROMPT"
 
 echo "Review the output and apply changes manually"
-echo "Then run: just verify"
+echo "Verification runs via system hook (just verify) before reporting success"

@@ -45,8 +45,8 @@ End with the exact command you ran.
 Implement minimal change to satisfy tests and SPEC.
 Rules:
 - Small diff-first plan, then apply edits
-- Run `just verify` and paste output
-- Update .council/NOTES.md
+- Verification runs via system hook (`just verify`); do not claim success if it fails
+- Do not edit .council/NOTES.md manually (verify hook updates it)
 ```
 
 ## 自愈循环

@@ -37,3 +37,9 @@ Keep it short and actionable.
 
 rm -f "$INPUT"
 echo "Wrote AUDIT.md"
+
+PYTHON_BIN="python3"
+if [[ -x ".venv/bin/python" ]]; then
+  PYTHON_BIN=".venv/bin/python"
+fi
+"${PYTHON_BIN}" scripts/graph_builder.py build

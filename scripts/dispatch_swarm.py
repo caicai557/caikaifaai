@@ -93,6 +93,8 @@ def dispatch_agent_tool(
             steps.append(["bash", "scripts/impl_gemini.sh"])
         if run_pipeline or run_verify:
             steps.append(["bash", "scripts/verify.sh"])
+        if run_impl and not (run_pipeline or run_verify):
+            steps.append(["bash", "scripts/verify.sh"])
 
         step_results = []
         for cmd in steps:

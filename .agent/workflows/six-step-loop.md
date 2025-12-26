@@ -17,11 +17,11 @@ description: "完整的六步自愈循环开发工作流"
 
 ### Step 1: 需求代码化 (PM 阶段)
 **主控者**: Codex  
-**命令**: `/prd_generate "<功能描述>"`
+**命令**: `/plan "<功能描述>"`
 
 ```bash
 # 示例
-/prd_generate "实现用户登录功能，支持邮箱+密码认证"
+/plan "实现用户登录功能，支持邮箱+密码认证"
 ```
 
 **输出**: `prd_output.yaml`  
@@ -35,11 +35,11 @@ yq '.task_tree[].name' prd_output.yaml
 
 ### Step 2: 全库审计与方案设计 (架构师阶段)
 **主控者**: Gemini Pro  
-**命令**: `/audit_design "<架构审计目标>"`
+**命令**: `/audit "<架构审计目标>"`
 
 ```bash
 # 示例
-/audit_design "用户登录功能的架构设计和冲突扫描"
+/audit "用户登录功能的架构设计和冲突扫描"
 ```
 
 **输出**: `audit_output.yaml`  
@@ -58,11 +58,11 @@ yq '.audit_report.technical_design.file_structure' audit_output.yaml
 
 ### Step 3: TDD 强制约束 (QA 阶段)
 **主控者**: Claude Code  
-**命令**: `/tdd_tests "<测试目标>"`
+**命令**: `/tdd "<测试目标>"`
 
 ```bash
 # 示例
-/tdd_tests "为用户登录功能生成完整测试套件"
+/tdd "为用户登录功能生成完整测试套件"
 ```
 
 **输出**: `tests.json`  
@@ -114,10 +114,10 @@ docker-compose exec python-sandbox python /workspace/tools/batch_executor.py /wo
 
 ### Step 5: 自愈校验与 Wald 共识 (裁决阶段)
 **主控者**: Claude Code  
-**命令**: `/self_heal`
+**命令**: `/verify`
 
 ```bash
-/self_heal
+/verify
 ```
 
 **自愈循环**:
@@ -162,13 +162,13 @@ docker-compose exec python-sandbox python /workspace/tools/batch_executor.py /wo
 docker-compose up -d
 
 # Step 1: 需求
-/prd_generate "用户登录功能(JWT认证)"
+/plan "用户登录功能(JWT认证)"
 
 # Step 2: 设计
-/audit_design "登录功能架构审计"
+/audit "登录功能架构审计"
 
 # Step 3: 测试
-/tdd_tests "生成登录测试套件"
+/tdd "生成登录测试套件"
 
 # 验证覆盖率
 docker-compose exec nodejs-sandbox pnpm test -- --coverage
@@ -178,7 +178,7 @@ docker-compose exec nodejs-sandbox pnpm test -- --coverage
 docker-compose exec python-sandbox python /workspace/tools/batch_executor.py /workspace/execution_plan.yaml
 
 # Step 5: 自愈
-/self_heal
+/verify
 
 # Step 6: 检查点
 /checkpoint "登录功能完成"
@@ -208,7 +208,7 @@ docker-compose exec python-sandbox python /workspace/tools/batch_executor.py /wo
 ### 测试覆盖率不达标
 ```bash
 # 补充测试
-/tdd_tests "补充边界条件测试"
+/tdd "补充边界条件测试"
 
 # 重新验证
 npm test -- --coverage
@@ -223,7 +223,7 @@ cat self_healing_report.yaml
 # ... 修复代码 ...
 
 # 重新自愈
-/self_heal
+/verify
 ```
 
 ### 需要回滚
@@ -247,12 +247,12 @@ git reset --hard $(cat .last_checkpoint)
 
 ```mermaid
 graph LR
-    A[/prd_generate] --> B[/audit_design]
-    B --> C[/tdd_tests]
+    A[/plan] --> B[/audit]
+    B --> C[/tdd]
     C --> D{覆盖率≥90%?}
     D -->|No| C
     D -->|Yes| E[batch_executor.py]
-    E --> F[/self_heal]
+    E --> F[/verify]
     F --> G{测试通过?}
     G -->|No| H{迭代<5?}
     H -->|Yes| E

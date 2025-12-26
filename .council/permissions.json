@@ -8,8 +8,11 @@
         "search_tools",
         "read_resource",
         "read_file",
+        "write_file",
+        "run_command",
         "list_directory",
-        "get_file_info"
+        "get_file_info",
+        "create_or_update_file"
       ]
     },
     "claude": {
@@ -37,10 +40,14 @@
         "audit_code",
         "read_resource",
         "read_file",
+        "write_file",
+        "run_command",
         "list_directory",
         "get_file_info",
         "search_code",
-        "search_issues"
+        "search_issues",
+        "create_or_update_file",
+        "push_files"
       ]
     }
   },

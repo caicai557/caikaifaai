@@ -1,47 +1,11 @@
 {
   "mcpServers": {
     "filesystem": {
-      "type": "stdio",
-      "command": "python3",
+      "command": "npx",
       "args": [
-        "scripts/mcp_guard.py",
-        "--role",
-        "claude",
-        "--cmd",
-        "npx",
         "-y",
         "@modelcontextprotocol/server-filesystem",
         "."
-      ]
-    },
-    "github": {
-      "type": "stdio",
-      "command": "python3",
-      "args": [
-        "scripts/mcp_guard.py",
-        "--role",
-        "claude",
-        "--cmd",
-        "npx",
-        "-y",
-        "@modelcontextprotocol/server-github"
-      ],
-      "env": {
-        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN:-}"
-      }
-    },
-    "codex": {
-      "type": "stdio",
-      "command": "codex",
-      "args": [
-        "mcp-server"
-      ]
-    },
-    "fetch": {
-      "type": "stdio",
-      "command": "uvx",
-      "args": [
-        "mcp-server-fetch"
       ]
     }
   }

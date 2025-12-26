@@ -1,85 +1,149 @@
-# 项目协作契约（Claude Code）
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 > [!IMPORTANT]
-> **必须严格遵循**: 在执行任何任务前,请先阅读并遵守 [AGENTS.md](file:///home/dabah123/projects/caicai/AGENTS.md) 中的所有规则和模型分工。AGENTS.md 是智能体理事会的"单一事实来源"。
+> **Strictly follow the rules in [.council/AGENTS.md](./.council/AGENTS.md)**
 
-## 目标
-- 小步交付（Small Diffs）
-- 任何改动必须可验证、可回滚
-- 默认不做大重构
+## Project Overview
 
-## 工作流（强制）
-1) 先输出 plan（≤30行）+ 验收命令
-2) 再改代码（尽量 ≤200 行 diff）
-3) 跑验收命令并贴结果
-4) 输出交接（YAML/JSON）
+**Name**: cesi-telegram-multi
+**Type**: Python backend application (telegram-web client with translation)
+**Main Purpose**: Multi-instance Telegram Web A runner with bidirectional translation support
+**Language**: Python 3.12+
+**Architecture**: Async/await with message interception and translation pipeline
 
-## 何时调用谁
-- 快速草稿/样板/简单实现：优先 Gemini Flash（gpf）
-- 前端复杂交互/状态机/架构权衡：用 Gemini Pro（gpp）做评审
-- 生产加固/边界条件/测试：交给 Codex（通过 MCP codex 工具或 cm）
+## Common Commands
 
-## MCP 工具
-- `/codex_review` - 风险扫描
-- `/codex_patch_plan <目标>` - 最小补丁计划
-- `council-memory` - 会话持久化和知识图谱
+### Development Commands
 
-## 智能体理事会 (Agent Council)
+```bash
+# Install dependencies
+pip install -e ".[telegram]"        # Telegram features
+pip install -e ".[dev]"              # Development tools (pytest, ruff)
 
-> [!TIP]
-> 使用 `council` 模块协调多智能体协作
+# Testing
+just test                            # Run pytest on tests/ directory
+pytest tests/test_<module>.py        # Run single test file
+
+# Code quality
+just lint                            # Check code with ruff
+just compile                         # Check syntax with py_compile
+
+# Verification
+just verify                          # Run compile + lint + test (gate keeper)
+just ship                            # verify + codex review + show git log
+```
+
+### Development Workflow
+
+```bash
+just dev "<task description>"        # Full workflow: codemap → plan → audit/tdd/impl → verify
+just tdd                             # TDD mode (write tests first)
+just impl                            # Implementation mode (minimal patch + verify)
+```
+
+## Architecture & Code Organization
+
+### Core Modules
+
+```
+src/
+├── telegram_multi/           # Main Telegram multi-instance runner
+│   ├── message_interceptor.py   # Message interception & translation injection
+│   ├── translator.py            # Translation factory with provider pattern
+│   ├── instance_manager.py      # Multi-instance lifecycle management
+│   ├── browser_context.py       # Browser context setup (Playwright)
+│   ├── config.py                # Configuration models (Pydantic)
+│   └── translators/             # Translation provider implementations
+│       └── google.py            # Google Translate provider
+├── seabox/                   # API server module (FastAPI-based)
+├── config.py                 # Global feature flags
+└── calculator.py             # Utility module
+```
+
+### Key Classes & Patterns
+
+**MessageInterceptor** (`message_interceptor.py`):
+- Injects JavaScript to intercept Telegram messages
+- Translates messages bidirectionally based on config
+- Supports callbacks for message interception events
+- Uses `get_injection_script()` to return browser-side code
+
+**Translator** (`translator.py`):
+- Factory pattern for creating translator instances
+- Plugin system: `register_provider(name, provider_class)`
+- Built-in Google Translate provider, extensible for DeepL/Argos
+- Caches translations to avoid duplicate API calls
+
+**InstanceManager** (`instance_manager.py`):
+- Manages lifecycle of multiple Telegram Web A instances
+- Coordinates browser context creation and cleanup
+- Handles async startup/shutdown of instances
+
+**TelegramConfig** (`config.py`):
+- Pydantic models for instance, translation, and browser configuration
+- Centralized configuration loading
+
+### Entry Points
+
+- `run_telegram.py`: CLI for launching multi-instance Telegram with translation
+- `run_dashboard.py`: Dashboard server for monitoring instances
+- Tests: `tests/test_*.py` files for each module
+
+## Testing Strategy
+
+- **Framework**: Pytest with coverage tracking
+- **Test Structure**: One test file per source module (e.g., `test_message_interceptor.py`)
+- **Mocking**: Use `unittest.mock` for translator and browser context mocks
+- **Run**: `just test` or `pytest tests/` for all tests
+
+Example: Running a single test
+```bash
+pytest tests/test_translator.py -v
+pytest tests/test_translator.py::TestTranslator::test_translate -v
+```
+
+## Development Standards
+
+- **Type Hints**: Required for all function signatures
+- **Async/Await**: Used for Playwright browser operations and Translator batching
+- **Config**: Use Pydantic models for configuration
+- **Providers**: Use factory pattern for pluggable translators
+
+## Batch Operations Protocol
+
+For changes affecting 3+ files, write a Python script instead of manual edits:
 
 ```python
-from council.agents import Architect, Coder, SecurityAuditor
-from council.facilitator import Facilitator, ConsensusDecision
-from council.governance import GovernanceGateway, ActionType
+# Example: scripts/bulk_rename.py
+import os, re, glob
+for filepath in glob.glob("src/**/*.py", recursive=True):
+    with open(filepath) as f:
+        content = f.read()
+    content = re.sub(r"old_name", "new_name", content)
+    with open(filepath, "w") as f:
+        f.write(content)
 ```
 
-### 专家角色
-| 角色 | 职责 | 立场 |
-|------|------|------|
-| Architect | 顶层设计、架构评审 | 长期可维护性 |
-| Coder | 代码实现、TDD | Small Diffs |
-| SecurityAuditor | 漏洞扫描、攻击面分析 | 怀疑论者 |
+## Verification Gate (just verify)
 
-### Wald 共识算法
-- **π ≥ 0.95**: 自动提交 (AUTO_COMMIT)
-- **π ≤ 0.30**: 拒绝 (REJECT)
-- **其他**: 人工审核 (HOLD_FOR_HUMAN)
+This is the single arbiter of quality:
+1. `compile`: Check Python syntax
+2. `lint`: Check code style with ruff
+3. `test`: Run pytest suite
 
-## HITL 治理流程
+All three must pass before shipping.
 
-> [!CAUTION]
-> 以下操作**必须经过人工审批**:
+## Safety Boundaries
 
-| 操作类型 | 风险级别 | 审批要求 |
-|----------|----------|----------|
-| DEPLOY | Critical | 强制 |
-| DATABASE | Critical | 强制 |
-| SECURITY | Critical | 强制 |
-| FILE_DELETE | High | 强制 |
-| CONFIG_CHANGE | Medium | 推荐 |
+- ❌ **Forbidden**: `rm -rf`, `git push`, modifying `.env`, destructive file operations
+- ✅ **Free**: `read`, `ls`, `grep`, `lint`, `pytest`, `python -m py_compile`
+- ⚠️ **Confirm**: Git commits/pushes, file deletions, batch edits
 
-### 审批流程
-```
-1. 检查是否需要审批
-   → GovernanceGateway.requires_approval(action_type, paths)
+## Related Documentation
 
-2. 创建审批请求
-   → gateway.create_approval_request(...)
-
-3. 等待董事长签字
-   → gateway.approve(request_id) 或 gateway.reject(request_id)
-```
-
-### 受保护路径 (自动触发审批)
-- `deploy/**`, `config/production/**`
-- `.env*`, `secrets/**`
-- `*.key`, `*.pem`
-
-## 硬性约束
-1. 所有交接 → 一律 YAML/JSON
-2. 所有改动 → 一律 Small diffs（≤200行）
-3. 所有任务 → 一律带 verification
-4. **高风险操作 → 一律经 HITL 网关审批**
-
+- [.council/AGENTS.md](./.council/AGENTS.md): Agent governance and routing rules
+- [CODEMAP.md](./CODEMAP.md): High-level project architecture
+- [NOTES.md](./NOTES.md): Session notes and decisions
+- [pyproject.toml](./pyproject.toml): Project metadata and dependencies

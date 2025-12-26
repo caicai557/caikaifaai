@@ -20,6 +20,8 @@ class TranslationConfig(BaseModel):
     provider: str = "google"
     source_lang: str = "auto"
     target_lang: str = "en"
+    display_mode: str = "bilingual"
+    show_header: bool = True
 
     @field_validator("provider")
     @classmethod
@@ -28,6 +30,15 @@ class TranslationConfig(BaseModel):
         valid_providers = {"google", "deepl", "local"}
         if v not in valid_providers:
             raise ValueError(f"provider must be one of {valid_providers}, got {v}")
+        return v
+
+    @field_validator("display_mode")
+    @classmethod
+    def validate_display_mode(cls, v: str) -> str:
+        """Validate that display_mode is one of supported types."""
+        valid_modes = {"bilingual", "replace", "original"}
+        if v not in valid_modes:
+            raise ValueError(f"display_mode must be one of {valid_modes}, got {v}")
         return v
 
 

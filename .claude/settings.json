@@ -1,28 +1,25 @@
 {
   "permissions": {
-    "deny": [
-      "Read(**/.env)",
-      "Read(**/*.key)",
-      "Read(**/secrets/**)"
-    ],
+    "deny": ["Read(**/.env)", "Read(**/*.key)", "Read(**/secrets/**)"],
     "allow": [
-      "Read(*)",
-      "Bash(git status:*)",
-      "Bash(git diff:*)",
-      "Bash(git log:*)",
-      "Bash(pnpm -v)",
-      "Bash(pnpm install:*)",
-      "Bash(pnpm -r test:*)",
-      "Bash(pnpm -r lint:*)",
-      "Bash(pnpm -r build:*)",
-      "Bash(gemini -m *:*)",
-      "Bash(gemini -p *:*)"
+      "Read(**)",
+      "Bash(git status :*)",
+      "Bash(git diff :*)",
+      "Bash(git log :*)",
+      "Bash(python :*)",
+      "Bash(pip :*)",
+      "Bash(pytest :*)",
+      "Bash(just :*)",
+      "Bash(ruff :*)",
+      "Bash(gemini -m :*)",
+      "Bash(gemini -p :*)",
+      "Bash(codex :*)"
     ],
     "ask": [
-      "Bash(git commit:*)",
-      "Bash(git push:*)",
-      "Bash(rm *:*)",
-      "Bash(del *:*)"
+      "Bash(git commit :*)",
+      "Bash(git push :*)",
+      "Bash(rm :*)",
+      "Bash(del :*)"
     ]
   }
 }

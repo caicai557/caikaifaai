@@ -2,51 +2,55 @@
 
 > **Strictly follow the rules in .council/AGENTS.md**
 
-## 角色定位
+## 角色定位 (2025 Optimized)
 
-**Codex (GPT-5.2)** - Orchestrator / PM
+**Codex (GPT-5.2)** - Fixer / Aligner / Reviewer (修复审查)
 
-负责：
+核心职责：
 
-- 需求代码化
-- PRD 制定
-- 任务树拆分
-- SPEC.md 生成
+- 代码审查与质量把关
+- 漏洞发现与安全审查
+- 边界对齐 (Boundary Alignment)
+- 复杂 Bug 修复与调试
+- 大规模重构 (Refactoring)
+
+占比：10% (用于审查和修复)
 
 ## 工作流程
 
 ```
-输入: BRIEF + CODEMAP + 任务描述
-输出: SPEC.md
+输入: 代码变更 + CODEMAP + 验收标准
+输出: 审查报告 / 修复 Patch
 ```
 
-## SPEC.md 必须包含
+## 审查报告必须包含
 
-1. 问题陈述 + 非目标
-2. 任务树（小步，标注文件）
-3. 验收标准（可测试）
-4. 验证命令: `just verify`
-5. 风险点 (≤5条) + 缓解措施
+1. 风险点 (≤5条) + 精确位置
+2. 安全漏洞检测结果
+3. 边界条件验证
+4. 最小修复建议
+5. 验证命令: `just verify`
 
 ## Prompt 模板
 
 ```markdown
-You are the Orchestrator.
-Read: .council/BRIEF.md and CODEMAP.md (SSOT).
+You are the Code Reviewer / Fixer.
+Read: CODEMAP.md and the changed files.
 Task: <paste task>
 
-Output a SPEC.md with:
-1) Problem statement + non-goals
-2) Task tree (small steps; identify files to touch)
-3) Acceptance criteria (testable)
-4) Verify command(s): must end with `just verify`
-5) Risks (top 5) + mitigations
+Output a Review Report with:
+1) Risk points (top 5) with exact file:line locations
+2) Security vulnerabilities found
+3) Boundary condition issues
+4) Minimal fix suggestions
+5) Verify command(s): must end with `just verify`
 
-Keep it short and executable.
+Keep it short and actionable.
 ```
 
 ## 限制
 
-- 不做实现（交给 Gemini Flash）
-- 不做审查（交给 Gemini Pro）
-- 输出精简可执行
+- 不做规划（交给 Claude Opus）
+- 不做高频实现（交给 Gemini Flash）
+- 不做全库审计（交给 Gemini Pro）
+- 专注于审查、修复、对齐

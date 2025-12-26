@@ -219,3 +219,77 @@ class TestMessageInterceptorDOMIntegration:
             or "input" in script.lower()
             or "contenteditable" in script.lower()
         )
+
+
+class TestInjectionScriptDynamicConfig:
+    """Phase 4.2: Contract tests for dynamic configuration in injection script."""
+
+    def test_script_contains_dynamic_config(self):
+        """Contract: JS script contains dynamic CONFIG object."""
+        config = TranslationConfig(enabled=True)
+        interceptor = MessageInterceptor(config)
+        script = interceptor.get_injection_script()
+        assert "const CONFIG =" in script or "var CONFIG =" in script
+
+    def test_config_contains_source_lang(self):
+        """Contract: CONFIG contains sourceLang from config.source_lang."""
+        config = TranslationConfig(enabled=True, source_lang="fr")
+        interceptor = MessageInterceptor(config)
+        script = interceptor.get_injection_script()
+        assert '"sourceLang": "fr"' in script or "'sourceLang': 'fr'" in script
+
+    def test_config_contains_target_lang(self):
+        """Contract: CONFIG contains targetLang from config.target_lang."""
+        config = TranslationConfig(enabled=True, target_lang="ja")
+        interceptor = MessageInterceptor(config)
+        script = interceptor.get_injection_script()
+        assert '"targetLang": "ja"' in script or "'targetLang': 'ja'" in script
+
+    def test_config_contains_display_mode(self):
+        """Contract: CONFIG contains displayMode from config.display_mode."""
+        config = TranslationConfig(enabled=True, display_mode="replace")
+        interceptor = MessageInterceptor(config)
+        script = interceptor.get_injection_script()
+        assert (
+            '"displayMode": "replace"' in script
+            or "'displayMode': 'replace'" in script
+        )
+
+    def test_config_contains_show_header(self):
+        """Contract: CONFIG contains showHeader from config.show_header."""
+        config = TranslationConfig(enabled=True, show_header=False)
+        interceptor = MessageInterceptor(config)
+        script = interceptor.get_injection_script()
+        # After .lower(), "showHeader" becomes "showheader"
+        assert (
+            '"showheader": false' in script.lower()
+            or "'showheader': false" in script.lower()
+        )
+
+    def test_no_hardcoded_default_lang(self):
+        """Contract: Script has no hardcoded 'zh-CN' when configured otherwise."""
+        config = TranslationConfig(enabled=True, target_lang="en")
+        interceptor = MessageInterceptor(config)
+        script = interceptor.get_injection_script()
+        # zh-CN shouldn't be forced in CONFIG when target is different
+        assert '"targetLang": "zh-CN"' not in script
+        assert "'targetLang': 'zh-CN'" not in script
+
+    def test_different_configs_generate_different_scripts(self):
+        """Contract: Different configurations generate different scripts."""
+        config1 = TranslationConfig(enabled=True, target_lang="en")
+        config2 = TranslationConfig(enabled=True, target_lang="ja")
+
+        script1 = MessageInterceptor(config1).get_injection_script()
+        script2 = MessageInterceptor(config2).get_injection_script()
+
+        assert script1 != script2
+
+    def test_bilingual_mode_contains_logic(self):
+        """Contract: Bilingual mode script contains bilingual related logic."""
+        config = TranslationConfig(enabled=True, display_mode="bilingual")
+        interceptor = MessageInterceptor(config)
+        script = interceptor.get_injection_script()
+
+        # Should contain logic to handle both original and translated text
+        assert "bilingual" in script.lower()

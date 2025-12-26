@@ -32,13 +32,20 @@ impl:
 # === 测试与验证 ===
 
 test:
-  @source .venv/bin/activate && pytest tests/ -q
+  @source .venv/bin/activate && \
+    if python -c 'import importlib.util,sys; sys.exit(0 if importlib.util.find_spec("pytest_cov") else 1)'; then \
+      pytest -q --cov=src --cov-report=xml tests/; \
+    else \
+      pytest tests/ -q; \
+    fi
 
 compile:
   @python3 -m py_compile src/*.py
 
 lint:
-  @if command -v ruff >/dev/null 2>&1; then ruff check .; else echo "skip: ruff not installed"; fi
+  @if [[ -x .venv/bin/ruff ]]; then .venv/bin/ruff check src tests tools; \
+    elif command -v ruff >/dev/null 2>&1; then ruff check src tests tools; \
+    else echo "skip: ruff not installed"; fi
 
 # === 门禁 ===
 

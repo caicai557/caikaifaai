@@ -1,27 +1,50 @@
 {
   "mcpServers": {
-    "github": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-github"],
-      "env": {
-        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"
-      }
+    "tool_search": {
+      "type": "tool_search_tool_bm25_20251119",
+      "description": "Dynamic tool discovery - always loaded",
+      "defer_loading": false
     },
     "filesystem": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-filesystem", "."]
+      "command": "python3",
+      "args": ["scripts/mcp_guard.py", "--role", "claude", "--cmd", "npx", "-y", "@modelcontextprotocol/server-filesystem", "."],
+      "description": "High-frequency - always loaded (Guarded)",
+      "defer_loading": false
     },
     "memory": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-memory"]
+      "command": "python3",
+      "args": ["scripts/mcp_memory_server.py"],
+      "description": "Live Synapse - In-Memory & RBAC",
+      "defer_loading": false
+    },
+    "github": {
+      "command": "python3",
+      "args": ["scripts/mcp_guard.py", "--role", "claude", "--cmd", "npx", "-y", "@modelcontextprotocol/server-github"],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"
+      },
+      "description": "On-demand - deferred (Guarded)",
+      "defer_loading": true
     },
     "codex": {
       "command": "codex",
-      "args": ["mcp-server"]
+      "args": ["mcp-server"],
+      "description": "On-demand - deferred",
+      "defer_loading": true
     },
     "fetch": {
       "command": "npx",
-      "args": ["-y", "@anthropics/mcp-server-fetch"]
+      "args": ["-y", "@anthropics/mcp-server-fetch"],
+      "description": "On-demand - deferred",
+      "defer_loading": true
+    },
+    "browser": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-puppeteer"],
+      "description": "Browser automation - deferred",
+      "defer_loading": true
     }
-  }
+  },
+  "betas": ["advanced-tool-use-2025-11-20"],
+  "version": "2025-06-18"
 }

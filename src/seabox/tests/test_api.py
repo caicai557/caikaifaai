@@ -1,14 +1,17 @@
-import sys
 import os
-import pytest
+import sys
 from fastapi.testclient import TestClient
 
 # Add project root to path
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../api")))
+api_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "api"))
+sys.path.insert(0, api_dir)
 # Add project root for imports in server.py
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../")))
+project_root = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "..", "..", "..")
+)
+sys.path.insert(0, project_root)
 
-from server import app
+from server import app  # noqa: E402
 
 client = TestClient(app)
 
@@ -25,10 +28,10 @@ def test_get_stats():
     assert "active_instances" in data
 
 def test_translate_endpoint():
-    # Mock translation call or expect failure if external service is unreachable/unmocked
+    # Mock translation call or expect failure if external service is unreachable.
     # For now we test integration with current simple implementation
     # Note: real translation requires network.
-    
+
     # We can use a mock or just simple text that might return itself on error
     payload = {"text": "Hello", "target_lang": "zh-CN"}
     response = client.post("/translate", json=payload)

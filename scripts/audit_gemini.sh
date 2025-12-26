@@ -23,7 +23,7 @@ INPUT="$(mktemp)"
   sed -n '1,240p' SPEC.md
 } > "$INPUT"
 
-cat "$INPUT" | gemini --prompt '
+cat "$INPUT" | gemini '
 You are the Auditor.
 Goal: find cross-file conflicts, missing edge cases, and API/exception contract issues.
 

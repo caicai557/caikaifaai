@@ -9,7 +9,7 @@ fi
 SPEC="$(cat SPEC.md 2>/dev/null || true)"
 TESTS="$(cat tests/test_*.py 2>/dev/null | head -200 || true)"
 
-gemini --prompt "
+PROMPT=$(cat <<PROMPT_EOF
 You are an implementation expert.
 Implement minimal change to pass the tests.
 
@@ -26,7 +26,10 @@ Rules:
 - Follow existing code style
 
 After implementation, run: just verify
-"
+PROMPT_EOF
+)
+
+gemini "$PROMPT"
 
 echo "Review the output and apply changes manually"
 echo "Then run: just verify"

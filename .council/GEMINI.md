@@ -11,6 +11,7 @@
 - 全库审计（2M 长上下文）
 - 跨文件冲突检测
 - API 契约问题发现
+- **前端开发 (Frontend Specialist)**: UI/UX 设计与还原
 
 ### Gemini 3 Flash - Implementer
 

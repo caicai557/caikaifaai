@@ -14,16 +14,27 @@ if [[ -f "pyproject.toml" || -f "requirements.txt" || -d "src" ]]; then
   fi
 
   # Lint
-  if command -v ruff >/dev/null 2>&1; then
+  if [[ -x ".venv/bin/ruff" ]]; then
     echo "  - ruff lint"
-    ruff check . || true
+    .venv/bin/ruff check src tests tools || true
+  elif command -v ruff >/dev/null 2>&1; then
+    echo "  - ruff lint"
+    ruff check src tests tools || true
   fi
 
   # 测试
   if command -v pytest >/dev/null 2>&1; then
     echo "  - pytest"
     source .venv/bin/activate 2>/dev/null || true
-    pytest -q
+    if python3 - <<'PY'
+import importlib.util
+raise SystemExit(0 if importlib.util.find_spec("pytest_cov") else 1)
+PY
+    then
+      pytest -q --cov=src --cov-report=xml
+    else
+      pytest -q
+    fi
   fi
 fi
 

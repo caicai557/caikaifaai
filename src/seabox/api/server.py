@@ -1,9 +1,11 @@
+import os
+import re
+import sys
+
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-import sys
-import os
 
 # Add project root to path to import translate modules
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..")))
@@ -38,8 +40,6 @@ def get_stats():
         "active_instances": 3
     }
 
-import re
-
 def redact_pii(text: str) -> str:
     """Simple Regex-based PII Redaction (Level 1 Governance)"""
     # Email
@@ -59,7 +59,7 @@ def translate(req: TranslationRequest):
     try:
         # 1. PII Redaction (Governance)
         clean_text = redact_pii(req.text)
-        
+
         # 2. Translation
         config = TranslationConfig(
             enabled=True,
@@ -69,13 +69,13 @@ def translate(req: TranslationRequest):
         )
         translator = TranslatorFactory.create(config)
         result = translator.translate(clean_text, "auto", req.target_lang)
-        
+
         # 3. Quality Check (Outgoing Governance)
         # If target is English-like but result still has Chinese, flag it
         blocked = False
-        if req.target_lang in ('en', 'en-US', 'en-GB') and has_chinese(result):
+        if req.target_lang in ("en", "en-US", "en-GB") and has_chinese(result):
             blocked = True
-        
+
         return {
             "translated": result,
             "original": req.text,

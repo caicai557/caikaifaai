@@ -1,0 +1,58 @@
+{
+  "roles": {
+    "codex": {
+      "description": "Orchestrator - Planning & Architecture",
+      "permissions": [
+        "read_ledger",
+        "plan_task",
+        "search_tools",
+        "read_resource",
+        "read_file",
+        "list_directory",
+        "get_file_info"
+      ]
+    },
+    "claude": {
+      "description": "Executor - Implementation & Testing",
+      "permissions": [
+        "read_ledger",
+        "update_task",
+        "write_file",
+        "run_command",
+        "read_resource",
+        "call_tool",
+        "read_file",
+        "list_directory",
+        "get_file_info",
+        "create_or_update_file",
+        "push_files",
+        "create_issue",
+        "create_pull_request"
+      ]
+    },
+    "gemini": {
+      "description": "Advisor - Audit & Memory",
+      "permissions": [
+        "read_ledger",
+        "audit_code",
+        "read_resource",
+        "read_file",
+        "list_directory",
+        "get_file_info",
+        "search_code",
+        "search_issues"
+      ]
+    }
+  },
+  "tool_aliases": {
+    "github_create_issue": "create_issue",
+    "github_create_pull_request": "create_pull_request",
+    "github_push_files": "push_files",
+    "github_search_code": "search_code",
+    "github_search_issues": "search_issues",
+    "fs_read_file": "read_file",
+    "fs_write_file": "write_file",
+    "fs_list_directory": "list_directory"
+  },
+  "default_role": "claude"
+}

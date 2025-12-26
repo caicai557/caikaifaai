@@ -12,6 +12,18 @@ if [[ -z "${TASK}" ]]; then
   exit 1
 fi
 
+CODEX_HOME_CANDIDATE="${CODEX_HOME:-$HOME/.codex}"
+mkdir -p "${CODEX_HOME_CANDIDATE}" 2>/dev/null || true
+if ! touch "${CODEX_HOME_CANDIDATE}/.codex_write_test" 2>/dev/null; then
+  CODEX_HOME_CANDIDATE="$(pwd)/.codex"
+  mkdir -p "${CODEX_HOME_CANDIDATE}"
+else
+  rm -f "${CODEX_HOME_CANDIDATE}/.codex_write_test"
+fi
+CODEX_HOME_PARENT="$(dirname "${CODEX_HOME_CANDIDATE}")"
+mkdir -p "${CODEX_HOME_PARENT}" 2>/dev/null || true
+export CODEX_HOME="${CODEX_HOME_CANDIDATE}"
+
 BRIEF="$(sed -n '1,200p' .council/BRIEF.md 2>/dev/null || true)"
 CODEMAP="$(sed -n '1,200p' CODEMAP.md 2>/dev/null || true)"
 
@@ -45,10 +57,31 @@ ${CODEMAP}
 PROMPT_EOF
 )
 
+OUTPUT_FLAG=""
+if command -v rg >/dev/null 2>&1; then
+  if codex exec --help 2>/dev/null | rg -q -- "--output-last-message"; then
+    OUTPUT_FLAG="--output-last-message"
+  elif codex exec --help 2>/dev/null | rg -q -- "-o, --output-last-message"; then
+    OUTPUT_FLAG="-o"
+  fi
+else
+  if codex exec --help 2>/dev/null | grep -q -- "--output-last-message"; then
+    OUTPUT_FLAG="--output-last-message"
+  elif codex exec --help 2>/dev/null | grep -q -- "-o, --output-last-message"; then
+    OUTPUT_FLAG="-o"
+  fi
+fi
+
 # Non-interactive run; write final message to SPEC.md
-printf "%s" "$PROMPT" | codex exec - \
-  --sandbox read-only \
-  --ask-for-approval never \
-  --output-last-message SPEC.md
+if [[ -n "${OUTPUT_FLAG}" ]]; then
+  printf "%s" "$PROMPT" | env HOME="${CODEX_HOME_PARENT}" CODEX_HOME="${CODEX_HOME}" \
+    codex exec - \
+    --sandbox read-only \
+    "${OUTPUT_FLAG}" SPEC.md
+else
+  printf "%s" "$PROMPT" | env HOME="${CODEX_HOME_PARENT}" CODEX_HOME="${CODEX_HOME}" \
+    codex exec - \
+    --sandbox read-only > SPEC.md
+fi
 
 echo "Wrote SPEC.md"

@@ -97,6 +97,57 @@ class TestTranslationConfig:
         assert config.source_lang == "en"
         assert config.target_lang == "zh-CN"
 
+    # === Phase 4.1: display_mode 和 show_header 测试 ===
+
+    def test_translation_config_display_mode_default(self):
+        """Contract: display_mode defaults to 'bilingual'."""
+        config = TranslationConfig()
+        assert config.display_mode == "bilingual"
+
+    def test_translation_config_display_mode_bilingual(self):
+        """Contract: display_mode accepts 'bilingual'."""
+        config = TranslationConfig(display_mode="bilingual")
+        assert config.display_mode == "bilingual"
+
+    def test_translation_config_display_mode_replace(self):
+        """Contract: display_mode accepts 'replace'."""
+        config = TranslationConfig(display_mode="replace")
+        assert config.display_mode == "replace"
+
+    def test_translation_config_display_mode_original(self):
+        """Contract: display_mode accepts 'original'."""
+        config = TranslationConfig(display_mode="original")
+        assert config.display_mode == "original"
+
+    def test_translation_config_display_mode_invalid(self):
+        """Contract: display_mode rejects invalid values."""
+        with pytest.raises(ValueError):
+            TranslationConfig(display_mode="invalid_mode")
+
+    def test_translation_config_show_header_default(self):
+        """Contract: show_header defaults to True."""
+        config = TranslationConfig()
+        assert config.show_header is True
+
+    def test_translation_config_show_header_false(self):
+        """Contract: show_header can be set to False."""
+        config = TranslationConfig(show_header=False)
+        assert config.show_header is False
+
+    def test_translation_config_full_bilingual_setup(self):
+        """Contract: Full bilingual configuration works."""
+        config = TranslationConfig(
+            enabled=True,
+            provider="google",
+            source_lang="zh",
+            target_lang="en",
+            display_mode="bilingual",
+            show_header=True,
+        )
+        assert config.enabled is True
+        assert config.display_mode == "bilingual"
+        assert config.show_header is True
+
 
 class TestBrowserConfig:
     """Contract tests for BrowserConfig."""
@@ -216,3 +267,41 @@ browser:
             ]
         )
         assert len(config.instances) == 2
+
+    # === Phase 4.1: YAML 加载支持新字段 ===
+
+    def test_telegram_config_yaml_with_display_mode(self, tmp_path):
+        """Contract: YAML loading supports display_mode field."""
+        config_file = tmp_path / "bilingual.yaml"
+        config_file.write_text("""
+instances:
+  - id: test
+    profile_path: profiles/test
+    translation:
+      enabled: true
+      source_lang: en
+      target_lang: zh-CN
+      display_mode: bilingual
+      show_header: true
+""")
+        config = TelegramConfig.from_yaml(str(config_file))
+        assert config.instances[0].translation.display_mode == "bilingual"
+        assert config.instances[0].translation.show_header is True
+
+    def test_telegram_config_yaml_backward_compatible(self, tmp_path):
+        """Contract: Old YAML configs without new fields still load."""
+        config_file = tmp_path / "old_config.yaml"
+        config_file.write_text("""
+instances:
+  - id: legacy
+    profile_path: profiles/legacy
+    translation:
+      enabled: true
+      provider: google
+      source_lang: auto
+      target_lang: en
+""")
+        config = TelegramConfig.from_yaml(str(config_file))
+        # Should use defaults for missing fields
+        assert config.instances[0].translation.display_mode == "bilingual"
+        assert config.instances[0].translation.show_header is True

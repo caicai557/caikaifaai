@@ -8,6 +8,7 @@ Contract:
 - Provides JavaScript injection for DOM integration
 """
 
+import json
 from enum import Enum
 from typing import Optional, Callable
 from pydantic import BaseModel, Field, ConfigDict
@@ -141,11 +142,24 @@ class MessageInterceptor:
         Returns:
             JavaScript code to inject into Telegram Web A
         """
-        return _get_injection_script()
+        # Build dynamic CONFIG from self.config
+        config_dict = {
+            "enabled": self.config.enabled,
+            "sourceLang": self.config.source_lang,
+            "targetLang": self.config.target_lang,
+            "displayMode": self.config.display_mode,
+            "showHeader": self.config.show_header,
+            "translateUrl": "https://translate.googleapis.com/translate_a/single"
+        }
+        config_json = json.dumps(config_dict, indent=2)
+        return _get_injection_script(config_json)
 
 
-def _get_injection_script() -> str:
+def _get_injection_script(config_json: str) -> str:
     """Generate JavaScript injection script for message interception.
+
+    Args:
+        config_json: JSON string of configuration object
 
     Returns:
         JavaScript code that:
@@ -153,16 +167,15 @@ def _get_injection_script() -> str:
         - Adds Apple-style "Liquid Glass" translation overlay
         - Handles bidirectional translation with smart alignment
     """
-    return """
+    # Use raw string concatenation to avoid f-string escaping issues with JS braces
+    return (
+        """
 (function() {
   // Telegram Web A Translation Overlay Script (Apple Design System)
 
-  const CONFIG = {
-    enabled: true,
-    sourceLang: 'auto',
-    targetLang: 'zh-CN',
-    translateUrl: 'https://translate.googleapis.com/translate_a/single'
-  };
+  const CONFIG = """
+        + config_json
+        + """;
 
   // --- Apple Design System CSS Injection ---
   const style = document.createElement('style');
@@ -238,14 +251,14 @@ def _get_injection_script() -> str:
       white-space: pre-wrap;
       word-break: break-word;
     }
-    
+
     /* Loading shimmer effect */
     .tg-apple-loading {
       height: 12px;
       width: 80%;
-      background: linear-gradient(90deg, 
-        rgba(150,150,150,0.1), 
-        rgba(150,150,150,0.2), 
+      background: linear-gradient(90deg,
+        rgba(150,150,150,0.1),
+        rgba(150,150,150,0.2),
         rgba(150,150,150,0.1));
       background-size: 200% 100%;
       animation: appleShimmer 1.5s infinite;
@@ -255,6 +268,20 @@ def _get_injection_script() -> str:
     @keyframes appleShimmer {
       0% { background-position: 200% 0; }
       100% { background-position: -200% 0; }
+    }
+
+    /* Bilingual mode styles */
+    .tg-apple-bilingual-original {
+      font-size: 12px;
+      color: var(--apple-text-secondary);
+      margin-bottom: 4px;
+      padding-bottom: 4px;
+      border-bottom: 1px solid var(--apple-glass-border);
+    }
+
+    .tg-apple-bilingual-translated {
+      font-size: 13px;
+      color: var(--apple-text-primary);
     }
   `;
   document.head.appendChild(style);
@@ -270,7 +297,7 @@ def _get_injection_script() -> str:
     try {
       const params = new URLSearchParams({
         client: 'gtx',
-        sl: 'auto',
+        sl: CONFIG.sourceLang || 'auto',
         tl: targetLang,
         dt: 't',
         q: text
@@ -288,11 +315,32 @@ def _get_injection_script() -> str:
     return null;
   }
 
+  // --- Bilingual Display Logic ---
+  function renderBilingualContent(content, originalText, translatedText) {
+    // For bilingual mode, show both original and translated
+    if (CONFIG.displayMode === 'bilingual') {
+      const originalDiv = document.createElement('div');
+      originalDiv.className = 'tg-apple-bilingual-original';
+      originalDiv.textContent = originalText;
+
+      const translatedDiv = document.createElement('div');
+      translatedDiv.className = 'tg-apple-bilingual-translated';
+      translatedDiv.textContent = translatedText;
+
+      content.innerHTML = '';
+      content.appendChild(originalDiv);
+      content.appendChild(translatedDiv);
+    } else {
+      // Replace mode: just show translated
+      content.textContent = translatedText;
+    }
+  }
+
   // --- Overlay Injection ---
   async function addTranslationOverlay(element) {
     if (!CONFIG.enabled) return;
     if (element.querySelector('.tg-apple-overlay')) return;
-    
+
     // Find text node
     const textNode = element.querySelector('.text-content, .message-content') || element;
     const originalText = (textNode.textContent || '').trim();
@@ -301,12 +349,14 @@ def _get_injection_script() -> str:
     // Create container
     const overlay = document.createElement('div');
     overlay.className = 'tg-apple-overlay';
-    
-    // Header
-    const header = document.createElement('div');
-    header.className = 'tg-apple-header';
-    header.innerHTML = '<span class="tg-apple-icon">🌐</span> TRANSPARENT TRANSLATE';
-    overlay.appendChild(header);
+
+    // Header (conditional based on showHeader config)
+    if (CONFIG.showHeader) {
+      const header = document.createElement('div');
+      header.className = 'tg-apple-header';
+      header.innerHTML = '<span class="tg-apple-icon">🌐</span> TRANSPARENT TRANSLATE';
+      overlay.appendChild(header);
+    }
 
     // Content (Loading State)
     const content = document.createElement('div');
@@ -321,17 +371,17 @@ def _get_injection_script() -> str:
 
     // Determine target language based on message direction (Simple heuristic)
     // If we are sending (right side), we want to see what they see (or verify our trans).
-    // Actually, user wants to see EVERYTHING in their language (zh-CN).
-    // Unless the user explicitly wants bidirectional check. 
-    // For now, simpler rule: Translate EVERYTHING to valid targetLang (Chinese).
-    // If source is already Chinese, Google Translate usually handles it (returns same or english).
+    // Actually, user wants to see EVERYTHING in their language.
+    // Unless the user explicitly wants bidirectional check.
+    // For now, simpler rule: Translate EVERYTHING to valid targetLang.
+    // If source is already target language, Google Translate usually handles it (returns same or english).
     // Let's rely on auto-detection.
-    
+
     const translated = await translateText(originalText, CONFIG.targetLang);
-    
+
     if (translated && translated !== originalText) {
-      // Remove loader, set text
-      content.innerHTML = translated;
+      // Handle bilingual vs replace mode
+      renderBilingualContent(content, originalText, translated);
     } else {
       // Translation failed or same language -> Remove overlay gracefully
       overlay.style.opacity = '0';
@@ -344,7 +394,7 @@ def _get_injection_script() -> str:
     mutations.forEach((mutation) => {
       mutation.addedNodes.forEach((node) => {
         if (node.nodeType !== Node.ELEMENT_NODE) return;
-        
+
         // Telegram Web A typically uses .message class
         if (node.matches('.message, .Message, [class*="message-content"]')) {
           addTranslationOverlay(node);
@@ -357,6 +407,30 @@ def _get_injection_script() -> str:
     });
   });
 
+  // --- Input Area Monitoring (for outgoing messages) ---
+  function setupInputMonitoring() {
+    // Monitor textarea or contenteditable input for message composition
+    const inputSelectors = [
+      'textarea',
+      '[contenteditable="true"]',
+      'input[type="text"]',
+      '.composer-input',
+      '.message-input'
+    ];
+
+    inputSelectors.forEach(selector => {
+      document.querySelectorAll(selector).forEach(input => {
+        if (input.dataset.translationMonitor) return;
+        input.dataset.translationMonitor = 'true';
+
+        // Add subtle indicator that translation is active
+        input.addEventListener('focus', () => {
+          console.log('[AppleTranslate] Input focused, translation active');
+        });
+      });
+    });
+  }
+
   function startObserver() {
     const container = document.querySelector('#MiddleColumn, .messages-container, [class*="chat"]');
     if (container) {
@@ -364,6 +438,7 @@ def _get_injection_script() -> str:
       // Process existing
       document.querySelectorAll('.message, .Message, [class*="message-content"]').forEach(addTranslationOverlay);
       console.log('[AppleTranslate] Active');
+      setupInputMonitoring();
     } else {
       setTimeout(startObserver, 1000);
     }
@@ -376,3 +451,4 @@ def _get_injection_script() -> str:
   }
 })();
 """
+    )

@@ -12,6 +12,7 @@ Implements the "Perceive → Reason → Act → Observe → Repeat" cycle:
 from dataclasses import dataclass, field
 from typing import List, Dict, Any, Optional, Callable
 from datetime import datetime
+import asyncio
 from enum import Enum
 import subprocess
 import json
@@ -253,16 +254,26 @@ class SelfHealingLoop:
         """
         Default patch generation function
         
-        In production, this would use an LLM to generate a fix.
-        For now, returns an empty patch (no auto-fix).
+        Attempts LLM patch generation when available.
         """
-        return Patch(
-            file_path="",
-            original_content="",
-            patched_content="",
-            diagnosis=diagnosis,
-            confidence=0.0,
-        )
+        try:
+            from council.self_healing.patch_generator import PatchGenerator
+        except Exception:
+            return Patch(
+                file_path="",
+                original_content="",
+                patched_content="",
+                diagnosis=diagnosis,
+                confidence=0.0,
+            )
+
+        generator = PatchGenerator()
+        if generator._has_gemini or generator._has_openai:
+            try:
+                return asyncio.run(generator.generate_patch_with_llm(diagnosis))
+            except RuntimeError:
+                return generator.generate_patch(diagnosis)
+        return generator.generate_patch(diagnosis)
     
     def apply_patch(self, patch: Patch) -> bool:
         """

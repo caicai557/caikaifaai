@@ -14,7 +14,7 @@ fi
 SPEC="$(cat SPEC.md)"
 CONTRACTS="$(cat .council/CONTRACTS.md 2>/dev/null || true)"
 
-gemini --prompt "
+PROMPT=$(cat <<PROMPT_EOF
 You are a TDD expert.
 Based on SPEC.md and CONTRACTS.md, write tests first.
 
@@ -31,6 +31,9 @@ Rules:
 - Tests should FAIL initially (red state)
 
 Output the test file content:
-" > tests/test_new.py
+PROMPT_EOF
+)
+
+gemini "$PROMPT" > tests/test_new.py
 
 echo "Wrote tests/test_new.py (review and rename)"

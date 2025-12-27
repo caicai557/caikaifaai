@@ -1,6 +1,6 @@
 ---
-description: Council TDD gate — write tests first from SPEC/AUDIT and acceptance criteria.
-argument-hint: [task-or-scope]
+description: TDD 门禁 — 先写测试后实现 (Gemini Flash)
+argument-hint: [任务或范围]
 ---
 
 Follow the project rules and governance:

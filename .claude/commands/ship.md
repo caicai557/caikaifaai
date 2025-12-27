@@ -1,6 +1,6 @@
 ---
-description: 发布前检查与回滚预案（小白可执行）
-argument-hint: [版本/里程碑名]
+description: 发布检查 — 清单+回滚预案
+argument-hint: [版本或里程碑]
 ---
 为“$ARGUMENTS”输出发布清单（适合小白照做）：
 

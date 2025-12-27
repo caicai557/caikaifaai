@@ -16,13 +16,20 @@ description: 2025 标准特性开发流 (Double II Framework)
 
 # Phase 2: Implementation (TDD & Code)
 
-3. 执行 TDD 循环 (Swarm Mode)
+> [!CAUTION]
+> **Token Saving Guard**: 在任何 Edit 操作前，必须检查：
+>
+> - Lint 错误？ → `ruff check --fix .`
+> - 修改 ≥3 处？ → `python scripts/batch_replace.py`
+> - 不确定方案？ → 先创建 `repro.py` 本地验证
+
+1. 执行 TDD 循环 (Swarm Mode)
 // turbo
 ./scripts/council_run.py --task "IMPL-${argument}" --goal "Implement feature: ${argument}" --risk medium --ephemeral
 
 # Phase 3: Verification (Wald Score)
 
-4. 运行 Wald 裁决
+1. 运行 Wald 裁决
 // turbo
 ./scripts/wald_score.py --risk medium
 

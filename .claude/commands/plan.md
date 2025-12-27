@@ -1,5 +1,5 @@
 ---
-description: PM 规划 — 需求代码化为 PRD、任务树、验收标准 (Claude Opus)
+description: PM 规划 — 需求转 PRD、任务树 (Claude Opus 4.5)
 argument-hint: [需求描述]
 ---
 

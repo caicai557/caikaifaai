@@ -1,6 +1,6 @@
 ---
-description: "全库审计: 扫描代码库,发现冲突,输出设计文档 (Gemini Pro)"
-argument-hint: [scope-or-feature]
+description: 全库审计 — 扫描代码库、发现冲突 (Gemini Pro)
+argument-hint: [范围或功能]
 ---
 
 # 架构审计 (2025 Optimized)

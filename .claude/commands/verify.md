@@ -1,6 +1,6 @@
 ---
-description: Council verify — run project verification and auto-fix failures.
-argument-hint: [scope]
+description: 自动验证 — 编译+检查+测试，自动修复失败
+argument-hint: [范围]
 ---
 
 请执行项目验收命令，并把失败项按"根因→修复→回归验证"输出：

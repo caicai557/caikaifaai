@@ -1,6 +1,6 @@
 ---
-description: "模型委托: 特殊场景的通用委托工具 (扩展命令)"
-argument-hint: <model> <task>
+description: 模型委托 — 特殊场景委托工具
+argument-hint: <模型> <任务>
 ---
 
 # 模型委托 (扩展命令)

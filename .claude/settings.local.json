@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(powershell:*)"
+      "Bash(powershell:*)",
+      "Bash(just verify:*)",
+      "Bash(git add:*)"
     ]
   },
   "enabledMcpjsonServers": [

@@ -1,6 +1,6 @@
 ---
-description: Council record — finalize task, commit changes, and update notes. (Claude)
-argument-hint: [task-label]
+description: 检查点记录 — 完成任务、提交代码、更新笔记
+argument-hint: [任务标签]
 ---
 
 Follow the project rules and governance:

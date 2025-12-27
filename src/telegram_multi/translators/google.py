@@ -29,6 +29,11 @@ class GoogleTranslator(Translator):
         self.max_retries = 3
         self.backoff_factor = 0.5  # Exponential backoff multiplier
 
+        # Initialize library once
+        from googletrans import Translator as GoogleTransLib
+
+        self._lib = GoogleTransLib()
+
     def translate(self, text: str, src_lang: str = None, dest_lang: str = None) -> str:
         """Translate text using Google Translate.
 
@@ -55,12 +60,7 @@ class GoogleTranslator(Translator):
         # Try translation with retries
         for attempt in range(self.max_retries):
             try:
-                from googletrans import Translator as GoogleTransLib
-
-                translator = GoogleTransLib()
-                result = translator.translate(
-                    text, src_language=src_lang, dest_language=dest_lang
-                )
+                result = self._lib.translate(text, src=src_lang, dest=dest_lang)
                 trans_text = (
                     result.get("text", text)
                     if isinstance(result, dict)

@@ -1,5 +1,39 @@
 # Architectural Decisions Log (ADL)
 
+## ADL-006: Hub-and-Spoke Event Architecture
+
+- **Date**: 2025-12-27
+- **Decision**: Implement Hub-and-Spoke architecture with Event-Driven (Pub/Sub) mechanism
+- **Context**:
+  - Need to decouple multiple autonomous agents (Coder, QA, Planner).
+  - Direct point-to-point communication leads to $O(N^2)$ complexity.
+  - Need automated, reactive workflows ("Surgical Room" metaphor).
+- **Alternatives**:
+  - Direct Agent-to-Agent calls → High coupling, hard to scale.
+  - Shared Database Polling → High latency, inefficient.
+- **Consequences**:
+  - **Decoupling**: Agents only know `Hub` and `Event`.
+  - **Automation**: Events trigger downstream tasks automatically.
+  - **Single Source of Truth**: Hub holds `DualLedger` context.
+  - **Token Saving**: PTC-friendly `Event.create()` reduces verbosity.
+- **Trade-offs**:
+  - ⚠️ Synchronous execution blocks Hub (future: async queue).
+  - ⚠️ In-memory event history lost on restart (future: persistence).
+- **API Contract**:
+
+  ```python
+  class Hub:
+    def subscribe(event_type: EventType, callback: Callable)
+    def publish(event: Event)
+    def get_context() -> str
+
+  class Event:
+    @classmethod
+    def create(type_str, source, **kwargs) -> Event
+  ```
+
+---
+
 ## ADL-005: 翻译系统设计与多提供商支持
 
 - **Date**: 2025-12-24
@@ -19,6 +53,7 @@
   - ⚠️ 循环导入风险：translator.py 导入 google.py（需监控）
   - ✅ 配置驱动：provider 切换无需代码改动
 - **API Contract**:
+
   ```python
   class Translator(ABC):
     def translate(text, src_lang, dest_lang) -> str
@@ -31,6 +66,7 @@
     @classmethod
     def create(config: TranslationConfig) -> Translator
   ```
+
 - **Cache Key Strategy**:
   - ✅ 使用 MD5(text) 代替 text[:50]
   - 避免长文本前缀相同导致的碰撞
@@ -54,6 +90,7 @@
   - InstanceManager 可扩展（支持未来的资源管理）
   - 端口自动分配防止冲突（9222 起始，递增）
 - **API Contract**:
+
   ```python
   BrowserContext(
     instance_id: str,              # 必需
@@ -88,6 +125,7 @@
   - 验证失败时抛 `ValidationError`（Pydantic 标准）
   - 类型提示友好（IDE 自动完成）
 - **API Contract**:
+
   ```python
   TranslationConfig: provider ∈ {google, deepl, local}
   InstanceConfig: id: str, profile_path: str (required)

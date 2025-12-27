@@ -1,6 +1,6 @@
 ---
-description: Council implementation — minimal patch to satisfy tests, then run just verify and update NOTES.
-argument-hint: [task-or-scope]
+description: 最小实现 — 通过测试的最小补丁 (Gemini Flash)
+argument-hint: [任务或范围]
 ---
 
 Follow the project rules and governance:

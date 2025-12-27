@@ -1,6 +1,6 @@
 ---
-description: 代码审查 — 质量把关、漏洞发现、边界对齐 (Codex)
-argument-hint: [范围/文件路径]
+description: 代码审查 — 质量把关、漏洞发现 (Codex 5.2)
+argument-hint: [范围或文件]
 ---
 
 # 代码审查阶段 (2025 Optimized)

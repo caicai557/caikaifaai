@@ -3,6 +3,7 @@
 Council Run - Unified Orchestrator for the Agent Council.
 Chains: Task -> Smart Injection -> Swarm (Reflective Loop) -> (Execution) -> Wald -> Context
 """
+
 import argparse
 import asyncio
 import json
@@ -25,27 +26,37 @@ SCRIPTS = {
 
 MIN_SRC_PI = 0.80
 
+# Wald Sequential Analysis Thresholds
+WALD_ALPHA = 0.90  # Confidence upper bound - auto commit
+WALD_BETA = 0.30  # Risk lower bound - human intervention
+WALD_STATE_FILE = ".council/wald_state.json"
+
+
 def get_python_executable() -> str:
     venv_python = os.path.join(os.getcwd(), ".venv", "bin", "python")
     if os.path.isfile(venv_python) and os.access(venv_python, os.X_OK):
         return venv_python
     return sys.executable
 
+
 def run_script(script: str, args: list, timeout_seconds: int = 120) -> dict:
     """Run a council script and capture output."""
     cmd = [get_python_executable(), script] + args
     try:
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout_seconds)
+        result = subprocess.run(
+            cmd, capture_output=True, text=True, timeout=timeout_seconds
+        )
         return {
             "status": "success" if result.returncode == 0 else "failure",
             "stdout": result.stdout,
             "stderr": result.stderr,
-            "code": result.returncode
+            "code": result.returncode,
         }
     except subprocess.TimeoutExpired:
         return {"status": "timeout", "stderr": "Script timed out", "code": -1}
     except Exception as e:
         return {"status": "error", "stderr": str(e), "code": -1}
+
 
 def command_exists(cmd: str) -> bool:
     result = subprocess.run(
@@ -55,10 +66,15 @@ def command_exists(cmd: str) -> bool:
     )
     return result.returncode == 0
 
+
 def run_verify() -> dict:
     verify_script = os.path.join("scripts", "verify.sh")
     if not os.path.exists(verify_script):
-        return {"status": "missing", "stderr": f"{verify_script} not found", "code": 127}
+        return {
+            "status": "missing",
+            "stderr": f"{verify_script} not found",
+            "code": 127,
+        }
     result = subprocess.run(
         ["bash", verify_script],
         capture_output=True,
@@ -70,6 +86,7 @@ def run_verify() -> dict:
         "stderr": result.stderr,
         "code": result.returncode,
     }
+
 
 def get_changed_files() -> list:
     """Return a list of changed files (staged or unstaged)."""
@@ -91,6 +108,7 @@ def get_changed_files() -> list:
         files.append(path)
     return files
 
+
 def sync_spec_from_worktree(worktree_path: str) -> None:
     """Sync SPEC.md from a worktree into .council for downstream checks."""
     if not worktree_path:
@@ -101,9 +119,11 @@ def sync_spec_from_worktree(worktree_path: str) -> None:
     os.makedirs(".council", exist_ok=True)
     shutil.copy2(src_spec, os.path.join(".council", "SPEC.md"))
 
+
 def get_src_changes() -> list:
     """Filter changed files under src/."""
     return [path for path in get_changed_files() if path.startswith("src/")]
+
 
 def get_diff_stat(paths: list) -> str:
     """Return a diff stat summary for selected paths."""
@@ -115,6 +135,7 @@ def get_diff_stat(paths: list) -> str:
         text=True,
     )
     return result.stdout.strip() if result.returncode == 0 else ""
+
 
 def build_src_vote_prompt(goal: str, src_changes: list, diff_stat: str) -> str:
     """Build a vote prompt for Council review."""
@@ -130,6 +151,7 @@ def build_src_vote_prompt(goal: str, src_changes: list, diff_stat: str) -> str:
         f"Changed src/ files:\n{files}\n\n"
         f"Diff summary:\n{diff_block}\n"
     )
+
 
 def collect_cli_votes(prompt: str):
     """Collect votes using CLI tools when API keys are unavailable."""
@@ -198,6 +220,7 @@ def collect_cli_votes(prompt: str):
 
     return votes, errors
 
+
 async def run_src_consensus(prompt: str):
     """Run Council consensus check for src/ changes."""
     try:
@@ -221,39 +244,56 @@ async def run_src_consensus(prompt: str):
         return result, "CLI fallback used; some models failed."
     return result, None
 
+
 def extract_keywords(text: str) -> list:
     """Extract potential keywords from text (simple heuristic)."""
     # Remove common stop words and keep significant terms
-    stop_words = {"the", "a", "an", "to", "in", "for", "of", "and", "with", "on", "at", "by", "from"}
-    words = re.findall(r'\w+', text.lower())
+    stop_words = {
+        "the",
+        "a",
+        "an",
+        "to",
+        "in",
+        "for",
+        "of",
+        "and",
+        "with",
+        "on",
+        "at",
+        "by",
+        "from",
+    }
+    words = re.findall(r"\w+", text.lower())
     return [w for w in words if w not in stop_words and len(w) > 3]
+
 
 def retrieve_lessons(goal: str) -> str:
     """Retrieve relevant lessons from Knowledge Base."""
     keywords = extract_keywords(goal)
     if not keywords:
         return ""
-    
+
     print(f"🔍 Smart Injection: Searching lessons for keywords: {keywords}")
-    
+
     lessons_found = []
     # Search for each keyword
-    for kw in keywords[:3]: # Limit to top 3 keywords
+    for kw in keywords[:3]:  # Limit to top 3 keywords
         result = run_script(SCRIPTS["kb"], ["search", kw])
         if result["status"] == "success":
             # Parse output to extract lessons (simple text parsing for now)
             # In a real implementation, KB should return JSON
             if "Found" in result["stdout"]:
                 lessons_found.append(result["stdout"].strip())
-    
+
     if not lessons_found:
         return ""
-        
+
     # Deduplicate and format
     unique_lessons = list(set(lessons_found))
     formatted_lessons = "\n".join(unique_lessons)
-    
+
     return f"\n\n📚 RELEVANT LESSONS FROM PLAYBOOK:\n{formatted_lessons}\n"
+
 
 def run_task(
     task: str,
@@ -271,7 +311,7 @@ def run_task(
     if dry_run:
         print("   Mode: DRY RUN (Planning Only)")
     print("-" * 40)
-    
+
     # 0. Smart Injection (Phase 1: Plan)
     print("\n[1/5] 🏗️ Phase 1: Plan & Research (Smart Injection)...")
     injected_context = retrieve_lessons(goal)
@@ -289,24 +329,29 @@ def run_task(
 
     # 1. Swarm Dispatch (Phase 2: Code)
     print("\n[2/5] 🛠️ Phase 2: Code & Execute (Swarm)...")
-    
+
     max_retries = 3
     attempt = 0
     swarm_success = False
-    
+
+    # Reset Wald state for new task
+    run_script(SCRIPTS["wald"], ["--reset"])
+
     while attempt < max_retries:
         attempt += 1
         print(f"   🔄 Attempt {attempt}/{max_retries}...")
-        
+
         swarm_args = ["--task", task, "--goal", goal]
         if ephemeral:
             swarm_args.append("--ephemeral")
         if swarm_pipeline:
             swarm_args.append("--pipeline")
-            
+
         swarm_timeout = 600 if swarm_pipeline else 120
-        swarm_result = run_script(SCRIPTS["swarm"], swarm_args, timeout_seconds=swarm_timeout)
-        
+        swarm_result = run_script(
+            SCRIPTS["swarm"], swarm_args, timeout_seconds=swarm_timeout
+        )
+
         if swarm_result["status"] == "success":
             print(swarm_result["stdout"])
             try:
@@ -314,20 +359,33 @@ def run_task(
                 sync_spec_from_worktree(swarm_payload.get("worktree", ""))
             except json.JSONDecodeError:
                 pass
+            # Update Wald state on success
+            run_script(SCRIPTS["wald"], ["--update", "success"])
+            # Check for early termination
+            if os.path.exists(WALD_STATE_FILE):
+                with open(WALD_STATE_FILE) as f:
+                    state = json.load(f)
+                if state["pi"] >= WALD_ALPHA:
+                    print(
+                        f"   🚀 Wald π={state['pi']:.2f} ≥ α={WALD_ALPHA}. AUTO_COMMIT triggered."
+                    )
             swarm_success = True
             break
         else:
             error_preview = swarm_result["stderr"] or swarm_result["stdout"]
             preview = (error_preview or "")[:200]
-            print(f"   ❌ Attempt {attempt} failed: {preview}...") # Truncate error
-            
+            print(f"   ❌ Attempt {attempt} failed: {preview}...")  # Truncate error
+
             # REFLECTIVE STEP: Update goal with error context
             error_context = f"\n\n[SYSTEM ERROR]: Previous attempt {attempt} failed with error:\n{swarm_result['stderr']}\n"
-            
+
             # Call Facilitator for strategy
             print("   👔 Calling Facilitator for conflict resolution...")
-            facilitator_result = run_script("./scripts/facilitator.py", ["--task", task, "--history", swarm_result['stderr']])
-            
+            facilitator_result = run_script(
+                "./scripts/facilitator.py",
+                ["--task", task, "--history", swarm_result["stderr"]],
+            )
+
             if facilitator_result["status"] == "success":
                 try:
                     fac_output = json.loads(facilitator_result["stdout"])
@@ -336,14 +394,28 @@ def run_task(
                     error_context += f"\n[FACILITATOR ADVICE]: {strategy}\n"
                 except json.JSONDecodeError:
                     print("   ⚠️ Facilitator output parse failed.")
-            
-            error_context += "\nPLEASE ANALYZE THIS ERROR AND ADVICE TO ADJUST YOUR STRATEGY."
+
+            error_context += (
+                "\nPLEASE ANALYZE THIS ERROR AND ADVICE TO ADJUST YOUR STRATEGY."
+            )
             goal += error_context
-            
+
+            # Update Wald state on failure
+            run_script(SCRIPTS["wald"], ["--update", "failure"])
+            # Check for early termination (human intervention)
+            if os.path.exists(WALD_STATE_FILE):
+                with open(WALD_STATE_FILE) as f:
+                    state = json.load(f)
+                if state["pi"] <= WALD_BETA:
+                    print(
+                        f"   ⛔ Wald π={state['pi']:.2f} ≤ β={WALD_BETA}. HUMAN_INTERVENTION required."
+                    )
+                    return False  # Early exit
+
             if attempt < max_retries:
                 print("   🧠 Reflecting and retrying in 2s...")
                 time.sleep(2)
-    
+
     if not swarm_success:
         print(f"❌ Swarm failed after {max_retries} attempts.")
         return False
@@ -365,9 +437,11 @@ def run_task(
             f"decision={wald_result.decision.value}"
         )
         if wald_result.pi_approve < MIN_SRC_PI:
-            print(f"❌ Council consensus below {MIN_SRC_PI:.2f}. Manual review required.")
+            print(
+                f"❌ Council consensus below {MIN_SRC_PI:.2f}. Manual review required."
+            )
             return False
-    
+
     # 3. Verification
     print("\n[3/5] 🧪 Phase 3: Verification (just verify)...")
     verify_result = run_verify()
@@ -381,15 +455,17 @@ def run_task(
 
     # 4. Wald Score (Phase 4: Verify & Audit)
     print("\n[4/5] 🛡️ Phase 4: Verify & Audit (Wald Score)...")
-    
+
     # 2.1 Adjudicator (Semantic Validation)
     print("   ⚖️ Running Adjudicator (Semantic Validation)...")
     # For now, we build the graph on the fly to ensure freshness
     run_script("./scripts/graph_builder.py", ["build"])
     # Validate the modified files (Mock: validating the task goal context conceptually)
     # In production, we would pass the specific files modified by the Swarm
-    adj_result = run_script("./scripts/graph_builder.py", ["validate", "--file", "scripts/council_run.py"])
-    
+    adj_result = run_script(
+        "./scripts/graph_builder.py", ["validate", "--file", "scripts/council_run.py"]
+    )
+
     if adj_result["status"] == "success":
         print(adj_result["stdout"])
     else:
@@ -398,36 +474,44 @@ def run_task(
     # 2.2 Wald Score
     wald_result = run_script(SCRIPTS["wald"], ["--risk", risk])
     print(wald_result["stdout"])
-    
+
     wald_passed = wald_result["code"] == 0
-    
+
     # 5. Functional Codification (Phase 5: Consolidate & Learn)
     print("\n[5/5] 🧹 Phase 5: Consolidate & Learn...")
     if wald_passed:
         # 1. Compact Context
         context_result = run_script(SCRIPTS["context"], ["compact"])
         print(context_result["stdout"])
-        
+
         # 2. Codify Routine (New)
         print("   ⚡ Codifying successful run...")
-        codify_result = run_script("./scripts/codify_routine.py", ["--task", task, "--goal", goal, "--history", "success"])
+        codify_result = run_script(
+            "./scripts/codify_routine.py",
+            ["--task", task, "--goal", goal, "--history", "success"],
+        )
         if codify_result["status"] == "success":
-            print(f"   ✅ Routine generated: {json.loads(codify_result['stdout']).get('routine')}")
-            
+            print(
+                f"   ✅ Routine generated: {json.loads(codify_result['stdout']).get('routine')}"
+            )
+
         # 3. Extract Lesson (Optional)
         if learn:
             print("   📚 Extracting Lesson...")
             kb_args = [
                 "add",
-                "--tags", f"task,{task}",
-                "--problem", f"Goal: {goal[:50]}...",
-                "--solution", f"Completed with risk={risk}"
+                "--tags",
+                f"task,{task}",
+                "--problem",
+                f"Goal: {goal[:50]}...",
+                "--solution",
+                f"Completed with risk={risk}",
             ]
             kb_result = run_script(SCRIPTS["kb"], kb_args)
             print(kb_result["stdout"])
     else:
         print("⚠️ Wald failed, skipping consolidation.")
-    
+
     # Summary
     print("\n" + "=" * 40)
     if wald_passed:
@@ -437,18 +521,33 @@ def run_task(
         print("⚠️ Council Run Requires Review")
         return False
 
+
 def main():
     parser = argparse.ArgumentParser(description="Council Run - Unified Orchestrator")
     parser.add_argument("--task", required=True, help="Task ID")
     parser.add_argument("--goal", required=True, help="Goal description")
-    parser.add_argument("--risk", choices=["low", "medium", "high"], default="medium", help="Risk level")
-    parser.add_argument("--ephemeral", action="store_true", help="Cleanup worktree after execution")
-    parser.add_argument("--learn", action="store_true", help="Extract lesson to knowledge base")
-    parser.add_argument("--dry-run", action="store_true", help="Execute only planning phase (Smart Injection)")
-    parser.add_argument("--swarm-pipeline", action="store_true", help="Run plan/audit/tdd/impl/verify in swarm")
-    
+    parser.add_argument(
+        "--risk", choices=["low", "medium", "high"], default="medium", help="Risk level"
+    )
+    parser.add_argument(
+        "--ephemeral", action="store_true", help="Cleanup worktree after execution"
+    )
+    parser.add_argument(
+        "--learn", action="store_true", help="Extract lesson to knowledge base"
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Execute only planning phase (Smart Injection)",
+    )
+    parser.add_argument(
+        "--swarm-pipeline",
+        action="store_true",
+        help="Run plan/audit/tdd/impl/verify in swarm",
+    )
+
     args = parser.parse_args()
-    
+
     success = run_task(
         args.task,
         args.goal,
@@ -459,6 +558,7 @@ def main():
         swarm_pipeline=args.swarm_pipeline,
     )
     sys.exit(0 if success else 1)
+
 
 if __name__ == "__main__":
     main()

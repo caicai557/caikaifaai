@@ -1,0 +1,80 @@
+{
+  "generated_at": "2025-12-27T23:42:40.431557",
+  "documents": {
+    "TOKEN_SAVING_PRACTICES.md": {
+      "path": ".council/TOKEN_SAVING_PRACTICES.md",
+      "size_kb": 4.53,
+      "modified": "2025-12-27T00:58:06.840901"
+    },
+    "MCP_PHILOSOPHY.md": {
+      "path": ".council/MCP_PHILOSOPHY.md",
+      "size_kb": 3.49,
+      "modified": "2025-12-25T23:47:52.479283"
+    },
+    "SPEC.md": {
+      "path": ".council/SPEC.md",
+      "size_kb": 6.42,
+      "modified": "2025-12-26T05:01:24.765489"
+    },
+    "CODEX.md": {
+      "path": ".council/CODEX.md",
+      "size_kb": 1.19,
+      "modified": "2025-12-26T04:37:48.361146"
+    },
+    "MCP_BEST_PRACTICES.md": {
+      "path": ".council/MCP_BEST_PRACTICES.md",
+      "size_kb": 1.76,
+      "modified": "2025-12-26T22:24:18.081574"
+    },
+    "CLAUDE.md": {
+      "path": ".council/CLAUDE.md",
+      "size_kb": 1.48,
+      "modified": "2025-12-26T04:37:16.807526"
+    },
+    "CONTRACTS.md": {
+      "path": ".council/CONTRACTS.md",
+      "size_kb": 1.7,
+      "modified": "2025-12-24T09:10:29.131822"
+    },
+    "BRIEF.md": {
+      "path": ".council/BRIEF.md",
+      "size_kb": 12.46,
+      "modified": "2025-12-27T06:33:55.653516"
+    },
+    "DECISIONS.md": {
+      "path": ".council/DECISIONS.md",
+      "size_kb": 5.76,
+      "modified": "2025-12-27T04:26:56.309418"
+    },
+    "NOTES.md": {
+      "path": ".council/NOTES.md",
+      "size_kb": 44.5,
+      "modified": "2025-12-27T23:16:38.166317"
+    },
+    "CHECKLIST.md": {
+      "path": ".council/CHECKLIST.md",
+      "size_kb": 0.37,
+      "modified": "2025-12-24T09:05:46.243569"
+    },
+    "GEMINI.md": {
+      "path": ".council/GEMINI.md",
+      "size_kb": 1.26,
+      "modified": "2025-12-26T22:24:18.081574"
+    },
+    "AGENTS.md": {
+      "path": ".council/AGENTS.md",
+      "size_kb": 13.3,
+      "modified": "2025-12-27T03:29:02.395971"
+    },
+    "SOP.md": {
+      "path": ".council/SOP.md",
+      "size_kb": 4.07,
+      "modified": "2025-12-26T05:46:19.874300"
+    }
+  },
+  "stats": {
+    "total_docs": 14,
+    "prompts_count": 6,
+    "routines_count": 5
+  }
+}

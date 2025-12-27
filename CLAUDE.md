@@ -38,7 +38,13 @@ just ship                            # verify + codex review + show git log
 ### Development Workflow
 
 ```bash
-just dev "<task description>"        # Full workflow: codemap → plan → audit/tdd/impl → verify
+just dev "<task description>"        # Full workflow: Six Step Self-Healing Loop
+# 1. Codex: Requirement Codification (PRD/Task Tree)
+# 2. Gemini: Audit & Design (Code Map)
+# 3. Claude: TDD Gate (tests.json)
+# 4. Claude: PTC Execution (Code Mode)
+# 5. Wald: Self-Healing & Consensus
+# 6. Gemini: Checkpoint & Archival
 just tdd                             # TDD mode (write tests first)
 just impl                            # Implementation mode (minimal patch + verify)
 ```

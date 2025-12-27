@@ -25,9 +25,16 @@
 | **快速实现** | **Gemini 3 Flash** | TDD、补测试、日常开发、迭代修复、快速代码 | 80% | 1M |
 
 **模型选择指南**:
+
 - **2M 超长上下文需求** → Gemini 2.5 Pro（可阅读 1,500 页文档、50,000 行代码、200+ 播客转录）
 - **1M 高级推理 + 长上下文** → Gemini 3 Pro（推理能力最强，64k 输出，工具使用优秀）
 - **日常高频开发** → Gemini 3 Flash（速度快，成本低，1M tokens）
+
+### 2.1 三权分立角色映射 (Three Branches Mapping)
+
+- **编排者 (Orchestrator)**: **Codex 5.2** (o1/o3-mini) - 负责高层逻辑与任务分发。
+- **博学顾问 (Advisor)**: **Gemini 3 Pro** - 负责全库审计与设计。
+- **执行官 (Executor)**: **Claude Code** - 负责物理执行与 PTC 脚本编排。
 
 ## 3. 令牌经济学 (Tokenomics) - 2025 Optimized
 
@@ -40,6 +47,7 @@
 | **Gemini 3 Flash** | $0.50 | $3.00 | 1M | 快速代码实现 | 80% |
 
 **成本优化建议**:
+
 - **2M 超长上下文** → Gemini 2.5 Pro（性价比最高，>200k 时仅 $2.50 输入）
 - **1M 深度推理** → Gemini 3 Pro（推理能力强，工具使用优秀）
 - **日常高频任务** → Gemini 3 Flash（$0.50 输入，速度快）
@@ -92,6 +100,7 @@
 #### 🟢 推荐做法
 
 1. **信息查询**
+
    ```bash
    # 优先级：精准文档 > 综合搜索 > 多次搜索
    mcp__context7__get-library-docs  # 第一选择
@@ -99,6 +108,7 @@
    ```
 
 2. **批量文件操作**
+
    ```python
    # 必须使用脚本，禁止循环调用 Edit
    import glob, re
@@ -109,6 +119,7 @@
    ```
 
 3. **审查报告精简化**
+
    ```markdown
    # ❌ 详细版（20k tokens）
    ## 代码审查报告
@@ -124,6 +135,7 @@
    ```
 
 4. **读取文件时限制行数**
+
    ```python
    Read(file, limit=30)      # ✅ 仅读取关键部分
    Read(file)                # ❌ 读取全文（可能数千行）
@@ -143,6 +155,7 @@
 #### ⚠️ 超预算警告
 
 当 Session tokens > 100k 时：
+
 1. 停止当前任务
 2. 输出已完成内容摘要
 3. 建议用户开新 Session 继续
@@ -154,6 +167,7 @@
 #### 🎯 主控编排者
 
 **Codex 5.2 (o1/GPT-5.2)** - Orchestrator
+
 - 高层需求拆解（PRD → 子任务树）
 - 任务分发（根据模型路由表 2.0 分配）
 - 进度监控与调度
@@ -166,6 +180,7 @@
 | **进度账本** (Progress Ledger) | 实时追踪执行状态 | `.council/NOTES.md` | 完成状态、耗时、风险点 |
 
 **更新规则**:
+
 - 每次 `/checkpoint` 后更新进度账本
 - 任务拆解后立即写入任务账本
 - 保持单一事实来源（SSOT）
@@ -175,6 +190,7 @@
 **目标**: 动态决定"提交 / 继续 / 终止"
 
 **决策公式**:
+
 ```
 后验概率 π = P(任务成功 | 当前证据)
 置信上限 α = 0.95  (95% 置信度)
@@ -189,6 +205,7 @@ else:
 ```
 
 **实现方式**:
+
 ```bash
 # just verify 作为证据收集点
 # 每次 verify 通过 → π 增加
@@ -211,6 +228,7 @@ for iteration in range(max_iterations=5):
 ```
 
 **触发时机**:
+
 - `/verify` 通过后计算 π
 - `/review` 发现高风险时降低 π
 - 超过 3 次失败自动触发人工干预
@@ -253,6 +271,7 @@ cesi/                         # 主工作区 (main)
 ```
 
 **优势**:
+
 - ✅ 物理隔离（不同目录 = 零文件冲突）
 - ✅ 并发会话（3 个智能体同时工作）
 - ✅ 独立分支（每个任务独立 branch）
@@ -261,6 +280,7 @@ cesi/                         # 主工作区 (main)
 #### 🚀 并发执行流程
 
 **启动并发任务**:
+
 ```bash
 # 任务 1: 用户认证（Gemini 3 Flash）
 just dev "实现 JWT 认证" &
@@ -279,6 +299,7 @@ wait
 ```
 
 **工作区管理**:
+
 ```bash
 # 创建工作区
 ./scripts/worktree_manager.sh create swarm/task-name
@@ -300,6 +321,7 @@ python3 scripts/dispatch_swarm.py --sync
 | **代码审查** | Codex 5.2 | `swarm/review-*` | 5-10 分钟 |
 
 **并发度控制**:
+
 - 最大并发数 = `CPU 核心数 / 2`（避免资源竞争）
 - 推荐：3-4 个并发任务
 - 超过 5 个任务建议排队
@@ -311,6 +333,7 @@ python3 scripts/dispatch_swarm.py --sync
    - 共享文件（如 `pyproject.toml`）由主工作区统一修改
 
 2. **定期同步主分支**
+
    ```bash
    # 在每个 worktree 中
    git fetch origin main
@@ -318,6 +341,7 @@ python3 scripts/dispatch_swarm.py --sync
    ```
 
 3. **清理临时工作区**
+
    ```bash
    # 合并后立即清理
    git worktree remove ../cesi.worktrees/swarm/feature-auth
@@ -421,3 +445,27 @@ subprocess.run(["gh", "issue", "create", ...])  # GitHub MCP 已提供
 ```
 
 **详细指南**: 参考 `.council/MCP_BEST_PRACTICES.md`
+
+### 4.10 共识协议 (Consensus Protocols)
+
+理事会根据风险等级采用以下四种核心共识机制：
+
+1. **简单多数票 (Simple Majority)**:
+    - **机制**: >50% 同意。
+    - **场景**: 低风险、确定性高的日常任务（如函数重构）。
+    - **优势**: 速度快，救援率 (Rescue Rate) 可达 53%。
+
+2. **绝对多数票 (Supermajority)**:
+    - **机制**: ≥66% (2/3) 或 75% (3/4) 同意。
+    - **场景**: 生产环境合入、金融/支付逻辑修改。
+    - **规则**: 安全审计员 (Security Auditor) 拥有“一票否决权”。
+
+3. **排序投票 (Ranked Voting)**:
+    - **机制**: 专家对方案进行优先级排序，加权计算最优解。
+    - **场景**: 技术选型、架构评估。
+    - **优势**: 解决意见分散，识别最大公约数。
+
+4. **辩论迭代 (Iterative Debate)**:
+    - **机制**: **Facilitator AI** 汇总冲突 -> 抛回质疑 -> 修正观点。
+    - **场景**: 复杂 Bug 排查、全库重构。
+    - **目标**: 将语义熵 (Semantic Entropy) 降低至零。

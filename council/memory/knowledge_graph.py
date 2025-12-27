@@ -22,19 +22,21 @@ DEFAULT_STORAGE_PATH = Path(".council/knowledge_graph.gml")
 
 class RelationType(Enum):
     """关系类型"""
-    DEPENDS_ON = "depends_on"       # A 依赖 B
-    IMPLEMENTS = "implements"       # A 实现 B
-    CONTAINS = "contains"           # A 包含 B
-    RELATED_TO = "related_to"       # A 与 B 相关
-    DECIDED_BY = "decided_by"       # A 由 B 决定
-    APPROVED_BY = "approved_by"     # A 被 B 批准
-    CREATED_BY = "created_by"       # A 由 B 创建
-    SUPERSEDES = "supersedes"       # A 取代 B
-    IMPORTS = "imports"             # A 导入 B (代码依赖)
+
+    DEPENDS_ON = "depends_on"  # A 依赖 B
+    IMPLEMENTS = "implements"  # A 实现 B
+    CONTAINS = "contains"  # A 包含 B
+    RELATED_TO = "related_to"  # A 与 B 相关
+    DECIDED_BY = "decided_by"  # A 由 B 决定
+    APPROVED_BY = "approved_by"  # A 被 B 批准
+    CREATED_BY = "created_by"  # A 由 B 创建
+    SUPERSEDES = "supersedes"  # A 取代 B
+    IMPORTS = "imports"  # A 导入 B (代码依赖)
 
 
 class EntityType(Enum):
     """实体类型"""
+
     FILE = "file"
     FUNCTION = "function"
     CLASS = "class"
@@ -48,13 +50,14 @@ class EntityType(Enum):
 @dataclass
 class Entity:
     """知识图谱实体"""
+
     id: str
     entity_type: EntityType
     name: str
     properties: Dict[str, Any] = field(default_factory=dict)
     created_at: datetime = field(default_factory=datetime.now)
     updated_at: datetime = field(default_factory=datetime.now)
-    
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "id": self.id,
@@ -69,13 +72,14 @@ class Entity:
 @dataclass
 class Relation:
     """知识图谱关系"""
+
     source_id: str
     target_id: str
     relation_type: RelationType
     properties: Dict[str, Any] = field(default_factory=dict)
     weight: float = 1.0
     created_at: datetime = field(default_factory=datetime.now)
-    
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "source": self.source_id,
@@ -90,32 +94,32 @@ class Relation:
 class KnowledgeGraph:
     """
     轻量级知识图谱实现
-    
+
     核心功能:
     1. 存储实体和关系
     2. 支持语义查询
     3. 持久化到文件 (.gml 或 .json)
-    
+
     可扩展为连接 Neo4j / FalkorDB
-    
+
     使用示例:
         kg = KnowledgeGraph()  # 默认使用 .council/knowledge_graph.gml
-        
+
         # 添加实体
         kg.add_entity("file_1", EntityType.FILE, "auth.py", {"path": "src/auth.py"})
         kg.add_entity("decision_1", EntityType.DECISION, "使用JWT认证")
-        
+
         # 添加关系
         kg.add_relation("decision_1", "file_1", RelationType.IMPLEMENTS)
-        
+
         # 查询
         related = kg.get_related("file_1", RelationType.IMPLEMENTS)
     """
-    
+
     def __init__(self, storage_path: Optional[str] = None, auto_load: bool = True):
         """
         初始化知识图谱
-        
+
         Args:
             storage_path: 持久化路径，默认 .council/knowledge_graph.gml
             auto_load: 是否在初始化时自动加载已有文件
@@ -125,7 +129,7 @@ class KnowledgeGraph:
         self.storage_path = (
             Path(storage_path) if storage_path is not None else DEFAULT_STORAGE_PATH
         )
-        
+
         # 索引
         self._entity_by_type: Dict[EntityType, Set[str]] = {}
         self._relations_from: Dict[str, List[Relation]] = {}
@@ -158,7 +162,9 @@ class KnowledgeGraph:
     @staticmethod
     def _require_networkx() -> None:
         if nx is None:
-            raise ImportError("networkx 未安装，无法使用 GML 持久化。请安装 networkx>=3.2.0")
+            raise ImportError(
+                "networkx 未安装，无法使用 GML 持久化。请安装 networkx>=3.2.0"
+            )
 
     @property
     def storage_format(self) -> str:
@@ -171,11 +177,11 @@ class KnowledgeGraph:
         if suffix == ".json":
             return "json"
         return "unknown"
-    
+
     def add_entity(
-        self, 
-        entity_id: str, 
-        entity_type: EntityType, 
+        self,
+        entity_id: str,
+        entity_type: EntityType,
         name: str,
         properties: Optional[Dict[str, Any]] = None,
         created_at: Optional[datetime] = None,
@@ -183,7 +189,7 @@ class KnowledgeGraph:
     ) -> Entity:
         """
         添加实体
-        
+
         Args:
             entity_id: 实体ID
             entity_type: 实体类型
@@ -191,7 +197,7 @@ class KnowledgeGraph:
             properties: 属性
             created_at: 创建时间（用于持久化恢复）
             updated_at: 更新时间（用于持久化恢复）
-            
+
         Returns:
             创建的实体
         """
@@ -204,18 +210,18 @@ class KnowledgeGraph:
             updated_at=updated_at or datetime.now(),
         )
         self.entities[entity_id] = entity
-        
+
         # 更新索引
         if entity_type not in self._entity_by_type:
             self._entity_by_type[entity_type] = set()
         self._entity_by_type[entity_type].add(entity_id)
-        
+
         return entity
-    
+
     def get_entity(self, entity_id: str) -> Optional[Entity]:
         """获取实体"""
         return self.entities.get(entity_id)
-    
+
     def add_relation(
         self,
         source_id: str,
@@ -227,7 +233,7 @@ class KnowledgeGraph:
     ) -> Optional[Relation]:
         """
         添加关系
-        
+
         Args:
             source_id: 源实体ID
             target_id: 目标实体ID
@@ -235,13 +241,13 @@ class KnowledgeGraph:
             properties: 属性
             weight: 权重
             created_at: 创建时间（用于持久化恢复）
-            
+
         Returns:
             创建的关系，如果实体不存在则返回None
         """
         if source_id not in self.entities or target_id not in self.entities:
             return None
-        
+
         relation = Relation(
             source_id=source_id,
             target_id=target_id,
@@ -251,94 +257,93 @@ class KnowledgeGraph:
             created_at=created_at or datetime.now(),
         )
         self.relations.append(relation)
-        
+
         # 更新索引
         if source_id not in self._relations_from:
             self._relations_from[source_id] = []
         self._relations_from[source_id].append(relation)
-        
+
         if target_id not in self._relations_to:
             self._relations_to[target_id] = []
         self._relations_to[target_id].append(relation)
-        
+
         return relation
-    
+
     def get_related(
-        self, 
-        entity_id: str, 
+        self,
+        entity_id: str,
         relation_type: Optional[RelationType] = None,
         direction: str = "both",  # "from" | "to" | "both"
     ) -> List[Tuple[Entity, Relation]]:
         """
         获取相关实体
-        
+
         Args:
             entity_id: 实体ID
             relation_type: 可选的关系类型过滤
             direction: 方向
-            
+
         Returns:
             (实体, 关系) 元组列表
         """
         results = []
-        
+
         if direction in ["from", "both"]:
             for rel in self._relations_from.get(entity_id, []):
                 if relation_type is None or rel.relation_type == relation_type:
                     target = self.entities.get(rel.target_id)
                     if target:
                         results.append((target, rel))
-        
+
         if direction in ["to", "both"]:
             for rel in self._relations_to.get(entity_id, []):
                 if relation_type is None or rel.relation_type == relation_type:
                     source = self.entities.get(rel.source_id)
                     if source:
                         results.append((source, rel))
-        
+
         return results
-    
+
     def get_entities_by_type(self, entity_type: EntityType) -> List[Entity]:
         """按类型获取实体"""
         ids = self._entity_by_type.get(entity_type, set())
         return [self.entities[i] for i in ids if i in self.entities]
-    
+
     def query(
-        self, 
+        self,
         entity_type: Optional[EntityType] = None,
         properties: Optional[Dict[str, Any]] = None,
     ) -> List[Entity]:
         """
         查询实体
-        
+
         Args:
             entity_type: 可选的类型过滤
             properties: 可选的属性过滤
-            
+
         Returns:
             匹配的实体列表
         """
         results = []
-        
+
         candidates = (
-            self.get_entities_by_type(entity_type) 
-            if entity_type else 
-            list(self.entities.values())
+            self.get_entities_by_type(entity_type)
+            if entity_type
+            else list(self.entities.values())
         )
-        
+
         for entity in candidates:
             if properties:
                 match = all(
-                    entity.properties.get(k) == v 
-                    for k, v in properties.items()
+                    entity.properties.get(k) == v for k, v in properties.items()
                 )
                 if match:
                     results.append(entity)
             else:
                 results.append(entity)
-        
+
         return results
-    
+
     def record_decision(
         self,
         decision_id: str,
@@ -349,14 +354,14 @@ class KnowledgeGraph:
     ) -> Entity:
         """
         记录决策 - 便捷方法
-        
+
         Args:
             decision_id: 决策ID
             description: 决策描述
             agents: 参与的智能体
             related_entities: 相关实体ID列表
             metadata: 附加元数据
-            
+
         Returns:
             决策实体
         """
@@ -369,20 +374,20 @@ class KnowledgeGraph:
                 "metadata": metadata or {},
             },
         )
-        
+
         # 添加关系
         for agent_name in agents:
             agent_id = f"agent_{agent_name.lower()}"
             if agent_id not in self.entities:
                 self.add_entity(agent_id, EntityType.AGENT, agent_name)
             self.add_relation(decision_id, agent_id, RelationType.DECIDED_BY)
-        
+
         for entity_id in related_entities:
             if entity_id in self.entities:
                 self.add_relation(decision_id, entity_id, RelationType.RELATED_TO)
-        
+
         return decision
-    
+
     def _reset(self) -> None:
         """清空现有数据"""
         self.entities.clear()
@@ -429,7 +434,7 @@ class KnowledgeGraph:
         """保存到文件"""
         if not self.storage_path:
             return False
-        
+
         try:
             self.storage_path.parent.mkdir(parents=True, exist_ok=True)
             if self.storage_format == "gml":
@@ -440,7 +445,7 @@ class KnowledgeGraph:
         except Exception as e:
             print(f"保存知识图谱失败: {e}")
             return False
-    
+
     def _load_json(self) -> None:
         with open(self.storage_path, "r", encoding="utf-8") as f:
             data = json.load(f)
@@ -454,7 +459,7 @@ class KnowledgeGraph:
                 created_at=self._parse_datetime(e.get("created_at")),
                 updated_at=self._parse_datetime(e.get("updated_at")),
             )
-        
+
         for r in data.get("relations", []):
             relation_type = r.get("type", RelationType.RELATED_TO.value)
             try:
@@ -527,12 +532,12 @@ class KnowledgeGraph:
                 weight=float(attrs.get("weight", 1.0)),
                 created_at=self._parse_datetime(attrs.get("created_at")),
             )
-    
+
     def load(self) -> bool:
         """从文件加载"""
         if not self.storage_path or not self.storage_path.exists():
             return False
-        
+
         try:
             self._reset()
             if self.storage_format == "gml":
@@ -543,16 +548,13 @@ class KnowledgeGraph:
         except Exception as e:
             print(f"加载知识图谱失败: {e}")
             return False
-    
+
     def get_stats(self) -> Dict[str, Any]:
         """获取统计信息"""
         return {
             "entity_count": len(self.entities),
             "relation_count": len(self.relations),
-            "entity_types": {
-                k.value: len(v) 
-                for k, v in self._entity_by_type.items()
-            },
+            "entity_types": {k.value: len(v) for k, v in self._entity_by_type.items()},
         }
 
 

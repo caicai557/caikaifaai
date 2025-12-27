@@ -8,7 +8,7 @@ from council.auth import RBAC
 __version__ = "0.1.0"
 __all__ = [
     "BaseAgent",
-    "Architect", 
+    "Architect",
     "Coder",
     "SecurityAuditor",
     "Facilitator",

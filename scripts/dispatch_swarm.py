@@ -10,12 +10,12 @@ from typing import List, Dict, Any
 WORKTREE_MANAGER = "./scripts/worktree_manager.sh"
 SYNC_SCRIPTS = [
     "codemap.sh",
-    "plan_codex.sh",
     "audit_gemini.sh",
     "tdd_gemini.sh",
     "impl_gemini.sh",
     "verify.sh",
 ]
+
 
 def run_command(cmd: List[str], cwd: str = ".") -> bool:
     try:
@@ -24,9 +24,12 @@ def run_command(cmd: List[str], cwd: str = ".") -> bool:
     except subprocess.CalledProcessError:
         return False
 
+
 def run_step(cmd: List[str], cwd: str) -> Dict[str, Any]:
     try:
-        result = subprocess.run(cmd, cwd=cwd, check=True, capture_output=True, text=True)
+        result = subprocess.run(
+            cmd, cwd=cwd, check=True, capture_output=True, text=True
+        )
         return {"ok": True, "stdout": result.stdout, "stderr": result.stderr}
     except subprocess.CalledProcessError as exc:
         return {
@@ -35,6 +38,7 @@ def run_step(cmd: List[str], cwd: str) -> Dict[str, Any]:
             "stderr": exc.stderr,
             "code": exc.returncode,
         }
+
 
 def sync_worktree_scripts(worktree_path: str) -> None:
     """Copy updated pipeline scripts into the worktree."""
@@ -48,6 +52,7 @@ def sync_worktree_scripts(worktree_path: str) -> None:
         if os.path.exists(src):
             shutil.copy2(src, dst)
             os.chmod(dst, 0o755)
+
 
 def dispatch_agent_tool(
     task_id: str,
@@ -66,25 +71,27 @@ def dispatch_agent_tool(
     """
     branch_name = f"swarm/{task_id}"
     worktree_path = f"../cesi.worktrees/{branch_name}"
-    
+
     print(f"🚀 [Agent-as-a-Tool] Spawning {task_id} (Ephemeral: {ephemeral})...")
-    
+
     # 1. Create Clean Room (Worktree)
     if not run_command([WORKTREE_MANAGER, "create", branch_name]):
         return {"status": "error", "message": "Failed to create worktree"}
-        
+
     # 2. Inject Context (Goal)
     try:
         with open(f"{worktree_path}/GOAL.md", "w") as f:
             f.write(f"# Goal for {task_id}\n{goal}")
 
         sync_worktree_scripts(worktree_path)
-            
+
         # 3. Execute (Optional Pipeline)
         steps = []
         if run_pipeline or run_plan:
             steps.append(["bash", "scripts/codemap.sh"])
-            steps.append(["bash", "scripts/plan_codex.sh", f"{task_id}: {goal}"])
+            print(
+                "⚠️  Plan step skipped: Please run /plan interactively in Claude Code (Claude Opus 4.5)"
+            )
         if run_pipeline or run_audit:
             steps.append(["bash", "scripts/audit_gemini.sh"])
         if run_pipeline or run_tdd:
@@ -118,43 +125,52 @@ def dispatch_agent_tool(
             "summary": f"Agent initialized environment for: {goal}",
             "steps": step_results,
         }
-        
+
         # 5. Cleanup (Transient Context)
         if ephemeral:
             print(f"🧹 Cleaning up ephemeral worktree {branch_name}...")
             # Use 'git worktree remove --force' to ensure cleanup even if there are changes
             if run_command([WORKTREE_MANAGER, "remove", branch_name]):
-                 result["worktree"] = "cleaned_up"
-                 result["status"] = "success_ephemeral"
+                result["worktree"] = "cleaned_up"
+                result["status"] = "success_ephemeral"
             else:
-                 # Fallback to manual removal if script fails
-                 try:
-                     shutil.rmtree(worktree_path)
-                     run_command(["git", "worktree", "prune"])
-                     result["worktree"] = "cleaned_up_forced"
-                     result["status"] = "success_ephemeral_forced"
-                 except Exception as e:
-                     result["cleanup_error"] = f"Failed to remove worktree: {str(e)}"
-        
+                # Fallback to manual removal if script fails
+                try:
+                    shutil.rmtree(worktree_path)
+                    run_command(["git", "worktree", "prune"])
+                    result["worktree"] = "cleaned_up_forced"
+                    result["status"] = "success_ephemeral_forced"
+                except Exception as e:
+                    result["cleanup_error"] = f"Failed to remove worktree: {str(e)}"
+
         return result
-        
+
     except Exception as e:
         return {"status": "error", "message": str(e)}
+
 
 def main():
     parser = argparse.ArgumentParser(description="Swarm Dispatch (Agent-as-a-Tool)")
     parser.add_argument("--task", required=True, help="Task ID")
     parser.add_argument("--goal", required=True, help="Goal description")
-    parser.add_argument("--ephemeral", action="store_true", help="Cleanup worktree after execution")
-    parser.add_argument("--pipeline", action="store_true", help="Run plan/audit/tdd/impl/verify pipeline")
-    parser.add_argument("--plan", action="store_true", help="Run plan step (codemap + plan)")
+    parser.add_argument(
+        "--ephemeral", action="store_true", help="Cleanup worktree after execution"
+    )
+    parser.add_argument(
+        "--pipeline",
+        action="store_true",
+        help="Run plan/audit/tdd/impl/verify pipeline",
+    )
+    parser.add_argument(
+        "--plan", action="store_true", help="Run plan step (codemap + plan)"
+    )
     parser.add_argument("--audit", action="store_true", help="Run audit step")
     parser.add_argument("--tdd", action="store_true", help="Run TDD step")
     parser.add_argument("--impl", action="store_true", help="Run implementation step")
     parser.add_argument("--verify", action="store_true", help="Run verify step")
-    
+
     args = parser.parse_args()
-    
+
     result = dispatch_agent_tool(
         args.task,
         args.goal,
@@ -169,6 +185,7 @@ def main():
     print(json.dumps(result, indent=2))
     status = result.get("status", "")
     sys.exit(0 if status.startswith("success") else 1)
+
 
 if __name__ == "__main__":
     main()

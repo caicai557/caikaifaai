@@ -10,9 +10,8 @@ Tests cover:
 """
 
 import pytest
-import asyncio
 import os
-from unittest.mock import patch, MagicMock, AsyncMock
+from unittest.mock import patch
 from council.mcp.ai_council_server import (
     AICouncilServer,
     ModelConfig,
@@ -78,7 +77,7 @@ class TestServerStatus:
         """Status should have correct structure"""
         server = AICouncilServer()
         status = server.get_status()
-        
+
         assert "total_models" in status
         assert "enabled_models" in status
         assert "models" in status
@@ -96,7 +95,7 @@ class TestServerStatus:
         ]
         server = AICouncilServer(models=models)
         status = server.get_status()
-        
+
         assert status["total_models"] == 1
         assert status["models"][0]["provider"] == "gemini"
         assert status["models"][0]["weight"] == 1.5
@@ -262,16 +261,16 @@ class TestParallelQuery:
         """Should handle unsupported provider gracefully"""
         # Create a mock provider
         server = AICouncilServer(models=[])
-        
+
         class FakeProvider:
             value = "fake"
-        
+
         config = ModelConfig(
             provider=FakeProvider,
             model_name="fake-model",
             api_key_env="FAKE_KEY",
         )
-        
+
         response = await server._query_model("test", config)
         assert response.success is False
         assert "Unsupported" in response.error

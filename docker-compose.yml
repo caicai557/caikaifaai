@@ -1,7 +1,79 @@
 version: '3.8'
 
 services:
+  # ==========================================================================
+  # Council Agent System - Main Application
+  # ==========================================================================
+  council:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: cesi-council
+    volumes:
+      - ./.council:/app/.council
+      - ./NOTES.md:/app/NOTES.md
+    environment:
+      - PYTHONUNBUFFERED=1
+    networks:
+      - dev-network
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+  # ==========================================================================
+  # PTC Runner - Secure Code Execution Sandbox
+  # ==========================================================================
+  ptc-runner:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: ptc-sandbox
+    container_name: cesi-ptc
+    image: cesi-ptc:latest
+    volumes:
+      - ./.ptc_output:/sandbox/output
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PTC_OUTPUT_DIR=/sandbox/output
+    networks:
+      - dev-network
+    network_mode: "none"  # Network isolation for security
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    mem_limit: 256m
+    cpus: 0.5
+
+  # ==========================================================================
+  # Development Environment
+  # ==========================================================================
+  dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    container_name: cesi-dev
+    volumes:
+      - ./:/app
+      - /app/.venv
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTHONDONTWRITEBYTECODE=1
+    ports:
+      - "8080:8080"
+    networks:
+      - dev-network
+    command: python run_dashboard.py
+
+  # ==========================================================================
   # Node.js 开发环境沙箱
+  # ==========================================================================
   nodejs-sandbox:
     image: node:20-alpine
     container_name: caicai-nodejs-sandbox
@@ -32,7 +104,9 @@ services:
       - SETGID
       - SETUID
 
+  # ==========================================================================
   # Python 执行环境沙箱
+  # ==========================================================================
   python-sandbox:
     image: python:3.11-slim
     container_name: caicai-python-sandbox
@@ -58,7 +132,9 @@ services:
       - CHOWN
       - DAC_OVERRIDE
 
+  # ==========================================================================
   # 测试运行器沙箱
+  # ==========================================================================
   test-runner:
     image: node:20-alpine
     container_name: caicai-test-runner

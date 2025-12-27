@@ -1,4 +1,3 @@
-
 import asyncio
 import sys
 import os
@@ -8,7 +7,6 @@ from unittest.mock import MagicMock, AsyncMock
 sys.path.append(os.getcwd())
 
 from council.mcp.ai_council_server import AICouncilServer, ModelProvider, ModelResponse
-from council.facilitator.wald_consensus import ConsensusDecision
 
 DASHBOARD_TEMPLATE = """
 <!DOCTYPE html>
@@ -33,7 +31,7 @@ DASHBOARD_TEMPLATE = """
 <body>
     <div class="container">
         <h1>🧠 AI Council Semantic Entropy Monitor</h1>
-        
+
         <div class="metrics-row">
             <div class="card metric-box">
                 <h2>Average Entropy</h2>
@@ -61,12 +59,12 @@ DASHBOARD_TEMPLATE = """
 
     <script>
         const data = {{DATA_JSON}};
-        
+
         // Calculate Summary Metrics
         const avgEntropy = data.entropy.reduce((a, b) => a + b, 0) / data.entropy.length;
         const consensusCount = data.wald_pi.filter(p => p > 0.9 || p < 0.2).length;
         const consensusRate = Math.round((consensusCount / data.wald_pi.length) * 100) + "%";
-        
+
         document.getElementById('avgEntropy').innerText = avgEntropy.toFixed(3);
         document.getElementById('avgEntropy').className = "metric-value " + (avgEntropy > 0.6 ? "high-entropy" : "low-entropy");
         document.getElementById('consensusRate').innerText = consensusRate;
@@ -117,52 +115,73 @@ DASHBOARD_TEMPLATE = """
 </html>
 """
 
+
 async def generate_simulation():
     server = AICouncilServer(models=[])
-    
+
     # We mock _query_model to control the output logic for specific entropy scenarios
     server._query_model = AsyncMock()
     server._synthesize_responses = AsyncMock(return_value="Synthesized.")
     server.gateway = MagicMock()
-    server.gateway._scan_content.return_value = 0 # OK Risk
-    
+    server.gateway._scan_content.return_value = 0  # OK Risk
+
     print("Running Simulation Scenarios...")
-    
+
     # Scenario 1: High Consensus (Everybody Approves) -> Low Entropy
     server._query_model.return_value = ModelResponse(
-        provider=ModelProvider.GEMINI, model_name="mock", content="Vote: APPROVE\nConfidence: 0.99", latency_ms=10, success=True
+        provider=ModelProvider.GEMINI,
+        model_name="mock",
+        content="Vote: APPROVE\nConfidence: 0.99",
+        latency_ms=10,
+        success=True,
     )
     # We need to simulate multiple responses for parallel query, wait...
     # Actually query_parallel calls _query_model multiple times.
     # Let's mock query_parallel directly to make it easier to control the batch result
-    
+
     server.query_parallel = AsyncMock()
-    
+
     print("1. Scenario: Perfect Agreement (Low Entropy)")
     server.query_parallel.return_value = [
-        ModelResponse(ModelProvider.GEMINI, "gemini", "Vote: APPROVE\nConfidence: 0.99", 50, True),
-        ModelResponse(ModelProvider.OPENAI, "gpt-4", "Vote: APPROVE\nConfidence: 0.98", 60, True),
+        ModelResponse(
+            ModelProvider.GEMINI, "gemini", "Vote: APPROVE\nConfidence: 0.99", 50, True
+        ),
+        ModelResponse(
+            ModelProvider.OPENAI, "gpt-4", "Vote: APPROVE\nConfidence: 0.98", 60, True
+        ),
     ]
     await server.query("Is Python a programming language?")
-    
+
     print("2. Scenario: Slight Disagreement (Low-Mid Entropy)")
     server.query_parallel.return_value = [
-        ModelResponse(ModelProvider.GEMINI, "gemini", "Vote: APPROVE\nConfidence: 0.80", 50, True),
-        ModelResponse(ModelProvider.OPENAI, "gpt-4", "Vote: APPROVE\nConfidence: 0.60", 60, True),
+        ModelResponse(
+            ModelProvider.GEMINI, "gemini", "Vote: APPROVE\nConfidence: 0.80", 50, True
+        ),
+        ModelResponse(
+            ModelProvider.OPENAI, "gpt-4", "Vote: APPROVE\nConfidence: 0.60", 60, True
+        ),
     ]
     await server.query("Is C++ hard?")
 
     print("3. Scenario: Total Confusion (High Entropy)")
     server.query_parallel.return_value = [
-        ModelResponse(ModelProvider.GEMINI, "gemini", "Vote: APPROVE\nConfidence: 0.9", 50, True),
-        ModelResponse(ModelProvider.OPENAI, "gpt-4", "Vote: REJECT\nConfidence: 0.9", 60, True),
+        ModelResponse(
+            ModelProvider.GEMINI, "gemini", "Vote: APPROVE\nConfidence: 0.9", 50, True
+        ),
+        ModelResponse(
+            ModelProvider.OPENAI, "gpt-4", "Vote: REJECT\nConfidence: 0.9", 60, True
+        ),
     ]
     await server.query("Should we deploy to prod on Friday?")
 
     print("4. Scenario: Strong Rejection (Low Entropy)")
     server.query_parallel.return_value = [
-        ModelResponse(ModelProvider.GEMINI, "gemini", "Vote: REJECT\nConfidence: 0.99", 50, True),
-        ModelResponse(ModelProvider.OPENAI, "gpt-4", "Vote: REJECT\nConfidence: 0.95", 60, True),
+        ModelResponse(
+            ModelProvider.GEMINI, "gemini", "Vote: REJECT\nConfidence: 0.99", 50, True
+        ),
+        ModelResponse(
+            ModelProvider.OPENAI, "gpt-4", "Vote: REJECT\nConfidence: 0.95", 60, True
+        ),
     ]
     await server.query("Delete the database?")
 
@@ -170,12 +189,13 @@ async def generate_simulation():
     stats = server.monitor.get_stats()
     json_data = json.dumps(stats)
     html = DASHBOARD_TEMPLATE.replace("{{DATA_JSON}}", json_data)
-    
+
     with open("dashboard.html", "w") as f:
         f.write(html)
-        
+
     print(f"\nDashboard generated at: {os.path.abspath('dashboard.html')}")
     print(f"Stats: {json.dumps(stats, indent=2)}")
+
 
 if __name__ == "__main__":
     asyncio.run(generate_simulation())

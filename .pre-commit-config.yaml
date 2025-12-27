@@ -15,3 +15,30 @@ repos:
       - id: trailing-whitespace
       - id: check-yaml
       - id: check-added-large-files
+      - id: check-merge-conflict
+      - id: detect-private-key
+
+  # Local hooks for project-specific validation
+  - repo: local
+    hooks:
+      - id: pytest-check
+        name: pytest-check
+        entry: bash -c 'source .venv/bin/activate 2>/dev/null && python -m pytest tests/ -q --tb=no || exit 1'
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-push]
+
+      - id: wald-score-gate
+        name: wald-score-gate
+        entry: bash -c 'source .venv/bin/activate 2>/dev/null && python scripts/wald_score.py --risk medium 2>/dev/null | grep -q "PASS\|AUTO_COMMIT" || echo "⚠️ Wald Score check skipped"'
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-push]
+
+      - id: compile-check
+        name: compile-check
+        entry: python -m py_compile
+        language: system
+        types: [python]

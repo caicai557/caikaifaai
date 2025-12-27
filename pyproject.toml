@@ -45,6 +45,7 @@ council = [
 testpaths = ["tests"]
 python_files = "test_*.py"
 addopts = "-v --tb=short"
+asyncio_mode = "auto"
 
 [tool.ruff]
 line-length = 88

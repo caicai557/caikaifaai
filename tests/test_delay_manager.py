@@ -68,14 +68,14 @@ class TestDelayConfig:
 class TestDelayManager:
     """Contract tests for DelayManager."""
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_delay_manager_initialization(self):
         """Contract: DelayManager accepts DelayConfig."""
         config = DelayConfig(min_delay=1.0, max_delay=2.0)
         manager = DelayManager(config)
         assert manager.config == config
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_delay_executes_within_range(self):
         """AC2.2: Delay time is within configured range."""
         config = DelayConfig(min_delay=0.1, max_delay=0.3)
@@ -87,7 +87,7 @@ class TestDelayManager:
 
         assert config.min_delay <= elapsed <= config.max_delay + 0.05  # 50ms tolerance
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_delay_is_random(self):
         """AC2.2: Multiple delays produce different wait times."""
         config = DelayConfig(min_delay=0.1, max_delay=0.5)
@@ -103,7 +103,7 @@ class TestDelayManager:
         unique_delays = len(set(round(d, 1) for d in delays))
         assert unique_delays >= 2, "Delays should vary (randomness check)"
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_delay_disabled_returns_immediately(self):
         """AC2.3: No delay when enabled=False."""
         config = DelayConfig(enabled=False, min_delay=1.0, max_delay=2.0)
@@ -115,7 +115,7 @@ class TestDelayManager:
 
         assert elapsed < 0.1, "Should return immediately when disabled"
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_delay_zero_range_returns_immediately(self):
         """AC2.3: No delay when min=max=0."""
         config = DelayConfig(min_delay=0.0, max_delay=0.0)
@@ -127,7 +127,7 @@ class TestDelayManager:
 
         assert elapsed < 0.1, "Should return immediately with zero delay"
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_delay_fixed_time_when_min_equals_max(self):
         """Contract: Fixed delay when min_delay == max_delay."""
         config = DelayConfig(min_delay=0.2, max_delay=0.2)
@@ -139,7 +139,7 @@ class TestDelayManager:
 
         assert 0.15 <= elapsed <= 0.25, "Should execute fixed delay"
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_delay_does_not_block_event_loop(self):
         """Contract: Async execution allows concurrent operations."""
         config = DelayConfig(min_delay=0.2, max_delay=0.3)
@@ -154,7 +154,7 @@ class TestDelayManager:
         # If sequential: ~0.4-0.6s, if parallel: ~0.2-0.3s
         assert elapsed < 0.4, "Should execute delays concurrently"
 
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_multiple_delay_calls_independent(self):
         """Contract: Multiple DelayManager instances work independently."""
         config1 = DelayConfig(min_delay=0.1, max_delay=0.2)

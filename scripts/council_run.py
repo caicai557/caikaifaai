@@ -233,9 +233,9 @@ def retrieve_lessons(goal: str) -> str:
     keywords = extract_keywords(goal)
     if not keywords:
         return ""
-    
+
     print(f"🔍 Smart Injection: Searching lessons for keywords: {keywords}")
-    
+
     lessons_found = []
     # Search for each keyword
     for kw in keywords[:3]: # Limit to top 3 keywords
@@ -245,14 +245,14 @@ def retrieve_lessons(goal: str) -> str:
             # In a real implementation, KB should return JSON
             if "Found" in result["stdout"]:
                 lessons_found.append(result["stdout"].strip())
-    
+
     if not lessons_found:
         return ""
-        
+
     # Deduplicate and format
     unique_lessons = list(set(lessons_found))
     formatted_lessons = "\n".join(unique_lessons)
-    
+
     return f"\n\n📚 RELEVANT LESSONS FROM PLAYBOOK:\n{formatted_lessons}\n"
 
 def run_task(
@@ -271,7 +271,7 @@ def run_task(
     if dry_run:
         print("   Mode: DRY RUN (Planning Only)")
     print("-" * 40)
-    
+
     # 0. Smart Injection (Phase 1: Plan)
     print("\n[1/5] 🏗️ Phase 1: Plan & Research (Smart Injection)...")
     injected_context = retrieve_lessons(goal)
@@ -289,24 +289,24 @@ def run_task(
 
     # 1. Swarm Dispatch (Phase 2: Code)
     print("\n[2/5] 🛠️ Phase 2: Code & Execute (Swarm)...")
-    
+
     max_retries = 3
     attempt = 0
     swarm_success = False
-    
+
     while attempt < max_retries:
         attempt += 1
         print(f"   🔄 Attempt {attempt}/{max_retries}...")
-        
+
         swarm_args = ["--task", task, "--goal", goal]
         if ephemeral:
             swarm_args.append("--ephemeral")
         if swarm_pipeline:
             swarm_args.append("--pipeline")
-            
+
         swarm_timeout = 600 if swarm_pipeline else 120
         swarm_result = run_script(SCRIPTS["swarm"], swarm_args, timeout_seconds=swarm_timeout)
-        
+
         if swarm_result["status"] == "success":
             print(swarm_result["stdout"])
             try:
@@ -320,14 +320,14 @@ def run_task(
             error_preview = swarm_result["stderr"] or swarm_result["stdout"]
             preview = (error_preview or "")[:200]
             print(f"   ❌ Attempt {attempt} failed: {preview}...") # Truncate error
-            
+
             # REFLECTIVE STEP: Update goal with error context
             error_context = f"\n\n[SYSTEM ERROR]: Previous attempt {attempt} failed with error:\n{swarm_result['stderr']}\n"
-            
+
             # Call Facilitator for strategy
             print("   👔 Calling Facilitator for conflict resolution...")
             facilitator_result = run_script("./scripts/facilitator.py", ["--task", task, "--history", swarm_result['stderr']])
-            
+
             if facilitator_result["status"] == "success":
                 try:
                     fac_output = json.loads(facilitator_result["stdout"])
@@ -336,14 +336,14 @@ def run_task(
                     error_context += f"\n[FACILITATOR ADVICE]: {strategy}\n"
                 except json.JSONDecodeError:
                     print("   ⚠️ Facilitator output parse failed.")
-            
+
             error_context += "\nPLEASE ANALYZE THIS ERROR AND ADVICE TO ADJUST YOUR STRATEGY."
             goal += error_context
-            
+
             if attempt < max_retries:
                 print("   🧠 Reflecting and retrying in 2s...")
                 time.sleep(2)
-    
+
     if not swarm_success:
         print(f"❌ Swarm failed after {max_retries} attempts.")
         return False
@@ -367,7 +367,7 @@ def run_task(
         if wald_result.pi_approve < MIN_SRC_PI:
             print(f"❌ Council consensus below {MIN_SRC_PI:.2f}. Manual review required.")
             return False
-    
+
     # 3. Verification
     print("\n[3/5] 🧪 Phase 3: Verification (just verify)...")
     verify_result = run_verify()
@@ -381,7 +381,7 @@ def run_task(
 
     # 4. Wald Score (Phase 4: Verify & Audit)
     print("\n[4/5] 🛡️ Phase 4: Verify & Audit (Wald Score)...")
-    
+
     # 2.1 Adjudicator (Semantic Validation)
     print("   ⚖️ Running Adjudicator (Semantic Validation)...")
     # For now, we build the graph on the fly to ensure freshness
@@ -389,7 +389,7 @@ def run_task(
     # Validate the modified files (Mock: validating the task goal context conceptually)
     # In production, we would pass the specific files modified by the Swarm
     adj_result = run_script("./scripts/graph_builder.py", ["validate", "--file", "scripts/council_run.py"])
-    
+
     if adj_result["status"] == "success":
         print(adj_result["stdout"])
     else:
@@ -398,22 +398,22 @@ def run_task(
     # 2.2 Wald Score
     wald_result = run_script(SCRIPTS["wald"], ["--risk", risk])
     print(wald_result["stdout"])
-    
+
     wald_passed = wald_result["code"] == 0
-    
+
     # 5. Functional Codification (Phase 5: Consolidate & Learn)
     print("\n[5/5] 🧹 Phase 5: Consolidate & Learn...")
     if wald_passed:
         # 1. Compact Context
         context_result = run_script(SCRIPTS["context"], ["compact"])
         print(context_result["stdout"])
-        
+
         # 2. Codify Routine (New)
         print("   ⚡ Codifying successful run...")
         codify_result = run_script("./scripts/codify_routine.py", ["--task", task, "--goal", goal, "--history", "success"])
         if codify_result["status"] == "success":
             print(f"   ✅ Routine generated: {json.loads(codify_result['stdout']).get('routine')}")
-            
+
         # 3. Extract Lesson (Optional)
         if learn:
             print("   📚 Extracting Lesson...")
@@ -427,7 +427,7 @@ def run_task(
             print(kb_result["stdout"])
     else:
         print("⚠️ Wald failed, skipping consolidation.")
-    
+
     # Summary
     print("\n" + "=" * 40)
     if wald_passed:
@@ -446,9 +446,9 @@ def main():
     parser.add_argument("--learn", action="store_true", help="Extract lesson to knowledge base")
     parser.add_argument("--dry-run", action="store_true", help="Execute only planning phase (Smart Injection)")
     parser.add_argument("--swarm-pipeline", action="store_true", help="Run plan/audit/tdd/impl/verify in swarm")
-    
+
     args = parser.parse_args()
-    
+
     success = run_task(
         args.task,
         args.goal,

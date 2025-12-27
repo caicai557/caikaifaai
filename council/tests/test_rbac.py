@@ -7,7 +7,6 @@ Tests cover:
 - Path matching with glob patterns
 """
 
-import pytest
 from council.auth.rbac import (
     RBAC,
     Role,
@@ -183,7 +182,7 @@ class TestRoleSummary:
         """get_role_summary should return correct structure"""
         rbac = RBAC()
         summary = rbac.get_role_summary(Role.CODER)
-        
+
         assert summary["role"] == "coder"
         assert "read" in summary["permissions"]
         assert "write" in summary["permissions"]

@@ -3,7 +3,7 @@ Coder - 工程师智能体
 负责代码实现、测试编写、功能开发
 """
 
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any
 from council.agents.base_agent import (
     BaseAgent, Vote, VoteDecision, ThinkResult, ExecuteResult
 )
@@ -38,17 +38,17 @@ CODER_SYSTEM_PROMPT = """你是一名高级软件工程师，专注于代码实�
 class Coder(BaseAgent):
     """
     工程师智能体
-    
+
     专注于代码实现和测试编写
     """
-    
+
     def __init__(self, model: str = "gemini-2.0-flash"):
         super().__init__(
             name="Coder",
             system_prompt=CODER_SYSTEM_PROMPT,
             model=model,
         )
-    
+
     def think(self, task: str, context: Optional[Dict[str, Any]] = None) -> ThinkResult:
         """
         从实现角度分析任务
@@ -74,24 +74,24 @@ class Coder(BaseAgent):
 0.9
 """
         response = self._call_llm(prompt)
-        
+
         # 解析逻辑 (与 Architect 类似，复用结构)
         analysis = ""
         concerns = []
         suggestions = []
         confidence = 0.5
-        
+
         current_section = None
         for line in response.split('\n'):
             line = line.strip()
             if not line: continue
-            
+
             if line.startswith("[Plan]"): current_section = "analysis"
             elif line.startswith("[Concerns]"): current_section = "concerns"
             elif line.startswith("[Suggestions]"): current_section = "suggestions"
             elif line.startswith("[Confidence]"): current_section = "confidence"
             elif current_section == "analysis": analysis += line + "\n"
-            elif current_section == "concerns": 
+            elif current_section == "concerns":
                 if line.startswith("-") or line[0].isdigit(): concerns.append(line.lstrip("- 1234567890."))
             elif current_section == "suggestions":
                 if line.startswith("-") or line[0].isdigit(): suggestions.append(line.lstrip("- 1234567890."))
@@ -104,7 +104,7 @@ class Coder(BaseAgent):
             "task": task,
             "context": context
         })
-        
+
         return ThinkResult(
             analysis=analysis.strip() or response,
             concerns=concerns,
@@ -112,7 +112,7 @@ class Coder(BaseAgent):
             confidence=confidence,
             context={"perspective": "implementation"},
         )
-    
+
     def vote(self, proposal: str, context: Optional[Dict[str, Any]] = None) -> Vote:
         """
         对提案进行实现可行性投票
@@ -130,12 +130,12 @@ Confidence: [0.0-1.0]
 Rationale: [理由]
 """
         response = self._call_llm(prompt)
-        
+
         import re
         decision = VoteDecision.HOLD
         confidence = 0.5
         rationale = response
-        
+
         decision_match = re.search(r"Vote:\s*(APPROVE_WITH_CHANGES|APPROVE|HOLD|REJECT)", response, re.IGNORECASE)
         if decision_match:
             d_str = decision_match.group(1).upper()
@@ -143,29 +143,29 @@ Rationale: [理由]
             elif d_str == "APPROVE_WITH_CHANGES": decision = VoteDecision.APPROVE_WITH_CHANGES
             elif d_str == "HOLD": decision = VoteDecision.HOLD
             elif d_str == "REJECT": decision = VoteDecision.REJECT
-            
+
         conf_match = re.search(r"Confidence:\s*(\d*\.?\d+)", response)
         if conf_match:
             try: confidence = float(conf_match.group(1))
             except: pass
-            
+
         rationale_match = re.search(r"Rationale:\s*(.+)", response, re.DOTALL | re.IGNORECASE)
         if rationale_match:
             rationale = rationale_match.group(1).strip()
-            
+
         self.add_to_history({
             "action": "vote",
             "proposal": proposal,
             "decision": decision.value
         })
-        
+
         return Vote(
             agent_name=self.name,
             decision=decision,
             confidence=confidence,
             rationale=rationale,
         )
-    
+
     def execute(self, task: str, plan: Optional[Dict[str, Any]] = None) -> ExecuteResult:
         """
         执行代码实现任务
@@ -175,20 +175,20 @@ Rationale: [理由]
             "task": task,
             "plan": plan,
         })
-        
+
         return ExecuteResult(
             success=True,
             output=f"工程师已完成实现: {task}",
             changes_made=["实现核心功能", "添加单元测试"],
         )
-    
+
     def generate_tests(self, spec: str) -> Dict[str, Any]:
         """
         生成测试代码
-        
+
         Args:
             spec: 功能规格说明
-            
+
         Returns:
             测试生成结果
         """
@@ -198,14 +198,14 @@ Rationale: [理由]
             "coverage_estimate": 0.0,
             "test_files": [],
         }
-    
+
     def review_code(self, code: str) -> Dict[str, Any]:
         """
         代码审查
-        
+
         Args:
             code: 待审查代码
-            
+
         Returns:
             审查结果
         """

@@ -3,7 +3,7 @@ Architect - 架构师智能体
 负责顶层设计、架构评审、风险识别
 """
 
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any
 from council.agents.base_agent import (
     BaseAgent, Vote, VoteDecision, ThinkResult, ExecuteResult
 )
@@ -39,17 +39,17 @@ ARCHITECT_SYSTEM_PROMPT = """你是一名资深软件架构师，拥有 20 年�
 class Architect(BaseAgent):
     """
     架构师智能体
-    
+
     专注于系统顶层设计和架构评审
     """
-    
+
     def __init__(self, model: str = "gemini-2.0-flash"):
         super().__init__(
             name="Architect",
             system_prompt=ARCHITECT_SYSTEM_PROMPT,
             model=model,
         )
-    
+
     def think(self, task: str, context: Optional[Dict[str, Any]] = None) -> ThinkResult:
         """
         从架构角度分析任务
@@ -82,19 +82,19 @@ class Architect(BaseAgent):
 """
         # 调用 LLM
         response = self._call_llm(prompt)
-        
+
         # 解析响应
         analysis = ""
         concerns = []
         suggestions = []
         confidence = 0.5
-        
+
         current_section = None
         for line in response.split('\n'):
             line = line.strip()
             if not line:
                 continue
-                
+
             if line.startswith("[Analysis]"):
                 current_section = "analysis"
             elif line.startswith("[Concerns]"):
@@ -123,7 +123,7 @@ class Architect(BaseAgent):
             "context": context,
             "response_length": len(response)
         })
-        
+
         return ThinkResult(
             analysis=analysis.strip() or response, # Fallback to raw response if parsing fails
             concerns=concerns,
@@ -131,7 +131,7 @@ class Architect(BaseAgent):
             confidence=confidence,
             context={"perspective": "architecture"},
         )
-    
+
     def vote(self, proposal: str, context: Optional[Dict[str, Any]] = None) -> Vote:
         """
         对提案进行架构评审投票
@@ -153,13 +153,13 @@ Rationale: [理由]
 Changes: [建议修改1, 建议修改2] (可选)
 """
         response = self._call_llm(prompt)
-        
+
         # 默认值
         decision = VoteDecision.HOLD
         confidence = 0.5
         rationale = response
         suggested_changes = []
-        
+
         # 简单解析
         import re
         decision_match = re.search(r"Vote:\s*(APPROVE_WITH_CHANGES|APPROVE|HOLD|REJECT)", response, re.IGNORECASE)
@@ -169,17 +169,17 @@ Changes: [建议修改1, 建议修改2] (可选)
             elif d_str == "APPROVE_WITH_CHANGES": decision = VoteDecision.APPROVE_WITH_CHANGES
             elif d_str == "HOLD": decision = VoteDecision.HOLD
             elif d_str == "REJECT": decision = VoteDecision.REJECT
-            
+
         conf_match = re.search(r"Confidence:\s*(\d*\.?\d+)", response)
         if conf_match:
             try:
                 confidence = float(conf_match.group(1))
             except: pass
-            
+
         rationale_match = re.search(r"Rationale:\s*(.+?)(?:\nChanges:|$)", response, re.DOTALL | re.IGNORECASE)
         if rationale_match:
             rationale = rationale_match.group(1).strip()
-            
+
         changes_match = re.search(r"Changes:\s*(.+)", response, re.DOTALL | re.IGNORECASE)
         if changes_match:
             changes_str = changes_match.group(1).strip()
@@ -196,7 +196,7 @@ Changes: [建议修改1, 建议修改2] (可选)
             "context": context,
             "decision": decision.value
         })
-        
+
         return Vote(
             agent_name=self.name,
             decision=decision,
@@ -204,7 +204,7 @@ Changes: [建议修改1, 建议修改2] (可选)
             rationale=rationale,
             suggested_changes=suggested_changes,
         )
-    
+
     def execute(self, task: str, plan: Optional[Dict[str, Any]] = None) -> ExecuteResult:
         """
         执行架构相关任务（如生成架构文档）
@@ -214,20 +214,20 @@ Changes: [建议修改1, 建议修改2] (可选)
             "task": task,
             "plan": plan,
         })
-        
+
         return ExecuteResult(
             success=True,
             output=f"架构师已完成任务: {task}",
             changes_made=["生成架构设计文档"],
         )
-    
+
     def review_design(self, design_doc: str) -> Dict[str, Any]:
         """
         专门的设计评审方法
-        
+
         Args:
             design_doc: 设计文档内容
-            
+
         Returns:
             评审结果
         """

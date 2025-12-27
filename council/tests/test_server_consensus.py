@@ -2,17 +2,15 @@
 import unittest
 import sys
 import os
-from datetime import datetime
-from unittest.mock import MagicMock, patch
 
 # Add project root
 sys.path.append(os.getcwd())
 
-from council.mcp.ai_council_server import AICouncilServer, ModelResponse, ModelProvider, ConsensusResponse
-from council.facilitator.wald_consensus import ConsensusDecision, ConsensusResult
+from council.mcp.ai_council_server import AICouncilServer, ModelResponse, ModelProvider
+from council.facilitator.wald_consensus import ConsensusDecision
 
 class TestServerConsensus(unittest.IsolatedAsyncioTestCase):
-    
+
     def test_parse_vote_approve(self):
         """Test parsing an APPROVE vote from model response"""
         server = AICouncilServer(models=[])
@@ -22,7 +20,7 @@ class TestServerConsensus(unittest.IsolatedAsyncioTestCase):
         Rationale: Looks good.
         """
         vote = server._parse_vote(content, "TestAgent")
-        
+
         self.assertEqual(vote.get("decision"), "approve")
         self.assertEqual(vote.get("confidence"), 0.95)
         self.assertEqual(vote.get("agent"), "TestAgent")
@@ -32,14 +30,14 @@ class TestServerConsensus(unittest.IsolatedAsyncioTestCase):
         server = AICouncilServer(models=[])
         content = "VOTE: REJECT\nCONFIDENCE: 0.8"
         vote = server._parse_vote(content, "TestAgent")
-        
+
         self.assertEqual(vote.get("decision"), "reject")
         self.assertEqual(vote.get("confidence"), 0.8)
 
     def test_evaluate_votes_autocommit(self):
         """Test evaluate_votes returns AUTO_COMMIT with strong support"""
         server = AICouncilServer(models=[])
-        
+
         # Simulate high agreement responses
         responses = [
             ModelResponse(
@@ -57,12 +55,12 @@ class TestServerConsensus(unittest.IsolatedAsyncioTestCase):
                 success=True
             )
         ]
-        
+
         # Mock WaldConsensus to return AUTO_COMMIT
-        # Note: In real implementation we'll use the actual class, 
+        # Note: In real implementation we'll use the actual class,
         # but here we want to test the integration logic.
         # Ideally we let the real WaldConsensus run if logic is simple.
-        
+
         result = server.evaluate_votes(responses)
         self.assertEqual(result.decision, ConsensusDecision.AUTO_COMMIT)
         self.assertTrue(result.pi_approve > 0.9)
@@ -79,7 +77,7 @@ class TestServerConsensus(unittest.IsolatedAsyncioTestCase):
                 success=True
             )
         ]
-        
+
         result = server.evaluate_votes(responses)
         self.assertEqual(result.decision, ConsensusDecision.HOLD_FOR_HUMAN)
 

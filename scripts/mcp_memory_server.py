@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
-import asyncio
 import json
 import os
 import sqlite3
 import sys
-from typing import Any, Dict, List, Optional
+from typing import Optional
 from mcp.server.fastmcp import FastMCP
 
 # Initialize FastMCP server
@@ -31,7 +30,7 @@ def init_db():
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
-    
+
     # Load from disk
     if os.path.exists(LEDGER_FILE):
         try:
@@ -50,7 +49,7 @@ def persist_to_disk():
     """Flush in-memory state to JSON file."""
     cursor = db.execute("SELECT * FROM tasks")
     tasks = [dict(row) for row in cursor.fetchall()]
-    
+
     os.makedirs(os.path.dirname(LEDGER_FILE), exist_ok=True)
     with open(LEDGER_FILE, 'w') as f:
         json.dump({"tasks": tasks}, f, indent=2)
@@ -60,20 +59,20 @@ def check_permission(agent_id: str, permission: str) -> bool:
     """Check if agent has required permission."""
     if not os.path.exists(PERMISSIONS_FILE):
         return True # Default allow if no policy
-        
+
     try:
         with open(PERMISSIONS_FILE, 'r') as f:
             policy = json.load(f)
-            
+
         role_def = policy.get("roles", {}).get(agent_id.lower())
         if not role_def:
             # Fallback to default role
             default_role = policy.get("default_role", "claude")
             role_def = policy.get("roles", {}).get(default_role)
-            
+
         if role_def and permission in role_def.get("permissions", []):
             return True
-            
+
         return False
     except Exception:
         return False
@@ -98,7 +97,7 @@ def add_task(description: str, agent: str = "Gemini", agent_id: str = "claude") 
     cursor = db.execute("SELECT COUNT(*) FROM tasks")
     count = cursor.fetchone()[0]
     task_id = f"T-{count + 1}"
-    
+
     db.execute(
         "INSERT INTO tasks (id, description, agent) VALUES (?, ?, ?)",
         (task_id, description, agent)
@@ -114,23 +113,23 @@ def update_task(task_id: str, status: Optional[str] = None, confidence: Optional
 
     updates = []
     params = []
-    
+
     if status:
         updates.append("status = ?")
         params.append(status)
     if confidence is not None:
         updates.append("confidence = ?")
         params.append(confidence)
-        
+
     if not updates:
         return "⚠️ No updates provided."
-        
+
     updates.append("updated_at = CURRENT_TIMESTAMP")
     params.append(task_id)
-    
+
     query = f"UPDATE tasks SET {', '.join(updates)} WHERE id = ?"
     cursor = db.execute(query, params)
-    
+
     if cursor.rowcount > 0:
         persist_to_disk()
         return f"✅ Task {task_id} updated."

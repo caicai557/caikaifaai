@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, patch
 sys.path.append(os.getcwd())
 
 from council.self_healing.patch_generator import PatchGenerator
-from council.self_healing.loop import Diagnosis, Patch
+from council.self_healing.loop import Diagnosis
 
 class TestPatchGenerator(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
@@ -32,13 +32,13 @@ class TestPatchGenerator(unittest.IsolatedAsyncioTestCase):
         mock_file = MagicMock()
         mock_file.__enter__.return_value.read.return_value = self.file_content
         mock_open.return_value = mock_file
-        
+
         # Mock LLM response with markdown code block
         mock_call_llm.return_value = "Here is the fix:\n```python\ndef add(a, b):\n    return a - b\n```"
-        
+
         generator = PatchGenerator()
         patch_result = await generator.generate_patch_with_llm(self.diagnosis)
-        
+
         self.assertIn("return a - b", patch_result.patched_content)
         self.assertTrue(patch_result.confidence > 0.5)
 
@@ -46,7 +46,7 @@ class TestPatchGenerator(unittest.IsolatedAsyncioTestCase):
         generator = PatchGenerator()
         text = "```python\ncode\n```"
         self.assertEqual(generator._extract_code_block(text), "code")
-        
+
     def test_construct_prompt(self):
         generator = PatchGenerator()
         prompt = generator._construct_prompt(self.diagnosis, self.file_content)

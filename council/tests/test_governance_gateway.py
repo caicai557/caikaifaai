@@ -7,15 +7,12 @@ Tests cover:
 - Approval workflow (create, approve, reject)
 """
 
-import pytest
-from datetime import datetime
 from council.governance.gateway import (
     GovernanceGateway,
     ApprovalRequest,
     ActionType,
     RiskLevel,
     HIGH_RISK_ACTIONS,
-    PROTECTED_PATHS,
 )
 
 
@@ -102,7 +99,7 @@ class TestApprovalWorkflow:
             affected_resources=["prod-server-1", "prod-server-2"],
             rationale="Version 1.0 passed all tests",
         )
-        
+
         assert request.request_id.startswith("REQ-")
         assert request.action_type == ActionType.DEPLOY
         assert request.risk_level == RiskLevel.CRITICAL
@@ -119,11 +116,11 @@ class TestApprovalWorkflow:
             affected_resources=["prod"],
             rationale="Test",
         )
-        
+
         assert request.request_id in gateway.pending_requests
-        
+
         result = gateway.approve(request.request_id, "admin@example.com")
-        
+
         assert result is True
         assert request.request_id not in gateway.pending_requests
         assert len(gateway.approval_log) == 1
@@ -139,9 +136,9 @@ class TestApprovalWorkflow:
             affected_resources=["prod"],
             rationale="Test",
         )
-        
+
         result = gateway.reject(request.request_id, "admin@example.com")
-        
+
         assert result is True
         assert request.request_id not in gateway.pending_requests
         assert len(gateway.approval_log) == 1
@@ -168,7 +165,7 @@ class TestApprovalWorkflow:
             affected_resources=["db"],
             rationale="Test",
         )
-        
+
         pending = gateway.get_pending_requests()
         assert len(pending) == 2
 
@@ -180,16 +177,16 @@ class TestApprovalCallback:
         """Callback that returns True should auto-approve"""
         gateway = GovernanceGateway()
         gateway.set_approval_callback(lambda req: True)
-        
+
         request = gateway.create_approval_request(
             action_type=ActionType.DEPLOY,
             description="Deploy",
             affected_resources=["prod"],
             rationale="Test",
         )
-        
+
         result = gateway.wait_for_approval(request)
-        
+
         assert result is True
         assert len(gateway.approval_log) == 1
         assert gateway.approval_log[0].approved is True
@@ -198,16 +195,16 @@ class TestApprovalCallback:
         """Callback that returns False should auto-reject"""
         gateway = GovernanceGateway()
         gateway.set_approval_callback(lambda req: False)
-        
+
         request = gateway.create_approval_request(
             action_type=ActionType.DEPLOY,
             description="Deploy",
             affected_resources=["prod"],
             rationale="Test",
         )
-        
+
         result = gateway.wait_for_approval(request)
-        
+
         assert result is False
         assert len(gateway.approval_log) == 1
         assert gateway.approval_log[0].approved is False
@@ -226,9 +223,9 @@ class TestApprovalRequestSerialization:
             affected_resources=["prod"],
             rationale="Test",
         )
-        
+
         d = request.to_dict()
-        
+
         assert d["request_id"] == "REQ-20231223-0001"
         assert d["action_type"] == "deploy"
         assert d["risk_level"] == "critical"

@@ -29,3 +29,15 @@ class BrowserContext(BaseModel):
     port: Optional[int] = Field(
         default=None, description="Debugging port for browser instance (optional)"
     )
+
+    async def start(self) -> None:
+        """Launch the browser instance (Not Implemented).
+
+        Raises:
+            NotImplementedError: Actual Playwright launch logic pending Phase 5.
+        """
+        raise NotImplementedError(
+            f"BrowserContext.start() not implemented for instance "
+            f"'{self.instance_id}'. This is a stub. "
+            "Implement Playwright launch logic in Phase 5."
+        )

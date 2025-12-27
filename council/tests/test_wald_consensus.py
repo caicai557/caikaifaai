@@ -10,7 +10,6 @@ Tests cover:
 """
 
 import pytest
-import math
 from council.facilitator.wald_consensus import (
     WaldConsensus,
     WaldConfig,

@@ -66,20 +66,20 @@ def dispatch_agent_tool(
     """
     branch_name = f"swarm/{task_id}"
     worktree_path = f"../cesi.worktrees/{branch_name}"
-    
+
     print(f"🚀 [Agent-as-a-Tool] Spawning {task_id} (Ephemeral: {ephemeral})...")
-    
+
     # 1. Create Clean Room (Worktree)
     if not run_command([WORKTREE_MANAGER, "create", branch_name]):
         return {"status": "error", "message": "Failed to create worktree"}
-        
+
     # 2. Inject Context (Goal)
     try:
         with open(f"{worktree_path}/GOAL.md", "w") as f:
             f.write(f"# Goal for {task_id}\n{goal}")
 
         sync_worktree_scripts(worktree_path)
-            
+
         # 3. Execute (Optional Pipeline)
         steps = []
         if run_pipeline or run_plan:
@@ -118,7 +118,7 @@ def dispatch_agent_tool(
             "summary": f"Agent initialized environment for: {goal}",
             "steps": step_results,
         }
-        
+
         # 5. Cleanup (Transient Context)
         if ephemeral:
             print(f"🧹 Cleaning up ephemeral worktree {branch_name}...")
@@ -135,9 +135,9 @@ def dispatch_agent_tool(
                      result["status"] = "success_ephemeral_forced"
                  except Exception as e:
                      result["cleanup_error"] = f"Failed to remove worktree: {str(e)}"
-        
+
         return result
-        
+
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
@@ -152,9 +152,9 @@ def main():
     parser.add_argument("--tdd", action="store_true", help="Run TDD step")
     parser.add_argument("--impl", action="store_true", help="Run implementation step")
     parser.add_argument("--verify", action="store_true", help="Run verify step")
-    
+
     args = parser.parse_args()
-    
+
     result = dispatch_agent_tool(
         args.task,
         args.goal,

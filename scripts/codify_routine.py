@@ -17,13 +17,13 @@ def codify_run(task_id: str, goal: str, history: str) -> str:
     Here we simulate the creation of a routine.
     """
     print(f"⚡ Codifier: Analyzing successful run for {task_id}...", file=sys.stderr)
-    
+
     # Simulate routine generation
     routine_name = f"routine_{task_id.lower().replace('-', '_')}.py"
     routine_path = os.path.join(ROUTINES_DIR, routine_name)
-    
+
     os.makedirs(ROUTINES_DIR, exist_ok=True)
-    
+
     routine_content = f"""#!/usr/bin/env python3
 # Routine for Task: {task_id}
 # Goal: {goal}
@@ -39,12 +39,12 @@ def main():
 if __name__ == "__main__":
     main()
 """
-    
+
     with open(routine_path, "w") as f:
         f.write(routine_content)
-        
+
     os.chmod(routine_path, 0o755)
-    
+
     return routine_path
 
 def main():
@@ -52,11 +52,11 @@ def main():
     parser.add_argument("--task", required=True, help="Task ID")
     parser.add_argument("--goal", required=True, help="Goal description")
     parser.add_argument("--history", required=True, help="Execution history")
-    
+
     args = parser.parse_args()
-    
+
     routine_path = codify_run(args.task, args.goal, args.history)
-    
+
     print(json.dumps({
         "status": "success",
         "routine": routine_path,

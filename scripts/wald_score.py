@@ -129,15 +129,15 @@ def main():
     parser.add_argument("--coverage", type=float, help="Override coverage (0.0-1.0)")
     parser.add_argument("--lint", type=int, help="Override lint error count")
     parser.add_argument("--risk", choices=["low", "medium", "high"], default="medium", help="Risk level for this operation")
-    
+
     args = parser.parse_args()
-    
+
     coverage = args.coverage if args.coverage is not None else get_coverage()
     lint_errors = args.lint if args.lint is not None else get_lint_errors()
     spec_compliance = check_spec_compliance()
-    
+
     pi = calculate_wald_score(coverage, lint_errors, spec_compliance)
-    
+
     # Dynamic Thresholds
     thresholds = {
         "low": 0.80,
@@ -145,7 +145,7 @@ def main():
         "high": 0.99
     }
     required_pi = thresholds[args.risk]
-    
+
     print(f"📊 Wald Score Calculation (Risk: {args.risk.upper()}):")
     print(f"  Coverage: {coverage:.2f}" if coverage is not None else "  Coverage: N/A")
     print(f"  Lint Errors: {lint_errors}" if lint_errors is not None else "  Lint Errors: N/A")
@@ -154,10 +154,10 @@ def main():
         print("  Warning: coverage.xml not found; skipping coverage metric.")
     if lint_errors is None:
         print("  Warning: ruff not found; skipping lint metric.")
-    print(f"---------------------------")
+    print("---------------------------")
     print(f"  π (Confidence): {pi:.4f}")
     print(f"  Required π: {required_pi:.2f}")
-    
+
     if pi >= required_pi:
         if args.risk == "high":
             print("⚠️ Status: HUMAN_APPROVAL_REQUIRED (High Risk Passed)")

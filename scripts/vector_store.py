@@ -14,13 +14,13 @@ class VectorStore:
     def __init__(self):
         # Ensure directory exists
         os.makedirs(DB_PATH, exist_ok=True)
-        
+
         # Initialize Client
         self.client = chromadb.PersistentClient(path=DB_PATH)
-        
+
         # Use default embedding function (all-MiniLM-L6-v2)
         self.ef = embedding_functions.DefaultEmbeddingFunction()
-        
+
         # Get or create collection
         self.collection = self.client.get_or_create_collection(
             name="council_lessons",
@@ -57,28 +57,28 @@ def main():
     import argparse
     parser = argparse.ArgumentParser(description="Vector Store CLI")
     subparsers = parser.add_subparsers(dest="command", required=True)
-    
+
     # Add
     add_parser = subparsers.add_parser("add", help="Add document")
     add_parser.add_argument("--id", required=True, help="Document ID")
     add_parser.add_argument("--text", required=True, help="Document Text")
     add_parser.add_argument("--tags", help="Tags (comma separated)")
-    
+
     # Search
     search_parser = subparsers.add_parser("search", help="Search documents")
     search_parser.add_argument("query", help="Query text")
-    
+
     args = parser.parse_args()
-    
+
     vs = VectorStore()
-    
+
     if args.command == "add":
         meta = {"tags": args.tags} if args.tags else {}
         if vs.add_lesson(args.id, args.text, meta):
             print(f"✅ Added document {args.id}")
         else:
             sys.exit(1)
-            
+
     elif args.command == "search":
         results = vs.search(args.query)
         if results and results['documents']:

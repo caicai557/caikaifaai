@@ -3,7 +3,9 @@
     "allow": [
       "Bash(powershell:*)",
       "Bash(just verify:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(ruff check:*)",
+      "Bash(pytest:*)"
     ]
   },
   "enabledMcpjsonServers": [

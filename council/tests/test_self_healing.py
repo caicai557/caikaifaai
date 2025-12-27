@@ -8,14 +8,10 @@ Tests cover:
 - Diagnosis generation
 """
 
-import pytest
-import os
-from unittest.mock import patch, MagicMock
 from council.self_healing.loop import (
     SelfHealingLoop,
     HealingStatus,
     HealingReport,
-    HealingIteration,
     TestResult,
     Diagnosis,
     Patch,

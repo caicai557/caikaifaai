@@ -8,7 +8,7 @@ from council.facilitator.facilitator import (
 
 __all__ = [
     "WaldConsensus",
-    "WaldConfig", 
+    "WaldConfig",
     "ConsensusResult",
     "ConsensusDecision",
     "Facilitator",

@@ -1,6 +1,6 @@
 
 import unittest
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 import sys
 import os
 
@@ -12,7 +12,7 @@ from council.agents.security_auditor import SecurityAuditor
 from council.agents.base_agent import VoteDecision
 
 class TestRealAgents(unittest.TestCase):
-    
+
     @patch("council.agents.base_agent.BaseAgent._call_llm")
     def test_architect_think(self, mock_llm):
         # Mock LLM response
@@ -33,11 +33,11 @@ Architecture is sound but needs caching.
 """
         agent = Architect()
         result = agent.think("Design a web app")
-        
+
         self.assertIn("Architecture is sound", result.analysis)
         self.assertIn("Scalability", result.concerns)
         self.assertEqual(result.confidence, 0.85)
-        
+
     @patch("council.agents.base_agent.BaseAgent._call_llm")
     def test_coder_vote(self, mock_llm):
         mock_llm.return_value = """
@@ -47,7 +47,7 @@ Rationale: Good code but missing docs.
 """
         agent = Coder()
         vote = agent.vote("PR #123")
-        
+
         self.assertEqual(vote.decision, VoteDecision.APPROVE_WITH_CHANGES)
         self.assertEqual(vote.confidence, 0.9)
         self.assertIn("missing docs", vote.rationale)
@@ -71,7 +71,7 @@ Attack surface is large.
 """
         agent = SecurityAuditor()
         result = agent.think("Review SQL query")
-        
+
         self.assertEqual(result.context.get("perspective"), "security")
         self.assertTrue(result.context.get("forced_debate"))
         self.assertIn("SQL Injection", result.concerns)

@@ -37,7 +37,7 @@ def compact_ledger():
         f.write(f"\n## Compaction Run: {timestamp}\n")
         for task in completed_tasks:
             f.write(f"- **{task['id']}**: {task['description']} (Agent: {task.get('agent')})\n")
-    
+
     # Update Ledger
     data["tasks"] = active_tasks
     with open(LEDGER_FILE, 'w') as f:
@@ -75,21 +75,21 @@ def rollover_session():
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     archive_name = f".council/ledger_archive_{timestamp}.json"
-    
+
     # 1. Archive
     shutil.move(LEDGER_FILE, archive_name)
     print(f"📦 Archived current session to {archive_name}")
-    
+
     # 2. Create New with Lineage
     new_ledger = {
         "parent": archive_name,
         "created_at": timestamp,
         "tasks": []
     }
-    
+
     with open(LEDGER_FILE, 'w') as f:
         json.dump(new_ledger, f, indent=2)
-        
+
     print("✅ Started new session (Lineage Linked).")
 
 def main():
@@ -100,9 +100,9 @@ def main():
         action="store_true",
         help="Required for destructive actions like rewind",
     )
-    
+
     args = parser.parse_args()
-    
+
     if args.action == "compact":
         compact_ledger()
     elif args.action == "rewind":

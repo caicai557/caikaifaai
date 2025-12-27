@@ -1,10 +1,8 @@
 #!/usr/bin/env python3
 import argparse
-import json
 import os
 import sqlite3
 import sys
-from typing import List, Dict
 
 # Import Vector Store (Lazy import to avoid hard dependency if not installed)
 try:
@@ -40,7 +38,7 @@ def add_lesson(tags: str, problem: str, solution: str):
     lesson_id = c.lastrowid
     conn.commit()
     conn.close()
-    
+
     print(f"✅ Lesson added to SQL: [{tags}] {problem[:30]}...")
 
     # 2. Write to Vector Store
@@ -63,16 +61,16 @@ def search_lessons(query: str):
     conn = sqlite3.connect(KB_FILE)
     conn.row_factory = sqlite3.Row
     c = conn.cursor()
-    
+
     search_term = f"%{query}%"
     c.execute("SELECT * FROM lessons WHERE tags LIKE ? OR problem LIKE ? OR solution LIKE ?",
               (search_term, search_term, search_term))
-    
+
     sql_results = c.fetchall()
     for row in sql_results:
         results_map[row['id']] = dict(row)
         results_map[row['id']]['source'] = 'SQL (Keyword)'
-    
+
     conn.close()
 
     # 2. Vector Search (Semantic)
@@ -80,16 +78,16 @@ def search_lessons(query: str):
         try:
             vs = VectorStore()
             vector_results = vs.search(query, n_results=3)
-            
+
             if vector_results and vector_results['ids']:
                 ids = vector_results['ids'][0]
                 distances = vector_results['distances'][0]
-                
+
                 # Fetch full details from SQL for these IDs
                 conn = sqlite3.connect(KB_FILE)
                 conn.row_factory = sqlite3.Row
                 c = conn.cursor()
-                
+
                 for i, lid in enumerate(ids):
                     lid_int = int(lid)
                     if lid_int not in results_map:
@@ -116,21 +114,21 @@ def search_lessons(query: str):
 def main():
     parser = argparse.ArgumentParser(description="Collective Memory (Playbook)")
     subparsers = parser.add_subparsers(dest="command", required=True)
-    
+
     # Add
     add_parser = subparsers.add_parser("add", help="Add a lesson")
     add_parser.add_argument("--tags", required=True, help="Comma-separated tags")
     add_parser.add_argument("--problem", required=True, help="Problem description")
     add_parser.add_argument("--solution", required=True, help="Solution description")
-    
+
     # Search
     search_parser = subparsers.add_parser("search", help="Search lessons")
     search_parser.add_argument("query", help="Search query")
-    
+
     args = parser.parse_args()
-    
+
     init_db()
-    
+
     if args.command == "add":
         add_lesson(args.tags, args.problem, args.solution)
     elif args.command == "search":

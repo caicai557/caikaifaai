@@ -10,12 +10,11 @@ Implements the "Perceive → Reason → Act → Observe → Repeat" cycle:
 """
 
 from dataclasses import dataclass, field
-from typing import List, Dict, Any, Optional, Callable
+from typing import List, Optional, Callable
 from datetime import datetime
 import asyncio
 from enum import Enum
 import subprocess
-import json
 
 
 class HealingStatus(Enum):
@@ -89,10 +88,10 @@ class HealingReport:
 class SelfHealingLoop:
     """
     Self-healing loop engine
-    
+
     Automatically attempts to fix failing tests through iterative
     diagnosis and patching.
-    
+
     Usage:
         loop = SelfHealingLoop(
             test_command="python -m pytest tests/",
@@ -102,7 +101,7 @@ class SelfHealingLoop:
         if report.status == HealingStatus.SUCCESS:
             print("All tests fixed!")
     """
-    
+
     def __init__(
         self,
         test_command: str = "python3 -m pytest",
@@ -113,7 +112,7 @@ class SelfHealingLoop:
     ):
         """
         Initialize the self-healing loop
-        
+
         Args:
             test_command: Command to run tests
             max_iterations: Maximum repair attempts
@@ -126,19 +125,19 @@ class SelfHealingLoop:
         self.working_dir = working_dir
         self.diagnose_fn = diagnose_fn or self._default_diagnose
         self.patch_fn = patch_fn or self._default_patch
-        
+
         self.iterations: List[HealingIteration] = []
         self.patches_applied: List[Patch] = []
-    
+
     def run_tests(self) -> TestResult:
         """
         Run the test suite
-        
+
         Returns:
             TestResult with pass/fail information
         """
         start_time = datetime.now()
-        
+
         try:
             result = subprocess.run(
                 self.test_command.split(),
@@ -147,19 +146,19 @@ class SelfHealingLoop:
                 text=True,
                 timeout=300,  # 5 minute timeout
             )
-            
+
             duration = (datetime.now() - start_time).total_seconds() * 1000
-            
+
             # Parse pytest output
             output = result.stdout + result.stderr
             passed = result.returncode == 0
-            
+
             # Simple parsing - extract test counts
             total = 0
             passed_count = 0
             failed_count = 0
             failed_tests = []
-            
+
             for line in output.split("\n"):
                 if "passed" in line.lower() and "=" in line:
                     # Try to extract counts from summary line
@@ -180,9 +179,9 @@ class SelfHealingLoop:
                     if "::" in line:
                         test_name = line.split("FAILED")[1].strip() if "FAILED" in line else line
                         failed_tests.append(test_name.strip())
-            
+
             total = passed_count + failed_count
-            
+
             return TestResult(
                 passed=passed,
                 total_tests=total,
@@ -192,7 +191,7 @@ class SelfHealingLoop:
                 duration_ms=duration,
                 failed_tests=failed_tests,
             )
-            
+
         except subprocess.TimeoutExpired:
             duration = (datetime.now() - start_time).total_seconds() * 1000
             return TestResult(
@@ -213,11 +212,11 @@ class SelfHealingLoop:
                 error_output=str(e),
                 duration_ms=duration,
             )
-    
+
     def _default_diagnose(self, test_result: TestResult) -> Diagnosis:
         """
         Default diagnosis function
-        
+
         Analyzes test output to identify the root cause.
         In production, this would use an LLM.
         """
@@ -233,27 +232,27 @@ class SelfHealingLoop:
             error_type = "type"
         elif "AttributeError" in test_result.error_output:
             error_type = "attribute"
-        
+
         if not test_result.failed_tests:
             return Diagnosis(
                 failed_test="unknown",
                 error_type=error_type,
                 error_message=test_result.error_output[:500],
             )
-        
+
         failed_test = test_result.failed_tests[0]
-        
+
         return Diagnosis(
             failed_test=failed_test,
             error_type=error_type,
             error_message=test_result.error_output[:1000],
             root_cause=f"Test '{failed_test}' failed with {error_type} error",
         )
-    
+
     def _default_patch(self, diagnosis: Diagnosis) -> Patch:
         """
         Default patch generation function
-        
+
         Attempts LLM patch generation when available.
         """
         try:
@@ -274,46 +273,46 @@ class SelfHealingLoop:
             except RuntimeError:
                 return generator.generate_patch(diagnosis)
         return generator.generate_patch(diagnosis)
-    
+
     def apply_patch(self, patch: Patch) -> bool:
         """
         Apply a patch to a file
-        
+
         Args:
             patch: The patch to apply
-            
+
         Returns:
             True if patch was applied successfully
         """
         if not patch.file_path or patch.confidence < 0.5:
             return False
-        
+
         try:
             with open(patch.file_path, 'r') as f:
                 current = f.read()
-            
+
             if patch.original_content not in current:
                 return False
-            
+
             new_content = current.replace(
-                patch.original_content, 
-                patch.patched_content, 
+                patch.original_content,
+                patch.patched_content,
                 1
             )
-            
+
             with open(patch.file_path, 'w') as f:
                 f.write(new_content)
-            
+
             self.patches_applied.append(patch)
             return True
-            
+
         except Exception:
             return False
-    
+
     def rollback_patches(self) -> int:
         """
         Rollback all applied patches
-        
+
         Returns:
             Number of patches rolled back
         """
@@ -322,7 +321,7 @@ class SelfHealingLoop:
             try:
                 with open(patch.file_path, 'r') as f:
                     current = f.read()
-                
+
                 if patch.patched_content in current:
                     new_content = current.replace(
                         patch.patched_content,
@@ -334,21 +333,21 @@ class SelfHealingLoop:
                     rolled_back += 1
             except Exception:
                 pass
-        
+
         self.patches_applied = []
         return rolled_back
-    
+
     def run(self) -> HealingReport:
         """
         Execute the self-healing loop
-        
+
         Returns:
             HealingReport with results
         """
         start_time = datetime.now()
         initial_result = self.run_tests()
         initial_failures = initial_result.failed_count
-        
+
         # If tests pass, nothing to heal
         if initial_result.passed:
             return HealingReport(
@@ -360,11 +359,11 @@ class SelfHealingLoop:
                 patches_applied=[],
                 duration_ms=(datetime.now() - start_time).total_seconds() * 1000,
             )
-        
+
         # Healing loop
         for i in range(1, self.max_iterations + 1):
             test_result = self.run_tests() if i > 1 else initial_result
-            
+
             if test_result.passed:
                 # Fixed!
                 duration = (datetime.now() - start_time).total_seconds() * 1000
@@ -378,16 +377,16 @@ class SelfHealingLoop:
                     duration_ms=duration,
                     recommendation="All tests passing after self-healing.",
                 )
-            
+
             # Diagnose
             diagnosis = self.diagnose_fn(test_result)
-            
+
             # Generate patch
             patch = self.patch_fn(diagnosis)
-            
+
             # Apply patch
             patch_applied = self.apply_patch(patch)
-            
+
             iteration = HealingIteration(
                 iteration=i,
                 test_result=test_result,
@@ -396,21 +395,21 @@ class SelfHealingLoop:
                 patch_applied=patch_applied,
             )
             self.iterations.append(iteration)
-            
+
             # If we can't generate a valid patch, stop
             if not patch_applied and patch.confidence < 0.3:
                 break
-        
+
         # Max iterations reached or no valid patches
         final_result = self.run_tests()
         duration = (datetime.now() - start_time).total_seconds() * 1000
-        
+
         status = HealingStatus.MAX_ITERATIONS
         requires_human = True
-        
+
         if final_result.failed_count < initial_failures:
             status = HealingStatus.PARTIAL
-        
+
         return HealingReport(
             status=status,
             iterations=self.iterations,

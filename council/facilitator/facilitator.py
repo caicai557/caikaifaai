@@ -69,13 +69,9 @@ class Facilitator:
             minutes = facilitator.end_meeting()
     """
 
-<<<<<<< HEAD
-    def __init__(self, wald_config: Optional[WaldConfig] = None, max_iterations: int = 5):
-=======
     def __init__(
         self, wald_config: Optional[WaldConfig] = None, max_iterations: int = 5
     ):
->>>>>>> e2df45bcf4fae044c2ec81c7ea50a183bdc8bd86
         """
         初始化促进者
 
@@ -179,23 +175,6 @@ class Facilitator:
 
         # 如果同时有批准和拒绝
         if approvals and rejections:
-<<<<<<< HEAD
-            contradictions.append({
-                "type": "decision_conflict",
-                "approvers": [v.agent_name for v in approvals],
-                "rejectors": [v.agent_name for v in rejections],
-                "description": "部分成员批准，部分成员拒绝",
-            })
-
-        # 如果有 hold 且其他人已决定
-        if holds and (approvals or rejections):
-            contradictions.append({
-                "type": "certainty_gap",
-                "undecided": [v.agent_name for v in holds],
-                "decided": [v.agent_name for v in approvals + rejections],
-                "description": "部分成员尚未明确表态",
-            })
-=======
             contradictions.append(
                 {
                     "type": "decision_conflict",
@@ -215,18 +194,11 @@ class Facilitator:
                     "description": "部分成员尚未明确表态",
                 }
             )
->>>>>>> e2df45bcf4fae044c2ec81c7ea50a183bdc8bd86
 
         return contradictions
 
     def _generate_clarification_questions(
-<<<<<<< HEAD
-        self,
-        votes: List[Vote],
-        contradictions: List[Dict[str, Any]]
-=======
         self, votes: List[Vote], contradictions: List[Dict[str, Any]]
->>>>>>> e2df45bcf4fae044c2ec81c7ea50a183bdc8bd86
     ) -> List[str]:
         """
         生成澄清问题
@@ -245,13 +217,7 @@ class Facilitator:
                 questions.append(
                     f"请 {contradiction['rejectors']} 详细说明拒绝的具体原因和担忧"
                 )
-<<<<<<< HEAD
-                questions.append(
-                    f"请 {contradiction['approvers']} 回应这些担忧"
-                )
-=======
                 questions.append(f"请 {contradiction['approvers']} 回应这些担忧")
->>>>>>> e2df45bcf4fae044c2ec81c7ea50a183bdc8bd86
 
             elif contradiction["type"] == "certainty_gap":
                 questions.append(

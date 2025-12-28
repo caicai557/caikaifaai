@@ -138,13 +138,9 @@ class GovernanceGateway:
         self._request_counter = 0
         self._approval_callback: Optional[Callable[[ApprovalRequest], bool]] = None
 
-<<<<<<< HEAD
-    def set_approval_callback(self, callback: Callable[[ApprovalRequest], bool]) -> None:
-=======
     def set_approval_callback(
         self, callback: Callable[[ApprovalRequest], bool]
     ) -> None:
->>>>>>> e2df45bcf4fae044c2ec81c7ea50a183bdc8bd86
         """
         设置审批回调函数
 
@@ -216,13 +212,9 @@ class GovernanceGateway:
 
         return False
 
-<<<<<<< HEAD
-    def auto_approve_with_council(self, request: ApprovalRequest, consensus_result: Dict[str, Any]) -> bool:
-=======
     def auto_approve_with_council(
         self, request: ApprovalRequest, consensus_result: Dict[str, Any]
     ) -> bool:
->>>>>>> e2df45bcf4fae044c2ec81c7ea50a183bdc8bd86
         """
         尝试使用 Council 共识自动批准
 
@@ -248,13 +240,9 @@ class GovernanceGateway:
         # 必须是 AUTO_COMMIT
         # 注意：这里假设 consensus_result.decision 是 Enum 或对应的字符串值
         # 为兼容性，转换字符串比较
-<<<<<<< HEAD
-        decision_str = str(decision.value) if hasattr(decision, "value") else str(decision)
-=======
         decision_str = (
             str(decision.value) if hasattr(decision, "value") else str(decision)
         )
->>>>>>> e2df45bcf4fae044c2ec81c7ea50a183bdc8bd86
 
         if decision_str == "auto_commit":
             return self.approve(request.request_id, "council_auto_commit")
@@ -285,13 +273,9 @@ class GovernanceGateway:
             审批请求对象
         """
         self._request_counter += 1
-<<<<<<< HEAD
-        request_id = f"REQ-{datetime.now().strftime('%Y%m%d')}-{self._request_counter:04d}"
-=======
         request_id = (
             f"REQ-{datetime.now().strftime('%Y%m%d')}-{self._request_counter:04d}"
         )
->>>>>>> e2df45bcf4fae044c2ec81c7ea50a183bdc8bd86
 
         # 重新计算风险（因为可能没传入 content，这里只能基于 action_type 和资源估算）
         # 理想情况下调用者应该先检测风险再创建请求，或者这里只做记录
@@ -355,13 +339,9 @@ class GovernanceGateway:
         self.approval_log.append(request)
         return True
 
-<<<<<<< HEAD
-    def wait_for_approval(self, request: ApprovalRequest, timeout_seconds: int = 300) -> bool:
-=======
     def wait_for_approval(
         self, request: ApprovalRequest, timeout_seconds: int = 300
     ) -> bool:
->>>>>>> e2df45bcf4fae044c2ec81c7ea50a183bdc8bd86
         """
         等待人工审批（同步版本）
 

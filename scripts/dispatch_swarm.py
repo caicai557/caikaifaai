@@ -134,16 +134,6 @@ def dispatch_agent_tool(
                 result["worktree"] = "cleaned_up"
                 result["status"] = "success_ephemeral"
             else:
-<<<<<<< HEAD
-                 # Fallback to manual removal if script fails
-                 try:
-                     shutil.rmtree(worktree_path)
-                     run_command(["git", "worktree", "prune"])
-                     result["worktree"] = "cleaned_up_forced"
-                     result["status"] = "success_ephemeral_forced"
-                 except Exception as e:
-                     result["cleanup_error"] = f"Failed to remove worktree: {str(e)}"
-=======
                 # Fallback to manual removal if script fails
                 try:
                     shutil.rmtree(worktree_path)
@@ -152,7 +142,6 @@ def dispatch_agent_tool(
                     result["status"] = "success_ephemeral_forced"
                 except Exception as e:
                     result["cleanup_error"] = f"Failed to remove worktree: {str(e)}"
->>>>>>> e2df45bcf4fae044c2ec81c7ea50a183bdc8bd86
 
         return result
 

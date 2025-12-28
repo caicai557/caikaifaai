@@ -262,11 +262,7 @@ class PatchGenerator:
         # But safer to return original text if no blocks found, or try to be smart
         # For this implementation, we'll assume valid LLM output has blocks or is raw code
         if "def " in text or "import " in text or "class " in text:
-<<<<<<< HEAD
-             return text.strip()
-=======
             return text.strip()
->>>>>>> e2df45bcf4fae044c2ec81c7ea50a183bdc8bd86
 
         return ""
 

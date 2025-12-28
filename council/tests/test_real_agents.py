@@ -12,10 +12,6 @@ from council.agents.base_agent import VoteDecision
 
 
 class TestRealAgents(unittest.TestCase):
-<<<<<<< HEAD
-
-=======
->>>>>>> e2df45bcf4fae044c2ec81c7ea50a183bdc8bd86
     @patch("council.agents.base_agent.BaseAgent._call_llm")
     def test_architect_think(self, mock_llm):
         # Mock LLM response

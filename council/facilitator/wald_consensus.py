@@ -135,15 +135,6 @@ class WaldConsensus:
             p_approve, p_reject = self._vote_likelihood(confidence, is_approve)
             log_likelihood += math.log(p_approve / p_reject)
 
-<<<<<<< HEAD
-            votes_summary.append({
-                "agent": vote.get("agent", "Unknown"),
-                "decision": decision,
-                "confidence": confidence,
-                "p_approve": p_approve,
-                "p_reject": p_reject,
-            })
-=======
             votes_summary.append(
                 {
                     "agent": vote.get("agent", "Unknown"),
@@ -153,7 +144,6 @@ class WaldConsensus:
                     "p_reject": p_reject,
                 }
             )
->>>>>>> e2df45bcf4fae044c2ec81c7ea50a183bdc8bd86
 
         # 计算似然比 L
         likelihood_ratio = math.exp(log_likelihood)

@@ -8,10 +8,7 @@ sys.path.append(os.getcwd())
 
 from council.self_healing.patch_generator import PatchGenerator
 from council.self_healing.loop import Diagnosis
-<<<<<<< HEAD
-=======
 
->>>>>>> e2df45bcf4fae044c2ec81c7ea50a183bdc8bd86
 
 class TestPatchGenerator(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
@@ -39,13 +36,9 @@ class TestPatchGenerator(unittest.IsolatedAsyncioTestCase):
         mock_open.return_value = mock_file
 
         # Mock LLM response with markdown code block
-<<<<<<< HEAD
-        mock_call_llm.return_value = "Here is the fix:\n```python\ndef add(a, b):\n    return a - b\n```"
-=======
         mock_call_llm.return_value = (
             "Here is the fix:\n```python\ndef add(a, b):\n    return a - b\n```"
         )
->>>>>>> e2df45bcf4fae044c2ec81c7ea50a183bdc8bd86
 
         generator = PatchGenerator()
         patch_result = await generator.generate_patch_with_llm(self.diagnosis)

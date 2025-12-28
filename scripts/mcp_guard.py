@@ -45,17 +45,12 @@ def resolve_tool_name(policy: dict, tool_name: str) -> str:
 
 def main():
     parser = argparse.ArgumentParser(description="MCP Guard (JSON-RPC Proxy)")
-<<<<<<< HEAD
-    parser.add_argument("--role", required=True, help="Agent Role (e.g., codex, claude)")
-    parser.add_argument("--cmd", required=True, nargs=argparse.REMAINDER, help="Command to run")
-=======
     parser.add_argument(
         "--role", required=True, help="Agent Role (e.g., codex, claude)"
     )
     parser.add_argument(
         "--cmd", required=True, nargs=argparse.REMAINDER, help="Command to run"
     )
->>>>>>> e2df45bcf4fae044c2ec81c7ea50a183bdc8bd86
 
     args = parser.parse_args()
 

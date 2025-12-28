@@ -10,10 +10,6 @@ from council.facilitator.wald_consensus import ConsensusResult, ConsensusDecisio
 
 
 class TestGovernanceHardening(unittest.TestCase):
-<<<<<<< HEAD
-
-=======
->>>>>>> e2df45bcf4fae044c2ec81c7ea50a183bdc8bd86
     def test_scan_content_dangerous_rm_rf(self):
         """Test blocking of recursive deletion commands in content"""
         gateway = GovernanceGateway()
@@ -26,11 +22,7 @@ class TestGovernanceHardening(unittest.TestCase):
     def test_scan_content_suspicious_eval(self):
         """Test detection of eval()"""
         gateway = GovernanceGateway()
-<<<<<<< HEAD
-        content = "eval('__import__(\"os\").system(\"ls\")')"
-=======
         content = 'eval(\'__import__("os").system("ls")\')'
->>>>>>> e2df45bcf4fae044c2ec81c7ea50a183bdc8bd86
 
         risk = gateway._scan_content(content)
         self.assertIn(risk, [RiskLevel.HIGH, RiskLevel.MEDIUM])
@@ -41,13 +33,7 @@ class TestGovernanceHardening(unittest.TestCase):
         content = "os.system('mkfs /dev/sda')"
 
         requires = gateway.requires_approval(
-<<<<<<< HEAD
-            ActionType.FILE_MODIFY,
-            affected_paths=["script.py"],
-            content=content
-=======
             ActionType.FILE_MODIFY, affected_paths=["script.py"], content=content
->>>>>>> e2df45bcf4fae044c2ec81c7ea50a183bdc8bd86
         )
         self.assertTrue(requires)
 

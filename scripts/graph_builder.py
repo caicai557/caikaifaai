@@ -86,13 +86,9 @@ def main():
         G = build_graph(args.root)
         os.makedirs(os.path.dirname(KG_FILE), exist_ok=True)
         nx.write_gml(G, KG_FILE)
-<<<<<<< HEAD
-        print(f"✅ Knowledge Graph built: {G.number_of_nodes()} nodes, {G.number_of_edges()} edges.")
-=======
         print(
             f"✅ Knowledge Graph built: {G.number_of_nodes()} nodes, {G.number_of_edges()} edges."
         )
->>>>>>> e2df45bcf4fae044c2ec81c7ea50a183bdc8bd86
 
     elif args.command == "validate":
         if os.path.exists(KG_FILE):

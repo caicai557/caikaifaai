@@ -6,17 +6,10 @@ import os
 sys.path.append(os.getcwd())
 
 from council.mcp.ai_council_server import AICouncilServer
-<<<<<<< HEAD
-
-# Use IsolatedAsyncioTestCase for async tests
-class TestServerGovernance(unittest.IsolatedAsyncioTestCase):
-
-=======
 
 
 # Use IsolatedAsyncioTestCase for async tests
 class TestServerGovernance(unittest.IsolatedAsyncioTestCase):
->>>>>>> e2df45bcf4fae044c2ec81c7ea50a183bdc8bd86
     @patch("council.mcp.ai_council_server.AICouncilServer.query_parallel")
     @patch("council.mcp.ai_council_server.AICouncilServer._synthesize_responses")
     async def test_governance_blocking(self, mock_synthesize, mock_query_parallel):

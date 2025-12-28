@@ -255,24 +255,14 @@ class AICouncilServer:
             return 1.0
 
         length_variance = sum((l - avg_length) ** 2 for l in lengths) / len(lengths)
-<<<<<<< HEAD
-        normalized_variance = length_variance / (avg_length ** 2)
-=======
         normalized_variance = length_variance / (avg_length**2)
->>>>>>> e2df45bcf4fae044c2ec81c7ea50a183bdc8bd86
 
         # Lower variance = higher agreement
         agreement = max(0, 1 - normalized_variance)
         return min(1.0, agreement)
 
     async def _synthesize_responses(
-<<<<<<< HEAD
-        self,
-        prompt: str,
-        responses: List[ModelResponse]
-=======
         self, prompt: str, responses: List[ModelResponse]
->>>>>>> e2df45bcf4fae044c2ec81c7ea50a183bdc8bd86
     ) -> str:
         """
         Synthesize multiple model responses into a single answer using an LLM
@@ -285,13 +275,9 @@ class AICouncilServer:
         synthesis_prompt = f"Original Task: {prompt}\n\nModels have provided the following responses. Please synthesize them into a single, high-quality response. If there are conflicts, resolve them by choosing the safest and most robust option.\n\n"
 
         for i, resp in enumerate(successful):
-<<<<<<< HEAD
-            synthesis_prompt += f"--- Model {i+1} ({resp.model_name}) ---\n{resp.content}\n\n"
-=======
             synthesis_prompt += (
                 f"--- Model {i + 1} ({resp.model_name}) ---\n{resp.content}\n\n"
             )
->>>>>>> e2df45bcf4fae044c2ec81c7ea50a183bdc8bd86
 
         synthesis_prompt += "--- End of Responses ---\n\nSynthesized Response:"
 
@@ -300,11 +286,6 @@ class AICouncilServer:
             # Quick hack to reuse query logic for synthesis
             # In a real system, we'd have a dedicated synthesizer config
             enabled = self.get_enabled_models()
-<<<<<<< HEAD
-            synthesizer_config = next((m for m in enabled if m.provider == ModelProvider.GEMINI), None) or enabled[0]
-
-            synthesis_resp = await self._query_model(synthesis_prompt, synthesizer_config)
-=======
             synthesizer_config = (
                 next((m for m in enabled if m.provider == ModelProvider.GEMINI), None)
                 or enabled[0]
@@ -313,7 +294,6 @@ class AICouncilServer:
             synthesis_resp = await self._query_model(
                 synthesis_prompt, synthesizer_config
             )
->>>>>>> e2df45bcf4fae044c2ec81c7ea50a183bdc8bd86
             if synthesis_resp.success:
                 return synthesis_resp.content
         except Exception:
@@ -348,15 +328,9 @@ class AICouncilServer:
         risk = self.gateway._scan_content(synthesis)
         if risk in [RiskLevel.CRITICAL, RiskLevel.HIGH]:
             if risk == RiskLevel.CRITICAL:
-<<<<<<< HEAD
-                 synthesis = "⚠️ [GOVERNANCE BLOCKED] The synthesized response was blocked due to detected CRITICAL risk pattern."
-            else:
-                 synthesis = f"⚠️ [GOVERNANCE BLOCKED] The synthesized response was blocked due to detected {risk.name} risk pattern.\n\nBlocked Content Preview (Safe): {synthesis[:50]}..."
-=======
                 synthesis = "⚠️ [GOVERNANCE BLOCKED] The synthesized response was blocked due to detected CRITICAL risk pattern."
             else:
                 synthesis = f"⚠️ [GOVERNANCE BLOCKED] The synthesized response was blocked due to detected {risk.name} risk pattern.\n\nBlocked Content Preview (Safe): {synthesis[:50]}..."
->>>>>>> e2df45bcf4fae044c2ec81c7ea50a183bdc8bd86
 
         agreement = self._calculate_agreement(responses)
 

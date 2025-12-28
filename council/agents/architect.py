@@ -121,14 +121,6 @@ class Architect(BaseAgent):
                 except ValueError:
                     pass
 
-<<<<<<< HEAD
-        self.add_to_history({
-            "action": "think",
-            "task": task,
-            "context": context,
-            "response_length": len(response)
-        })
-=======
         self.add_to_history(
             {
                 "action": "think",
@@ -137,7 +129,6 @@ class Architect(BaseAgent):
                 "response_length": len(response),
             }
         )
->>>>>>> e2df45bcf4fae044c2ec81c7ea50a183bdc8bd86
 
         return ThinkResult(
             analysis=analysis.strip()
@@ -186,12 +177,6 @@ Changes: [建议修改1, 建议修改2] (可选)
         )
         if decision_match:
             d_str = decision_match.group(1).upper()
-<<<<<<< HEAD
-            if d_str == "APPROVE": decision = VoteDecision.APPROVE
-            elif d_str == "APPROVE_WITH_CHANGES": decision = VoteDecision.APPROVE_WITH_CHANGES
-            elif d_str == "HOLD": decision = VoteDecision.HOLD
-            elif d_str == "REJECT": decision = VoteDecision.REJECT
-=======
             if d_str == "APPROVE":
                 decision = VoteDecision.APPROVE
             elif d_str == "APPROVE_WITH_CHANGES":
@@ -200,21 +185,11 @@ Changes: [建议修改1, 建议修改2] (可选)
                 decision = VoteDecision.HOLD
             elif d_str == "REJECT":
                 decision = VoteDecision.REJECT
->>>>>>> e2df45bcf4fae044c2ec81c7ea50a183bdc8bd86
 
         conf_match = re.search(r"Confidence:\s*(\d*\.?\d+)", response)
         if conf_match:
             try:
                 confidence = float(conf_match.group(1))
-<<<<<<< HEAD
-            except: pass
-
-        rationale_match = re.search(r"Rationale:\s*(.+?)(?:\nChanges:|$)", response, re.DOTALL | re.IGNORECASE)
-        if rationale_match:
-            rationale = rationale_match.group(1).strip()
-
-        changes_match = re.search(r"Changes:\s*(.+)", response, re.DOTALL | re.IGNORECASE)
-=======
             except:
                 pass
 
@@ -227,7 +202,6 @@ Changes: [建议修改1, 建议修改2] (可选)
         changes_match = re.search(
             r"Changes:\s*(.+)", response, re.DOTALL | re.IGNORECASE
         )
->>>>>>> e2df45bcf4fae044c2ec81c7ea50a183bdc8bd86
         if changes_match:
             changes_str = changes_match.group(1).strip()
             # 尝试分割
@@ -237,14 +211,6 @@ Changes: [建议修改1, 建议修改2] (可选)
             else:
                 suggested_changes = [changes_str]
 
-<<<<<<< HEAD
-        self.add_to_history({
-            "action": "vote",
-            "proposal": proposal,
-            "context": context,
-            "decision": decision.value
-        })
-=======
         self.add_to_history(
             {
                 "action": "vote",
@@ -253,7 +219,6 @@ Changes: [建议修改1, 建议修改2] (可选)
                 "decision": decision.value,
             }
         )
->>>>>>> e2df45bcf4fae044c2ec81c7ea50a183bdc8bd86
 
         return Vote(
             agent_name=self.name,
@@ -263,17 +228,6 @@ Changes: [建议修改1, 建议修改2] (可选)
             suggested_changes=suggested_changes,
         )
 
-<<<<<<< HEAD
-    def execute(self, task: str, plan: Optional[Dict[str, Any]] = None) -> ExecuteResult:
-        """
-        执行架构相关任务（如生成架构文档）
-        """
-        self.add_to_history({
-            "action": "execute",
-            "task": task,
-            "plan": plan,
-        })
-=======
     def execute(
         self, task: str, plan: Optional[Dict[str, Any]] = None
     ) -> ExecuteResult:
@@ -287,7 +241,6 @@ Changes: [建议修改1, 建议修改2] (可选)
                 "plan": plan,
             }
         )
->>>>>>> e2df45bcf4fae044c2ec81c7ea50a183bdc8bd86
 
         return ExecuteResult(
             success=True,

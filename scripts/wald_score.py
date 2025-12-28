@@ -141,12 +141,6 @@ def main():
     parser = argparse.ArgumentParser(description="Wald Score Calculator")
     parser.add_argument("--coverage", type=float, help="Override coverage (0.0-1.0)")
     parser.add_argument("--lint", type=int, help="Override lint error count")
-<<<<<<< HEAD
-    parser.add_argument("--risk", choices=["low", "medium", "high"], default="medium", help="Risk level for this operation")
-
-    args = parser.parse_args()
-
-=======
     parser.add_argument(
         "--risk",
         choices=["low", "medium", "high"],
@@ -195,7 +189,6 @@ def main():
         )
         return
 
->>>>>>> e2df45bcf4fae044c2ec81c7ea50a183bdc8bd86
     coverage = args.coverage if args.coverage is not None else get_coverage()
     lint_errors = args.lint if args.lint is not None else get_lint_errors()
     spec_compliance = check_spec_compliance()

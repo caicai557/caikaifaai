@@ -72,15 +72,6 @@ def search_lessons(query: str):
     c = conn.cursor()
 
     search_term = f"%{query}%"
-<<<<<<< HEAD
-    c.execute("SELECT * FROM lessons WHERE tags LIKE ? OR problem LIKE ? OR solution LIKE ?",
-              (search_term, search_term, search_term))
-
-    sql_results = c.fetchall()
-    for row in sql_results:
-        results_map[row['id']] = dict(row)
-        results_map[row['id']]['source'] = 'SQL (Keyword)'
-=======
     c.execute(
         "SELECT * FROM lessons WHERE tags LIKE ? OR problem LIKE ? OR solution LIKE ?",
         (search_term, search_term, search_term),
@@ -90,7 +81,6 @@ def search_lessons(query: str):
     for row in sql_results:
         results_map[row["id"]] = dict(row)
         results_map[row["id"]]["source"] = "SQL (Keyword)"
->>>>>>> e2df45bcf4fae044c2ec81c7ea50a183bdc8bd86
 
     conn.close()
 
@@ -100,15 +90,9 @@ def search_lessons(query: str):
             vs = VectorStore()
             vector_results = vs.search(query, n_results=3)
 
-<<<<<<< HEAD
-            if vector_results and vector_results['ids']:
-                ids = vector_results['ids'][0]
-                distances = vector_results['distances'][0]
-=======
             if vector_results and vector_results["ids"]:
                 ids = vector_results["ids"][0]
                 distances = vector_results["distances"][0]
->>>>>>> e2df45bcf4fae044c2ec81c7ea50a183bdc8bd86
 
                 # Fetch full details from SQL for these IDs
                 conn = sqlite3.connect(KB_FILE)

@@ -150,14 +150,7 @@ class RBAC:
         return False
 
     def check_permission(
-<<<<<<< HEAD
-        self,
-        role: Role,
-        permission: Permission,
-        path: Optional[str] = None
-=======
         self, role: Role, permission: Permission, path: Optional[str] = None
->>>>>>> e2df45bcf4fae044c2ec81c7ea50a183bdc8bd86
     ) -> bool:
         """
         检查角色是否有指定权限

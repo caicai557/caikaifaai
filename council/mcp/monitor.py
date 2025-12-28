@@ -3,10 +3,7 @@ from typing import List, Dict, Any
 from dataclasses import dataclass
 from datetime import datetime
 from council.facilitator.wald_consensus import ConsensusResult
-<<<<<<< HEAD
-=======
 
->>>>>>> e2df45bcf4fae044c2ec81c7ea50a183bdc8bd86
 
 @dataclass
 class MetricPoint:

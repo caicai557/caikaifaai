@@ -37,13 +37,9 @@ def compact_ledger():
     with open(NOTES_FILE, "a") as f:
         f.write(f"\n## Compaction Run: {timestamp}\n")
         for task in completed_tasks:
-<<<<<<< HEAD
-            f.write(f"- **{task['id']}**: {task['description']} (Agent: {task.get('agent')})\n")
-=======
             f.write(
                 f"- **{task['id']}**: {task['description']} (Agent: {task.get('agent')})\n"
             )
->>>>>>> e2df45bcf4fae044c2ec81c7ea50a183bdc8bd86
 
     # Update Ledger
     data["tasks"] = active_tasks
@@ -90,19 +86,9 @@ def rollover_session():
     print(f"📦 Archived current session to {archive_name}")
 
     # 2. Create New with Lineage
-<<<<<<< HEAD
-    new_ledger = {
-        "parent": archive_name,
-        "created_at": timestamp,
-        "tasks": []
-    }
-
-    with open(LEDGER_FILE, 'w') as f:
-=======
     new_ledger = {"parent": archive_name, "created_at": timestamp, "tasks": []}
 
     with open(LEDGER_FILE, "w") as f:
->>>>>>> e2df45bcf4fae044c2ec81c7ea50a183bdc8bd86
         json.dump(new_ledger, f, indent=2)
 
     print("✅ Started new session (Lineage Linked).")

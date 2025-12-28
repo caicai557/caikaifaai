@@ -15,23 +15,12 @@ PTC_OUTPUT_DIR = ".ptc_output"
 
 def run_in_docker(script_content: str, timeout: int = 60) -> Dict[str, Any]:
     """
-<<<<<<< HEAD
-    Executes a Python script in a temporary isolated environment.
-
-    Args:
-        script_content: The Python code to execute.
-        timeout: Execution timeout in seconds.
-
-    Returns:
-        Dict containing 'stdout', 'stderr', 'returncode', and 'status'.
-=======
     Executes a Python script inside a Docker container for security isolation.
 
     Features:
     - Network isolation (--network none)
     - Read-only filesystem where possible
     - Limited resources
->>>>>>> e2df45bcf4fae044c2ec81c7ea50a183bdc8bd86
     """
     # Ensure output directory exists
     os.makedirs(PTC_OUTPUT_DIR, exist_ok=True)

@@ -123,11 +123,7 @@ async def generate_simulation():
     server._query_model = AsyncMock()
     server._synthesize_responses = AsyncMock(return_value="Synthesized.")
     server.gateway = MagicMock()
-<<<<<<< HEAD
-    server.gateway._scan_content.return_value = 0 # OK Risk
-=======
     server.gateway._scan_content.return_value = 0  # OK Risk
->>>>>>> e2df45bcf4fae044c2ec81c7ea50a183bdc8bd86
 
     print("Running Simulation Scenarios...")
 

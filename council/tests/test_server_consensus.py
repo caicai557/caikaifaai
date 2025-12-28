@@ -7,15 +7,9 @@ sys.path.append(os.getcwd())
 
 from council.mcp.ai_council_server import AICouncilServer, ModelResponse, ModelProvider
 from council.facilitator.wald_consensus import ConsensusDecision
-<<<<<<< HEAD
-
-class TestServerConsensus(unittest.IsolatedAsyncioTestCase):
-
-=======
 
 
 class TestServerConsensus(unittest.IsolatedAsyncioTestCase):
->>>>>>> e2df45bcf4fae044c2ec81c7ea50a183bdc8bd86
     def test_parse_vote_approve(self):
         """Test parsing an APPROVE vote from model response"""
         server = AICouncilServer(models=[])

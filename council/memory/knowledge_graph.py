@@ -328,24 +328,14 @@ class KnowledgeGraph:
 
         candidates = (
             self.get_entities_by_type(entity_type)
-<<<<<<< HEAD
-            if entity_type else
-            list(self.entities.values())
-=======
             if entity_type
             else list(self.entities.values())
->>>>>>> e2df45bcf4fae044c2ec81c7ea50a183bdc8bd86
         )
 
         for entity in candidates:
             if properties:
                 match = all(
-<<<<<<< HEAD
-                    entity.properties.get(k) == v
-                    for k, v in properties.items()
-=======
                     entity.properties.get(k) == v for k, v in properties.items()
->>>>>>> e2df45bcf4fae044c2ec81c7ea50a183bdc8bd86
                 )
                 if match:
                     results.append(entity)
@@ -564,14 +554,7 @@ class KnowledgeGraph:
         return {
             "entity_count": len(self.entities),
             "relation_count": len(self.relations),
-<<<<<<< HEAD
-            "entity_types": {
-                k.value: len(v)
-                for k, v in self._entity_by_type.items()
-            },
-=======
             "entity_types": {k.value: len(v) for k, v in self._entity_by_type.items()},
->>>>>>> e2df45bcf4fae044c2ec81c7ea50a183bdc8bd86
         }
 
 

@@ -334,12 +334,9 @@ def run_task(
     attempt = 0
     swarm_success = False
 
-<<<<<<< HEAD
-=======
     # Reset Wald state for new task
     run_script(SCRIPTS["wald"], ["--reset"])
 
->>>>>>> e2df45bcf4fae044c2ec81c7ea50a183bdc8bd86
     while attempt < max_retries:
         attempt += 1
         print(f"   🔄 Attempt {attempt}/{max_retries}...")
@@ -351,13 +348,9 @@ def run_task(
             swarm_args.append("--pipeline")
 
         swarm_timeout = 600 if swarm_pipeline else 120
-<<<<<<< HEAD
-        swarm_result = run_script(SCRIPTS["swarm"], swarm_args, timeout_seconds=swarm_timeout)
-=======
         swarm_result = run_script(
             SCRIPTS["swarm"], swarm_args, timeout_seconds=swarm_timeout
         )
->>>>>>> e2df45bcf4fae044c2ec81c7ea50a183bdc8bd86
 
         if swarm_result["status"] == "success":
             print(swarm_result["stdout"])
@@ -381,25 +374,17 @@ def run_task(
         else:
             error_preview = swarm_result["stderr"] or swarm_result["stdout"]
             preview = (error_preview or "")[:200]
-<<<<<<< HEAD
-            print(f"   ❌ Attempt {attempt} failed: {preview}...") # Truncate error
-=======
             print(f"   ❌ Attempt {attempt} failed: {preview}...")  # Truncate error
->>>>>>> e2df45bcf4fae044c2ec81c7ea50a183bdc8bd86
 
             # REFLECTIVE STEP: Update goal with error context
             error_context = f"\n\n[SYSTEM ERROR]: Previous attempt {attempt} failed with error:\n{swarm_result['stderr']}\n"
 
             # Call Facilitator for strategy
             print("   👔 Calling Facilitator for conflict resolution...")
-<<<<<<< HEAD
-            facilitator_result = run_script("./scripts/facilitator.py", ["--task", task, "--history", swarm_result['stderr']])
-=======
             facilitator_result = run_script(
                 "./scripts/facilitator.py",
                 ["--task", task, "--history", swarm_result["stderr"]],
             )
->>>>>>> e2df45bcf4fae044c2ec81c7ea50a183bdc8bd86
 
             if facilitator_result["status"] == "success":
                 try:
@@ -410,11 +395,6 @@ def run_task(
                 except json.JSONDecodeError:
                     print("   ⚠️ Facilitator output parse failed.")
 
-<<<<<<< HEAD
-            error_context += "\nPLEASE ANALYZE THIS ERROR AND ADVICE TO ADJUST YOUR STRATEGY."
-            goal += error_context
-
-=======
             error_context += (
                 "\nPLEASE ANALYZE THIS ERROR AND ADVICE TO ADJUST YOUR STRATEGY."
             )
@@ -432,7 +412,6 @@ def run_task(
                     )
                     return False  # Early exit
 
->>>>>>> e2df45bcf4fae044c2ec81c7ea50a183bdc8bd86
             if attempt < max_retries:
                 print("   🧠 Reflecting and retrying in 2s...")
                 time.sleep(2)
@@ -483,13 +462,9 @@ def run_task(
     run_script("./scripts/graph_builder.py", ["build"])
     # Validate the modified files (Mock: validating the task goal context conceptually)
     # In production, we would pass the specific files modified by the Swarm
-<<<<<<< HEAD
-    adj_result = run_script("./scripts/graph_builder.py", ["validate", "--file", "scripts/council_run.py"])
-=======
     adj_result = run_script(
         "./scripts/graph_builder.py", ["validate", "--file", "scripts/council_run.py"]
     )
->>>>>>> e2df45bcf4fae044c2ec81c7ea50a183bdc8bd86
 
     if adj_result["status"] == "success":
         print(adj_result["stdout"])
@@ -516,13 +491,9 @@ def run_task(
             ["--task", task, "--goal", goal, "--history", "success"],
         )
         if codify_result["status"] == "success":
-<<<<<<< HEAD
-            print(f"   ✅ Routine generated: {json.loads(codify_result['stdout']).get('routine')}")
-=======
             print(
                 f"   ✅ Routine generated: {json.loads(codify_result['stdout']).get('routine')}"
             )
->>>>>>> e2df45bcf4fae044c2ec81c7ea50a183bdc8bd86
 
         # 3. Extract Lesson (Optional)
         if learn:
@@ -555,13 +526,6 @@ def main():
     parser = argparse.ArgumentParser(description="Council Run - Unified Orchestrator")
     parser.add_argument("--task", required=True, help="Task ID")
     parser.add_argument("--goal", required=True, help="Goal description")
-<<<<<<< HEAD
-    parser.add_argument("--risk", choices=["low", "medium", "high"], default="medium", help="Risk level")
-    parser.add_argument("--ephemeral", action="store_true", help="Cleanup worktree after execution")
-    parser.add_argument("--learn", action="store_true", help="Extract lesson to knowledge base")
-    parser.add_argument("--dry-run", action="store_true", help="Execute only planning phase (Smart Injection)")
-    parser.add_argument("--swarm-pipeline", action="store_true", help="Run plan/audit/tdd/impl/verify in swarm")
-=======
     parser.add_argument(
         "--risk", choices=["low", "medium", "high"], default="medium", help="Risk level"
     )
@@ -581,7 +545,6 @@ def main():
         action="store_true",
         help="Run plan/audit/tdd/impl/verify in swarm",
     )
->>>>>>> e2df45bcf4fae044c2ec81c7ea50a183bdc8bd86
 
     args = parser.parse_args()
 

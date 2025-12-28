@@ -60,13 +60,6 @@ def main():
 
     routine_path = codify_run(args.task, args.goal, args.history)
 
-<<<<<<< HEAD
-    print(json.dumps({
-        "status": "success",
-        "routine": routine_path,
-        "message": f"Routine codified at {routine_path}"
-    }, indent=2))
-=======
     print(
         json.dumps(
             {
@@ -78,7 +71,6 @@ def main():
         )
     )
 
->>>>>>> e2df45bcf4fae044c2ec81c7ea50a183bdc8bd86
 
 if __name__ == "__main__":
     main()

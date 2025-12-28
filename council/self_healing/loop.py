@@ -305,19 +305,10 @@ class SelfHealingLoop:
                 return False
 
             new_content = current.replace(
-<<<<<<< HEAD
-                patch.original_content,
-                patch.patched_content,
-                1
-            )
-
-            with open(patch.file_path, 'w') as f:
-=======
                 patch.original_content, patch.patched_content, 1
             )
 
             with open(patch.file_path, "w") as f:
->>>>>>> e2df45bcf4fae044c2ec81c7ea50a183bdc8bd86
                 f.write(new_content)
 
             self.patches_applied.append(patch)

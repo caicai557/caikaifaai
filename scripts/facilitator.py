@@ -98,22 +98,6 @@ def analyze_conflict(task_id: str, history: str) -> tuple[str, str]:
     """
     print(f"👔 Facilitator: Analyzing conflict for task {task_id}...", file=sys.stderr)
 
-<<<<<<< HEAD
-    resolution = ""
-
-    if "ImportError" in history:
-        resolution = "CRITICAL: Missing dependency detected. ACTION: Run 'pip install' or check 'requirements.txt'."
-    elif "SyntaxError" in history:
-        resolution = "CRITICAL: Code syntax error. ACTION: Use 'python -m py_compile' to verify before running."
-    elif "AssertionError" in history:
-        resolution = "CRITICAL: Test assumption failed. ACTION: Review test case against implementation logic."
-    elif "Timeout" in history:
-        resolution = "WARNING: Operation timed out. ACTION: Optimize query or increase timeout limit."
-    else:
-        resolution = "ADVICE: The approach seems stuck. Try breaking the task into smaller sub-tasks."
-
-    return resolution
-=======
     # Try LLM first
     llm_prompt = f"Task ID: {task_id}\n\nError History:\n{history}\n\nProvide a resolution strategy:"
     llm_response = call_llm_cli(llm_prompt)
@@ -126,7 +110,6 @@ def analyze_conflict(task_id: str, history: str) -> tuple[str, str]:
     print("   📋 Using heuristic analysis (LLM unavailable)", file=sys.stderr)
     return heuristic_analysis(history), "heuristic"
 
->>>>>>> e2df45bcf4fae044c2ec81c7ea50a183bdc8bd86
 
 def main():
     parser = argparse.ArgumentParser(description="Facilitator AI")
@@ -135,11 +118,7 @@ def main():
 
     args = parser.parse_args()
 
-<<<<<<< HEAD
-    strategy = analyze_conflict(args.task, args.history)
-=======
     strategy, source = analyze_conflict(args.task, args.history)
->>>>>>> e2df45bcf4fae044c2ec81c7ea50a183bdc8bd86
 
     result = {
         "task_id": args.task,

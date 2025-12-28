@@ -72,11 +72,7 @@ def persist_to_disk():
 def check_permission(agent_id: str, permission: str) -> bool:
     """Check if agent has required permission."""
     if not os.path.exists(PERMISSIONS_FILE):
-<<<<<<< HEAD
-        return True # Default allow if no policy
-=======
         return True  # Default allow if no policy
->>>>>>> e2df45bcf4fae044c2ec81c7ea50a183bdc8bd86
 
     try:
         with open(PERMISSIONS_FILE, "r") as f:

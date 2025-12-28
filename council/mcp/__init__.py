@@ -8,6 +8,7 @@ from council.mcp.ai_council_server import (
     ModelResponse,
     ConsensusResponse,
 )
+from council.mcp.protocol import MCPProtocolHandler
 
 __all__ = [
     "AICouncilServer",
@@ -15,4 +16,5 @@ __all__ = [
     "ModelProvider",
     "ModelResponse",
     "ConsensusResponse",
+    "MCPProtocolHandler",
 ]

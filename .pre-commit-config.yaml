@@ -39,6 +39,6 @@ repos:
 
       - id: compile-check
         name: compile-check
-        entry: python -m py_compile
+        entry: bash -c 'source .venv/bin/activate 2>/dev/null && python -m py_compile "$@"' --
         language: system
         types: [python]

@@ -134,16 +134,16 @@ class KnowledgeGraph:
         self._entity_by_type: Dict[EntityType, Set[str]] = {}
         self._relations_from: Dict[str, List[Relation]] = {}
         self._relations_to: Dict[str, List[Relation]] = {}
+        
+        # Hybrid Search: Initialize Vector Store BEFORE auto_load
+        try:
+            from council.memory.vector_store import VectorStore
+            self.vector_store = VectorStore(use_fallback=True)
+        except ImportError:
+            self.vector_store = None
 
         if auto_load:
             self.load()
-            
-        # Hybrid Search: Initialize Vector Store
-        try:
-            from council.memory.vector_store import VectorStore
-            self.vector_store = VectorStore(use_fallback=True) # Default to fallback to be safe, actual class handles import
-        except ImportError:
-            self.vector_store = None
 
     @staticmethod
     def _parse_datetime(value: Any) -> datetime:

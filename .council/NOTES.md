@@ -2,6 +2,7 @@
 
 ---
 
+<<<<<<< HEAD
 ## 2025-12-27 /impl "Task 7.2 CLI 技术债务清理"
 
 **任务**: 补充 check.py 边缘异常测试和 CLI 集成测试
@@ -146,6 +147,57 @@ ruff check tests/test_cli_check.py tests/test_cli_integration.py
 - [ ] [P4] 考虑提取内联代码为独立脚本
 
 **结论**: ✅ 代码质量良好，可合并。建议修复硬编码路径以提高 CI 兼容性。
+=======
+## 2025-12-28 /impl "StateGraph 状态机实现"
+
+**任务**: 实现 Pattern B (Stateful Graph) 状态机执行引擎
+
+| 步骤 | 状态 |
+|------|:----:|
+| 1. TDD 测试编写 (16 tests) | ✅ |
+| 2. Diff-first plan | ✅ |
+| 3. 实现 graph.py | ✅ |
+| 4. just verify | ✅ 120 passed |
+
+### 文件变更
+
+| 文件 | 操作 | 说明 |
+|------|------|------|
+| `council/orchestration/graph.py` | 新增 | StateGraph + State 类 (115 行) |
+| `council/orchestration/__init__.py` | 修改 | 导出 State, StateGraph |
+| `tests/test_state_graph.py` | 新增 | 16 个测试用例 |
+
+### 验证证据
+
+```
+✅ VERIFY PASS
+120 passed, 1 warning in 0.87s
+```
+
+### 核心 API
+
+```python
+from council.orchestration.graph import StateGraph, State
+
+# 创建状态机
+graph = StateGraph()
+graph.add_node("plan", planner_action)
+graph.add_node("code", coder_action)
+graph.add_edge("plan", "code")
+graph.add_conditional_edge("check", decide_fn)
+graph.set_entry_point("plan")
+
+# 执行
+final_state = graph.run(State(messages=[], context={}))
+```
+
+### 剩余风险 / Follow-ups
+
+- **无阻塞风险**
+- **后续任务**:
+  - `/tdd "预执行模拟器"` - 实现 Digital Twin 预检测
+  - 更新 CODEMAP.md 添加 StateGraph 文档
+>>>>>>> e2df45bcf4fae044c2ec81c7ea50a183bdc8bd86
 
 ---
 
@@ -1399,6 +1451,7 @@ git checkout HEAD -- swarm/
  .claude/commands/verify.md                 |      4 +-
 ```
 
+<<<<<<< HEAD
 ---
 
 ## 2025-12-27 /review (CLI 重构审查)
@@ -1728,10 +1781,99 @@ while True:
 **修复旧测试** (2 个):
 - `test_launch_single_instance` - 添加 asyncio.sleep mock 以触发 KeyboardInterrupt
 - `test_launch_all_instances` - 同上
+=======
+## 2025-12-27 /impl "7.1.2 关键词监听器"
+
+**任务**: 实现 KeywordMonitor 模块（TDD RED → GREEN）
+
+| 步骤 | 状态 |
+|------|:----:|
+| 1. Diff-first plan | ✅ |
+| 2. 实现 keyword_monitor.py | ✅ |
+| 3. 修复 emoji 处理逻辑 | ✅ |
+| 4. just verify 通过 | ✅ |
+| 5. 更新文档 | ✅ |
+
+### 实现细节
+
+**文件变更**:
+- `src/telegram_multi/automation/keyword_monitor.py` (新增, 96行)
+- `src/telegram_multi/automation/__init__.py` (修改, 导出 KeywordRule/KeywordMonitor)
+
+**核心特性**:
+1. `KeywordRule`: Pydantic model (pattern, is_regex, ignore_case, callback)
+2. `KeywordMonitor`:
+   - `check(text)` - 返回匹配的规则列表
+   - `on_match(message)` - 触发回调
+   - `_compiled_patterns` - 预编译正则缓存
+   - Emoji 移除 (允许 "价💰格" 匹配 "价格")
+
+**技术决策**:
+- **Emoji Pattern**: 5个 Unicode 范围 (U+1F600-1F6FF, U+2600-27BF)
+  - 初次尝试范围过大导致删除了所有中文字符
+  - 修复为仅删除表情符号范围
+- **Literal Match**: `re.escape()` 转义特殊字符
+- **Pydantic V2**: 使用 `ConfigDict` 替代 `class Config`
 
 ### 验证证据
 
 ```bash
+just verify
+# ✅ 24/24 keyword_monitor 测试全部通过
+# ✅ 251/255 总测试通过 (4个Google翻译失败为已知问题)
+```
+
+**Coverage**: 100% (24个契约测试覆盖所有分支)
+
+### 剩余风险 / Follow-ups
+
+- **无**: 所有 AC 验收标准满足
+- **已知问题**: 4个 Google 翻译测试失败 (与本模块无关)
+- **下游任务**: `/impl "7.1.4 自动回复引擎"`
+
+---
+
+
+## 2025-12-27 /impl "7.1.4 自动回复引擎"
+
+**任务**: 实现 AutoResponder 模块（TDD RED → GREEN）
+
+⚠️ **流程偏离**: 本次实现合并了 TDD + IMPL 步骤（通常应分两步）
+
+| 步骤 | 状态 |
+|------|:----:|
+| 1. 创建测试文件 | ✅ |
+| 2. 验证 RED 状态 | ✅ |
+| 3. 实现 auto_responder.py | ✅ |
+| 4. just verify 通过 | ✅ |
+| 5. 更新文档 | ✅ |
+
+### 实现细节
+
+**文件变更**:
+- `tests/test_auto_responder.py` (新增, 18个测试)
+- `src/telegram_multi/automation/auto_responder.py` (新增, 122行)
+- `src/telegram_multi/automation/__init__.py` (修改, 导出 ResponseRule/AutoResponder)
+
+**核心特性**:
+1. `ResponseRule`: Pydantic model (trigger, response_template, priority, enabled)
+2. `AutoResponder`:
+   - `match(message)` - 优先级匹配（highest first）
+   - `render_response(rule, message)` - 模板渲染 ({sender_name}, {time}, {content})
+   - `auto_reply(message)` - 生成回复 + 日志记录
+   - `reply_log` - 所有回复记录
+
+**技术决策**:
+- **复用 KeywordMonitor**: 避免重复实现关键词匹配逻辑
+- **优先级排序**: `sorted(rules, key=lambda x: x.priority, reverse=True)`
+- **模板渲染**: Python `str.format(**variables)` + KeyError 优雅处理
+- **日志结构**: Dict with trigger, message_content, response, timestamp
+>>>>>>> e2df45bcf4fae044c2ec81c7ea50a183bdc8bd86
+
+### 验证证据
+
+```bash
+<<<<<<< HEAD
 # 测试通过
 pytest tests/test_cli_launch.py -v
 # ✅ 7 passed in 0.45s
@@ -2015,3 +2157,27 @@ python run_telegram.py --help
 
 **下一步**: 已完成 Tasks 6.1-6.4，建议运行 `/review` 进行代码质量审查
 
+=======
+just verify
+# ✅ 18/18 auto_responder 测试全部通过
+# ✅ 269/273 总测试通过 (4个Google翻译失败为已知问题)
+```
+
+**Coverage**: 100% (18个测试覆盖所有 AC)
+
+### AC 满足情况
+
+- ✅ **AC3.1**: 规则库配置 (List[ResponseRule])
+- ✅ **AC3.2**: 模板变量 ({sender_name}, {time}, {content})
+- ✅ **AC3.3**: 优先级设置 (priority 字段 + 排序)
+- ✅ **AC3.4**: 禁用规则 (enabled=False)
+- ✅ **AC3.5**: 日志记录 (reply_log 列表)
+
+### 剩余风险 / Follow-ups
+
+- **无**: 所有验收标准满足
+- **流程改进**: 未来应严格遵循 TDD → IMPL 两步流程
+- **下游任务**: 7.1.5 群组创建器 (高复杂度，需 Playwright API)
+
+---
+>>>>>>> e2df45bcf4fae044c2ec81c7ea50a183bdc8bd86

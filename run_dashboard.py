@@ -1,4 +1,3 @@
-
 import asyncio
 import sys
 import os
@@ -116,6 +115,7 @@ DASHBOARD_TEMPLATE = """
 </html>
 """
 
+
 async def generate_simulation():
     server = AICouncilServer(models=[])
 
@@ -123,13 +123,21 @@ async def generate_simulation():
     server._query_model = AsyncMock()
     server._synthesize_responses = AsyncMock(return_value="Synthesized.")
     server.gateway = MagicMock()
+<<<<<<< HEAD
     server.gateway._scan_content.return_value = 0 # OK Risk
+=======
+    server.gateway._scan_content.return_value = 0  # OK Risk
+>>>>>>> e2df45bcf4fae044c2ec81c7ea50a183bdc8bd86
 
     print("Running Simulation Scenarios...")
 
     # Scenario 1: High Consensus (Everybody Approves) -> Low Entropy
     server._query_model.return_value = ModelResponse(
-        provider=ModelProvider.GEMINI, model_name="mock", content="Vote: APPROVE\nConfidence: 0.99", latency_ms=10, success=True
+        provider=ModelProvider.GEMINI,
+        model_name="mock",
+        content="Vote: APPROVE\nConfidence: 0.99",
+        latency_ms=10,
+        success=True,
     )
     # We need to simulate multiple responses for parallel query, wait...
     # Actually query_parallel calls _query_model multiple times.
@@ -139,29 +147,45 @@ async def generate_simulation():
 
     print("1. Scenario: Perfect Agreement (Low Entropy)")
     server.query_parallel.return_value = [
-        ModelResponse(ModelProvider.GEMINI, "gemini", "Vote: APPROVE\nConfidence: 0.99", 50, True),
-        ModelResponse(ModelProvider.OPENAI, "gpt-4", "Vote: APPROVE\nConfidence: 0.98", 60, True),
+        ModelResponse(
+            ModelProvider.GEMINI, "gemini", "Vote: APPROVE\nConfidence: 0.99", 50, True
+        ),
+        ModelResponse(
+            ModelProvider.OPENAI, "gpt-4", "Vote: APPROVE\nConfidence: 0.98", 60, True
+        ),
     ]
     await server.query("Is Python a programming language?")
 
     print("2. Scenario: Slight Disagreement (Low-Mid Entropy)")
     server.query_parallel.return_value = [
-        ModelResponse(ModelProvider.GEMINI, "gemini", "Vote: APPROVE\nConfidence: 0.80", 50, True),
-        ModelResponse(ModelProvider.OPENAI, "gpt-4", "Vote: APPROVE\nConfidence: 0.60", 60, True),
+        ModelResponse(
+            ModelProvider.GEMINI, "gemini", "Vote: APPROVE\nConfidence: 0.80", 50, True
+        ),
+        ModelResponse(
+            ModelProvider.OPENAI, "gpt-4", "Vote: APPROVE\nConfidence: 0.60", 60, True
+        ),
     ]
     await server.query("Is C++ hard?")
 
     print("3. Scenario: Total Confusion (High Entropy)")
     server.query_parallel.return_value = [
-        ModelResponse(ModelProvider.GEMINI, "gemini", "Vote: APPROVE\nConfidence: 0.9", 50, True),
-        ModelResponse(ModelProvider.OPENAI, "gpt-4", "Vote: REJECT\nConfidence: 0.9", 60, True),
+        ModelResponse(
+            ModelProvider.GEMINI, "gemini", "Vote: APPROVE\nConfidence: 0.9", 50, True
+        ),
+        ModelResponse(
+            ModelProvider.OPENAI, "gpt-4", "Vote: REJECT\nConfidence: 0.9", 60, True
+        ),
     ]
     await server.query("Should we deploy to prod on Friday?")
 
     print("4. Scenario: Strong Rejection (Low Entropy)")
     server.query_parallel.return_value = [
-        ModelResponse(ModelProvider.GEMINI, "gemini", "Vote: REJECT\nConfidence: 0.99", 50, True),
-        ModelResponse(ModelProvider.OPENAI, "gpt-4", "Vote: REJECT\nConfidence: 0.95", 60, True),
+        ModelResponse(
+            ModelProvider.GEMINI, "gemini", "Vote: REJECT\nConfidence: 0.99", 50, True
+        ),
+        ModelResponse(
+            ModelProvider.OPENAI, "gpt-4", "Vote: REJECT\nConfidence: 0.95", 60, True
+        ),
     ]
     await server.query("Delete the database?")
 
@@ -175,6 +199,7 @@ async def generate_simulation():
 
     print(f"\nDashboard generated at: {os.path.abspath('dashboard.html')}")
     print(f"Stats: {json.dumps(stats, indent=2)}")
+
 
 if __name__ == "__main__":
     asyncio.run(generate_simulation())

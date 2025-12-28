@@ -229,11 +229,11 @@ class TestPatchGenerator:
     def test_diagnose_full(self):
         """Should create full diagnosis"""
         generator = PatchGenerator()
-        output = '''
+        output = """
         FAILED test_example
         File "src/main.py", line 10
         AssertionError: Expected True, got False
-        '''
+        """
         diagnosis = generator.diagnose(output)
         assert diagnosis.error_type == "assertion"
         assert diagnosis.suspected_line == 10

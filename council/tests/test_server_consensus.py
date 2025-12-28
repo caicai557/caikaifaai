@@ -1,4 +1,3 @@
-
 import unittest
 import sys
 import os
@@ -8,9 +7,15 @@ sys.path.append(os.getcwd())
 
 from council.mcp.ai_council_server import AICouncilServer, ModelResponse, ModelProvider
 from council.facilitator.wald_consensus import ConsensusDecision
+<<<<<<< HEAD
 
 class TestServerConsensus(unittest.IsolatedAsyncioTestCase):
 
+=======
+
+
+class TestServerConsensus(unittest.IsolatedAsyncioTestCase):
+>>>>>>> e2df45bcf4fae044c2ec81c7ea50a183bdc8bd86
     def test_parse_vote_approve(self):
         """Test parsing an APPROVE vote from model response"""
         server = AICouncilServer(models=[])
@@ -45,15 +50,15 @@ class TestServerConsensus(unittest.IsolatedAsyncioTestCase):
                 model_name="gemini",
                 content="Vote: APPROVE\nConfidence: 0.99",
                 latency_ms=100,
-                success=True
+                success=True,
             ),
             ModelResponse(
                 provider=ModelProvider.OPENAI,
                 model_name="gpt-4",
                 content="Vote: APPROVE\nConfidence: 0.98",
                 latency_ms=100,
-                success=True
-            )
+                success=True,
+            ),
         ]
 
         # Mock WaldConsensus to return AUTO_COMMIT
@@ -74,12 +79,13 @@ class TestServerConsensus(unittest.IsolatedAsyncioTestCase):
                 model_name="gemini",
                 content="Just chatting, no vote here.",
                 latency_ms=100,
-                success=True
+                success=True,
             )
         ]
 
         result = server.evaluate_votes(responses)
         self.assertEqual(result.decision, ConsensusDecision.HOLD_FOR_HUMAN)
+
 
 if __name__ == "__main__":
     unittest.main()

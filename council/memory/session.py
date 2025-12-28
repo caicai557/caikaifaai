@@ -13,6 +13,7 @@ from pathlib import Path
 @dataclass
 class Message:
     """会话消息"""
+
     role: str  # "system" | "user" | "assistant"
     content: str
     timestamp: datetime = field(default_factory=datetime.now)
@@ -39,6 +40,7 @@ class Message:
 @dataclass
 class SessionState:
     """会话状态"""
+
     session_id: str
     agent_name: str
     messages: List[Message] = field(default_factory=list)
@@ -126,10 +128,14 @@ class LLMSession:
         return self.storage_dir / f"{self.state.session_id}.json"
 
     def add_message(
+<<<<<<< HEAD
         self,
         role: str,
         content: str,
         metadata: Optional[Dict[str, Any]] = None
+=======
+        self, role: str, content: str, metadata: Optional[Dict[str, Any]] = None
+>>>>>>> e2df45bcf4fae044c2ec81c7ea50a183bdc8bd86
     ) -> None:
         """
         添加消息
@@ -256,7 +262,13 @@ class SessionManager:
         self.storage_dir = storage_dir
         self.sessions: Dict[str, LLMSession] = {}
 
+<<<<<<< HEAD
     def get_session(self, agent_name: str, session_id: Optional[str] = None) -> LLMSession:
+=======
+    def get_session(
+        self, agent_name: str, session_id: Optional[str] = None
+    ) -> LLMSession:
+>>>>>>> e2df45bcf4fae044c2ec81c7ea50a183bdc8bd86
         """获取或创建会话"""
         key = f"{agent_name}:{session_id or 'default'}"
         if key not in self.sessions:

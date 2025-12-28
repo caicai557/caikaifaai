@@ -3,12 +3,14 @@
 Functional Codification - The Optimizer.
 Converts successful Agent runs into reusable Python routines to reduce latency.
 """
+
 import argparse
 import json
 import os
 import sys
 
 ROUTINES_DIR = ".council/routines"
+
 
 def codify_run(task_id: str, goal: str, history: str) -> str:
     """
@@ -47,6 +49,7 @@ if __name__ == "__main__":
 
     return routine_path
 
+
 def main():
     parser = argparse.ArgumentParser(description="Functional Codification")
     parser.add_argument("--task", required=True, help="Task ID")
@@ -57,11 +60,25 @@ def main():
 
     routine_path = codify_run(args.task, args.goal, args.history)
 
+<<<<<<< HEAD
     print(json.dumps({
         "status": "success",
         "routine": routine_path,
         "message": f"Routine codified at {routine_path}"
     }, indent=2))
+=======
+    print(
+        json.dumps(
+            {
+                "status": "success",
+                "routine": routine_path,
+                "message": f"Routine codified at {routine_path}",
+            },
+            indent=2,
+        )
+    )
+
+>>>>>>> e2df45bcf4fae044c2ec81c7ea50a183bdc8bd86
 
 if __name__ == "__main__":
     main()

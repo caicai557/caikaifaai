@@ -1,4 +1,3 @@
-
 import unittest
 from unittest.mock import patch
 import sys
@@ -11,8 +10,12 @@ from council.agents.coder import Coder
 from council.agents.security_auditor import SecurityAuditor
 from council.agents.base_agent import VoteDecision
 
-class TestRealAgents(unittest.TestCase):
 
+class TestRealAgents(unittest.TestCase):
+<<<<<<< HEAD
+
+=======
+>>>>>>> e2df45bcf4fae044c2ec81c7ea50a183bdc8bd86
     @patch("council.agents.base_agent.BaseAgent._call_llm")
     def test_architect_think(self, mock_llm):
         # Mock LLM response
@@ -75,6 +78,7 @@ Attack surface is large.
         self.assertEqual(result.context.get("perspective"), "security")
         self.assertTrue(result.context.get("forced_debate"))
         self.assertIn("SQL Injection", result.concerns)
+
 
 if __name__ == "__main__":
     unittest.main()

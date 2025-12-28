@@ -1,0 +1,14 @@
+[
+  {
+    "name": "send_email",
+    "description": "Send an email to a specified recipient with subject and body",
+    "schema": "{}",
+    "defer_loading": true
+  },
+  {
+    "name": "read_file",
+    "description": "Read contents of a file from the filesystem",
+    "schema": "{}",
+    "defer_loading": true
+  }
+]

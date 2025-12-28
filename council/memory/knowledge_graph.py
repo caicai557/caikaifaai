@@ -22,19 +22,21 @@ DEFAULT_STORAGE_PATH = Path(".council/knowledge_graph.gml")
 
 class RelationType(Enum):
     """关系类型"""
-    DEPENDS_ON = "depends_on"       # A 依赖 B
-    IMPLEMENTS = "implements"       # A 实现 B
-    CONTAINS = "contains"           # A 包含 B
-    RELATED_TO = "related_to"       # A 与 B 相关
-    DECIDED_BY = "decided_by"       # A 由 B 决定
-    APPROVED_BY = "approved_by"     # A 被 B 批准
-    CREATED_BY = "created_by"       # A 由 B 创建
-    SUPERSEDES = "supersedes"       # A 取代 B
-    IMPORTS = "imports"             # A 导入 B (代码依赖)
+
+    DEPENDS_ON = "depends_on"  # A 依赖 B
+    IMPLEMENTS = "implements"  # A 实现 B
+    CONTAINS = "contains"  # A 包含 B
+    RELATED_TO = "related_to"  # A 与 B 相关
+    DECIDED_BY = "decided_by"  # A 由 B 决定
+    APPROVED_BY = "approved_by"  # A 被 B 批准
+    CREATED_BY = "created_by"  # A 由 B 创建
+    SUPERSEDES = "supersedes"  # A 取代 B
+    IMPORTS = "imports"  # A 导入 B (代码依赖)
 
 
 class EntityType(Enum):
     """实体类型"""
+
     FILE = "file"
     FUNCTION = "function"
     CLASS = "class"
@@ -48,6 +50,7 @@ class EntityType(Enum):
 @dataclass
 class Entity:
     """知识图谱实体"""
+
     id: str
     entity_type: EntityType
     name: str
@@ -69,6 +72,7 @@ class Entity:
 @dataclass
 class Relation:
     """知识图谱关系"""
+
     source_id: str
     target_id: str
     relation_type: RelationType
@@ -158,7 +162,9 @@ class KnowledgeGraph:
     @staticmethod
     def _require_networkx() -> None:
         if nx is None:
-            raise ImportError("networkx 未安装，无法使用 GML 持久化。请安装 networkx>=3.2.0")
+            raise ImportError(
+                "networkx 未安装，无法使用 GML 持久化。请安装 networkx>=3.2.0"
+            )
 
     @property
     def storage_format(self) -> str:
@@ -322,15 +328,24 @@ class KnowledgeGraph:
 
         candidates = (
             self.get_entities_by_type(entity_type)
+<<<<<<< HEAD
             if entity_type else
             list(self.entities.values())
+=======
+            if entity_type
+            else list(self.entities.values())
+>>>>>>> e2df45bcf4fae044c2ec81c7ea50a183bdc8bd86
         )
 
         for entity in candidates:
             if properties:
                 match = all(
+<<<<<<< HEAD
                     entity.properties.get(k) == v
                     for k, v in properties.items()
+=======
+                    entity.properties.get(k) == v for k, v in properties.items()
+>>>>>>> e2df45bcf4fae044c2ec81c7ea50a183bdc8bd86
                 )
                 if match:
                     results.append(entity)
@@ -549,10 +564,14 @@ class KnowledgeGraph:
         return {
             "entity_count": len(self.entities),
             "relation_count": len(self.relations),
+<<<<<<< HEAD
             "entity_types": {
                 k.value: len(v)
                 for k, v in self._entity_by_type.items()
             },
+=======
+            "entity_types": {k.value: len(v) for k, v in self._entity_by_type.items()},
+>>>>>>> e2df45bcf4fae044c2ec81c7ea50a183bdc8bd86
         }
 
 

@@ -21,6 +21,7 @@ from council.facilitator.wald_consensus import WaldConsensus, ConsensusResult
 
 class ModelProvider(Enum):
     """Supported model providers"""
+
     GEMINI = "gemini"
     OPENAI = "openai"
     ANTHROPIC = "anthropic"
@@ -29,6 +30,7 @@ class ModelProvider(Enum):
 @dataclass
 class ModelConfig:
     """Configuration for a model"""
+
     provider: ModelProvider
     model_name: str
     api_key_env: str
@@ -39,6 +41,7 @@ class ModelConfig:
 @dataclass
 class ModelResponse:
     """Response from a single model"""
+
     provider: ModelProvider
     model_name: str
     content: str
@@ -51,6 +54,7 @@ class ModelResponse:
 @dataclass
 class ConsensusResponse:
     """Synthesized consensus response"""
+
     synthesis: str
     individual_responses: List[ModelResponse]
     agreement_score: float  # 0-1, how much models agree
@@ -100,10 +104,12 @@ class AICouncilServer:
 
         # Initialize Governance Gateway for output filtering
         from council.governance.gateway import GovernanceGateway
+
         self.gateway = GovernanceGateway()
 
         # Initialize Monitor
         from council.mcp.monitor import SemanticEntropyMonitor
+
         self.monitor = SemanticEntropyMonitor()
 
     def _validate_api_keys(self) -> None:
@@ -216,14 +222,16 @@ class AICouncilServer:
         result = []
         for i, resp in enumerate(responses):
             if isinstance(resp, Exception):
-                result.append(ModelResponse(
-                    provider=enabled[i].provider,
-                    model_name=enabled[i].model_name,
-                    content="",
-                    latency_ms=0,
-                    success=False,
-                    error=str(resp),
-                ))
+                result.append(
+                    ModelResponse(
+                        provider=enabled[i].provider,
+                        model_name=enabled[i].model_name,
+                        content="",
+                        latency_ms=0,
+                        success=False,
+                        error=str(resp),
+                    )
+                )
             else:
                 result.append(resp)
 
@@ -247,16 +255,24 @@ class AICouncilServer:
             return 1.0
 
         length_variance = sum((l - avg_length) ** 2 for l in lengths) / len(lengths)
+<<<<<<< HEAD
         normalized_variance = length_variance / (avg_length ** 2)
+=======
+        normalized_variance = length_variance / (avg_length**2)
+>>>>>>> e2df45bcf4fae044c2ec81c7ea50a183bdc8bd86
 
         # Lower variance = higher agreement
         agreement = max(0, 1 - normalized_variance)
         return min(1.0, agreement)
 
     async def _synthesize_responses(
+<<<<<<< HEAD
         self,
         prompt: str,
         responses: List[ModelResponse]
+=======
+        self, prompt: str, responses: List[ModelResponse]
+>>>>>>> e2df45bcf4fae044c2ec81c7ea50a183bdc8bd86
     ) -> str:
         """
         Synthesize multiple model responses into a single answer using an LLM
@@ -269,7 +285,13 @@ class AICouncilServer:
         synthesis_prompt = f"Original Task: {prompt}\n\nModels have provided the following responses. Please synthesize them into a single, high-quality response. If there are conflicts, resolve them by choosing the safest and most robust option.\n\n"
 
         for i, resp in enumerate(successful):
+<<<<<<< HEAD
             synthesis_prompt += f"--- Model {i+1} ({resp.model_name}) ---\n{resp.content}\n\n"
+=======
+            synthesis_prompt += (
+                f"--- Model {i + 1} ({resp.model_name}) ---\n{resp.content}\n\n"
+            )
+>>>>>>> e2df45bcf4fae044c2ec81c7ea50a183bdc8bd86
 
         synthesis_prompt += "--- End of Responses ---\n\nSynthesized Response:"
 
@@ -278,9 +300,20 @@ class AICouncilServer:
             # Quick hack to reuse query logic for synthesis
             # In a real system, we'd have a dedicated synthesizer config
             enabled = self.get_enabled_models()
+<<<<<<< HEAD
             synthesizer_config = next((m for m in enabled if m.provider == ModelProvider.GEMINI), None) or enabled[0]
 
             synthesis_resp = await self._query_model(synthesis_prompt, synthesizer_config)
+=======
+            synthesizer_config = (
+                next((m for m in enabled if m.provider == ModelProvider.GEMINI), None)
+                or enabled[0]
+            )
+
+            synthesis_resp = await self._query_model(
+                synthesis_prompt, synthesizer_config
+            )
+>>>>>>> e2df45bcf4fae044c2ec81c7ea50a183bdc8bd86
             if synthesis_resp.success:
                 return synthesis_resp.content
         except Exception:
@@ -311,12 +344,19 @@ class AICouncilServer:
 
         # Governance Check: Output Filtering
         from council.governance.gateway import RiskLevel
+
         risk = self.gateway._scan_content(synthesis)
         if risk in [RiskLevel.CRITICAL, RiskLevel.HIGH]:
             if risk == RiskLevel.CRITICAL:
+<<<<<<< HEAD
                  synthesis = "⚠️ [GOVERNANCE BLOCKED] The synthesized response was blocked due to detected CRITICAL risk pattern."
             else:
                  synthesis = f"⚠️ [GOVERNANCE BLOCKED] The synthesized response was blocked due to detected {risk.name} risk pattern.\n\nBlocked Content Preview (Safe): {synthesis[:50]}..."
+=======
+                synthesis = "⚠️ [GOVERNANCE BLOCKED] The synthesized response was blocked due to detected CRITICAL risk pattern."
+            else:
+                synthesis = f"⚠️ [GOVERNANCE BLOCKED] The synthesized response was blocked due to detected {risk.name} risk pattern.\n\nBlocked Content Preview (Safe): {synthesis[:50]}..."
+>>>>>>> e2df45bcf4fae044c2ec81c7ea50a183bdc8bd86
 
         agreement = self._calculate_agreement(responses)
 
@@ -370,7 +410,7 @@ class AICouncilServer:
             "agent": agent_name,
             "decision": decision,
             "confidence": confidence,
-            "rationale": content[:200]
+            "rationale": content[:200],
         }
 
     def evaluate_votes(self, responses: List[ModelResponse]) -> ConsensusResult:

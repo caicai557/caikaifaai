@@ -13,6 +13,7 @@ import re
 
 class RiskLevel(Enum):
     """风险级别"""
+
     LOW = "low"
     MEDIUM = "medium"
     HIGH = "high"
@@ -21,6 +22,7 @@ class RiskLevel(Enum):
 
 class ActionType(Enum):
     """动作类型"""
+
     FILE_DELETE = "file_delete"
     FILE_MODIFY = "file_modify"
     CONFIG_CHANGE = "config_change"
@@ -34,6 +36,7 @@ class ActionType(Enum):
 @dataclass
 class ApprovalRequest:
     """审批请求"""
+
     request_id: str
     action_type: ActionType
     risk_level: RiskLevel
@@ -79,14 +82,14 @@ HIGH_RISK_ACTIONS = {
 
 # 危险内容模式 (Regex)
 DANGEROUS_PATTERNS = [
-    (r"rm\s+-[rf]{1,2}", RiskLevel.CRITICAL),          # rm -rf
-    (r"mkfs", RiskLevel.CRITICAL),                     # 格式化
-    (r"dd\s+if=", RiskLevel.CRITICAL),                 # dd 命令
-    (r"os\.system\(['\"]rm", RiskLevel.CRITICAL),      # os.system('rm...')
-    (r"subprocess\.call\(['\"]rm", RiskLevel.CRITICAL),# subprocess rm
-    (r"eval\(", RiskLevel.HIGH),                       # eval() - 高危但不一定致命
-    (r"exec\(", RiskLevel.HIGH),                       # exec()
-    (r"__import__", RiskLevel.HIGH),                   # 动态导入
+    (r"rm\s+-[rf]{1,2}", RiskLevel.CRITICAL),  # rm -rf
+    (r"mkfs", RiskLevel.CRITICAL),  # 格式化
+    (r"dd\s+if=", RiskLevel.CRITICAL),  # dd 命令
+    (r"os\.system\(['\"]rm", RiskLevel.CRITICAL),  # os.system('rm...')
+    (r"subprocess\.call\(['\"]rm", RiskLevel.CRITICAL),  # subprocess rm
+    (r"eval\(", RiskLevel.HIGH),  # eval() - 高危但不一定致命
+    (r"exec\(", RiskLevel.HIGH),  # exec()
+    (r"__import__", RiskLevel.HIGH),  # 动态导入
 ]
 
 # 需要强制人工审批的路径模式
@@ -135,7 +138,13 @@ class GovernanceGateway:
         self._request_counter = 0
         self._approval_callback: Optional[Callable[[ApprovalRequest], bool]] = None
 
+<<<<<<< HEAD
     def set_approval_callback(self, callback: Callable[[ApprovalRequest], bool]) -> None:
+=======
+    def set_approval_callback(
+        self, callback: Callable[[ApprovalRequest], bool]
+    ) -> None:
+>>>>>>> e2df45bcf4fae044c2ec81c7ea50a183bdc8bd86
         """
         设置审批回调函数
 
@@ -172,7 +181,7 @@ class GovernanceGateway:
         self,
         action_type: ActionType,
         affected_paths: Optional[List[str]] = None,
-        content: Optional[str] = None
+        content: Optional[str] = None,
     ) -> bool:
         """
         检查操作是否需要人工审批
@@ -199,6 +208,7 @@ class GovernanceGateway:
         # 3. 检查受保护路径
         if affected_paths:
             import fnmatch
+
             for path in affected_paths:
                 for pattern in PROTECTED_PATHS:
                     if fnmatch.fnmatch(path, pattern):
@@ -206,7 +216,13 @@ class GovernanceGateway:
 
         return False
 
+<<<<<<< HEAD
     def auto_approve_with_council(self, request: ApprovalRequest, consensus_result: Dict[str, Any]) -> bool:
+=======
+    def auto_approve_with_council(
+        self, request: ApprovalRequest, consensus_result: Dict[str, Any]
+    ) -> bool:
+>>>>>>> e2df45bcf4fae044c2ec81c7ea50a183bdc8bd86
         """
         尝试使用 Council 共识自动批准
 
@@ -232,7 +248,13 @@ class GovernanceGateway:
         # 必须是 AUTO_COMMIT
         # 注意：这里假设 consensus_result.decision 是 Enum 或对应的字符串值
         # 为兼容性，转换字符串比较
+<<<<<<< HEAD
         decision_str = str(decision.value) if hasattr(decision, "value") else str(decision)
+=======
+        decision_str = (
+            str(decision.value) if hasattr(decision, "value") else str(decision)
+        )
+>>>>>>> e2df45bcf4fae044c2ec81c7ea50a183bdc8bd86
 
         if decision_str == "auto_commit":
             return self.approve(request.request_id, "council_auto_commit")
@@ -263,7 +285,13 @@ class GovernanceGateway:
             审批请求对象
         """
         self._request_counter += 1
+<<<<<<< HEAD
         request_id = f"REQ-{datetime.now().strftime('%Y%m%d')}-{self._request_counter:04d}"
+=======
+        request_id = (
+            f"REQ-{datetime.now().strftime('%Y%m%d')}-{self._request_counter:04d}"
+        )
+>>>>>>> e2df45bcf4fae044c2ec81c7ea50a183bdc8bd86
 
         # 重新计算风险（因为可能没传入 content，这里只能基于 action_type 和资源估算）
         # 理想情况下调用者应该先检测风险再创建请求，或者这里只做记录
@@ -327,7 +355,13 @@ class GovernanceGateway:
         self.approval_log.append(request)
         return True
 
+<<<<<<< HEAD
     def wait_for_approval(self, request: ApprovalRequest, timeout_seconds: int = 300) -> bool:
+=======
+    def wait_for_approval(
+        self, request: ApprovalRequest, timeout_seconds: int = 300
+    ) -> bool:
+>>>>>>> e2df45bcf4fae044c2ec81c7ea50a183bdc8bd86
         """
         等待人工审批（同步版本）
 
@@ -348,17 +382,19 @@ class GovernanceGateway:
             return result
 
         # 否则打印请求并返回 False（需要外部处理）
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print(f"⚠️  审批请求: {request.request_id}")
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
         print(f"类型: {request.action_type.value}")
         print(f"风险: {request.risk_level.value}")
         print(f"描述: {request.description}")
         print(f"资源: {', '.join(request.affected_resources)}")
         print(f"理由: {request.rationale}")
         if request.council_decision:
-            print(f"理事会决策: {json.dumps(request.council_decision, ensure_ascii=False, indent=2)}")
-        print(f"{'='*60}")
+            print(
+                f"理事会决策: {json.dumps(request.council_decision, ensure_ascii=False, indent=2)}"
+            )
+        print(f"{'=' * 60}")
         print("请使用 gateway.approve() 或 gateway.reject() 处理此请求")
 
         return False

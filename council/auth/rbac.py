@@ -12,6 +12,7 @@ import fnmatch
 
 class Permission(Enum):
     """权限级别枚举"""
+
     READ = "read"
     WRITE = "write"
     EXECUTE = "execute"
@@ -21,16 +22,18 @@ class Permission(Enum):
 
 class Role(Enum):
     """角色定义"""
-    AUDITOR = "auditor"      # 只读权限，审计员
-    ENGINEER = "engineer"    # 读写权限，工程师
+
+    AUDITOR = "auditor"  # 只读权限，审计员
+    ENGINEER = "engineer"  # 读写权限，工程师
     ARCHITECT = "architect"  # 读写+设计权限
-    ADMIN = "admin"          # 全部权限
-    CODER = "coder"          # 代码读写权限
+    ADMIN = "admin"  # 全部权限
+    CODER = "coder"  # 代码读写权限
 
 
 @dataclass
 class RolePermissions:
     """角色权限配置"""
+
     role: Role
     permissions: Set[Permission]
     allowed_paths: Set[str] = field(default_factory=set)
@@ -86,7 +89,13 @@ DEFAULT_ROLE_PERMISSIONS = {
     ),
     Role.ADMIN: RolePermissions(
         role=Role.ADMIN,
-        permissions={Permission.READ, Permission.WRITE, Permission.EXECUTE, Permission.DELETE, Permission.ADMIN},
+        permissions={
+            Permission.READ,
+            Permission.WRITE,
+            Permission.EXECUTE,
+            Permission.DELETE,
+            Permission.ADMIN,
+        },
         allowed_paths={"**/*"},
         denied_paths=set(),  # Admin 可以访问所有路径
     ),
@@ -141,10 +150,14 @@ class RBAC:
         return False
 
     def check_permission(
+<<<<<<< HEAD
         self,
         role: Role,
         permission: Permission,
         path: Optional[str] = None
+=======
+        self, role: Role, permission: Permission, path: Optional[str] = None
+>>>>>>> e2df45bcf4fae044c2ec81c7ea50a183bdc8bd86
     ) -> bool:
         """
         检查角色是否有指定权限
@@ -176,7 +189,9 @@ class RBAC:
             return False
 
         # 然后检查是否在白名单中
-        if role_perms.allowed_paths and not self._match_path(path, role_perms.allowed_paths):
+        if role_perms.allowed_paths and not self._match_path(
+            path, role_perms.allowed_paths
+        ):
             return False
 
         return True

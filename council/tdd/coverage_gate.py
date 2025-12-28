@@ -13,6 +13,7 @@ import re
 @dataclass
 class CoverageReport:
     """Test coverage report"""
+
     total_coverage: float  # Percentage 0-100
     files_coverage: Dict[str, float]  # Per-file coverage
     uncovered_lines: Dict[str, List[int]]  # Per-file uncovered lines
@@ -22,12 +23,11 @@ class CoverageReport:
 
 class CoverageGateError(Exception):
     """Raised when coverage is below threshold"""
+
     def __init__(self, current: float, required: float):
         self.current = current
         self.required = required
-        super().__init__(
-            f"Coverage {current:.1f}% is below required {required:.1f}%"
-        )
+        super().__init__(f"Coverage {current:.1f}% is below required {required:.1f}%")
 
 
 class CoverageGate:

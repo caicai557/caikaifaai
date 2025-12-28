@@ -11,16 +11,18 @@ import math
 
 class ConsensusDecision(Enum):
     """共识决策结果"""
-    AUTO_COMMIT = "auto_commit"      # 自动提交
+
+    AUTO_COMMIT = "auto_commit"  # 自动提交
     HOLD_FOR_HUMAN = "hold_for_human"  # 等待人工审核
-    REJECT = "reject"                # 拒绝
+    REJECT = "reject"  # 拒绝
 
 
 @dataclass
 class WaldConfig:
     """Wald 算法配置"""
-    upper_limit: float = 0.95   # π 达到此值则自动提交
-    lower_limit: float = 0.30   # π 低于此值则拒绝
+
+    upper_limit: float = 0.95  # π 达到此值则自动提交
+    lower_limit: float = 0.30  # π 低于此值则拒绝
     prior_approve: float = 0.70  # 批准的先验概率
 
     def __post_init__(self):
@@ -31,9 +33,10 @@ class WaldConfig:
 @dataclass
 class ConsensusResult:
     """共识计算结果"""
+
     decision: ConsensusDecision
     pi_approve: float  # 批准的后验概率
-    pi_reject: float   # 拒绝的后验概率
+    pi_reject: float  # 拒绝的后验概率
     likelihood_ratio: float  # 似然比
     votes_summary: List[Dict[str, Any]]
     reason: str
@@ -132,6 +135,7 @@ class WaldConsensus:
             p_approve, p_reject = self._vote_likelihood(confidence, is_approve)
             log_likelihood += math.log(p_approve / p_reject)
 
+<<<<<<< HEAD
             votes_summary.append({
                 "agent": vote.get("agent", "Unknown"),
                 "decision": decision,
@@ -139,6 +143,17 @@ class WaldConsensus:
                 "p_approve": p_approve,
                 "p_reject": p_reject,
             })
+=======
+            votes_summary.append(
+                {
+                    "agent": vote.get("agent", "Unknown"),
+                    "decision": decision,
+                    "confidence": confidence,
+                    "p_approve": p_approve,
+                    "p_reject": p_reject,
+                }
+            )
+>>>>>>> e2df45bcf4fae044c2ec81c7ea50a183bdc8bd86
 
         # 计算似然比 L
         likelihood_ratio = math.exp(log_likelihood)
@@ -153,10 +168,14 @@ class WaldConsensus:
         # 决策
         if pi_approve >= self.config.upper_limit:
             decision = ConsensusDecision.AUTO_COMMIT
-            reason = f"共识概率 π={pi_approve:.3f} ≥ {self.config.upper_limit}，自动提交"
+            reason = (
+                f"共识概率 π={pi_approve:.3f} ≥ {self.config.upper_limit}，自动提交"
+            )
         elif pi_approve <= self.config.lower_limit:
             decision = ConsensusDecision.REJECT
-            reason = f"共识概率 π={pi_approve:.3f} ≤ {self.config.lower_limit}，拒绝提案"
+            reason = (
+                f"共识概率 π={pi_approve:.3f} ≤ {self.config.lower_limit}，拒绝提案"
+            )
         else:
             decision = ConsensusDecision.HOLD_FOR_HUMAN
             reason = f"共识概率 π={pi_approve:.3f} 处于不确定区间，需人工审核"

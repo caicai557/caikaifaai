@@ -9,13 +9,17 @@ from datetime import datetime
 
 from council.agents.base_agent import Vote, VoteDecision
 from council.facilitator.wald_consensus import (
-    WaldConsensus, WaldConfig, ConsensusResult, ConsensusDecision
+    WaldConsensus,
+    WaldConfig,
+    ConsensusResult,
+    ConsensusDecision,
 )
 
 
 @dataclass
 class DebateRound:
     """辩论轮次记录"""
+
     round_number: int
     topic: str
     votes: List[Vote]
@@ -28,6 +32,7 @@ class DebateRound:
 @dataclass
 class MeetingMinutes:
     """会议纪要"""
+
     topic: str
     participants: List[str]
     rounds: List[DebateRound]
@@ -64,7 +69,13 @@ class Facilitator:
             minutes = facilitator.end_meeting()
     """
 
+<<<<<<< HEAD
     def __init__(self, wald_config: Optional[WaldConfig] = None, max_iterations: int = 5):
+=======
+    def __init__(
+        self, wald_config: Optional[WaldConfig] = None, max_iterations: int = 5
+    ):
+>>>>>>> e2df45bcf4fae044c2ec81c7ea50a183bdc8bd86
         """
         初始化促进者
 
@@ -158,12 +169,17 @@ class Facilitator:
         contradictions = []
 
         # 分组
-        approvals = [v for v in votes if v.decision in [VoteDecision.APPROVE, VoteDecision.APPROVE_WITH_CHANGES]]
+        approvals = [
+            v
+            for v in votes
+            if v.decision in [VoteDecision.APPROVE, VoteDecision.APPROVE_WITH_CHANGES]
+        ]
         rejections = [v for v in votes if v.decision == VoteDecision.REJECT]
         holds = [v for v in votes if v.decision == VoteDecision.HOLD]
 
         # 如果同时有批准和拒绝
         if approvals and rejections:
+<<<<<<< HEAD
             contradictions.append({
                 "type": "decision_conflict",
                 "approvers": [v.agent_name for v in approvals],
@@ -179,13 +195,38 @@ class Facilitator:
                 "decided": [v.agent_name for v in approvals + rejections],
                 "description": "部分成员尚未明确表态",
             })
+=======
+            contradictions.append(
+                {
+                    "type": "decision_conflict",
+                    "approvers": [v.agent_name for v in approvals],
+                    "rejectors": [v.agent_name for v in rejections],
+                    "description": "部分成员批准，部分成员拒绝",
+                }
+            )
+
+        # 如果有 hold 且其他人已决定
+        if holds and (approvals or rejections):
+            contradictions.append(
+                {
+                    "type": "certainty_gap",
+                    "undecided": [v.agent_name for v in holds],
+                    "decided": [v.agent_name for v in approvals + rejections],
+                    "description": "部分成员尚未明确表态",
+                }
+            )
+>>>>>>> e2df45bcf4fae044c2ec81c7ea50a183bdc8bd86
 
         return contradictions
 
     def _generate_clarification_questions(
+<<<<<<< HEAD
         self,
         votes: List[Vote],
         contradictions: List[Dict[str, Any]]
+=======
+        self, votes: List[Vote], contradictions: List[Dict[str, Any]]
+>>>>>>> e2df45bcf4fae044c2ec81c7ea50a183bdc8bd86
     ) -> List[str]:
         """
         生成澄清问题
@@ -204,9 +245,13 @@ class Facilitator:
                 questions.append(
                     f"请 {contradiction['rejectors']} 详细说明拒绝的具体原因和担忧"
                 )
+<<<<<<< HEAD
                 questions.append(
                     f"请 {contradiction['approvers']} 回应这些担忧"
                 )
+=======
+                questions.append(f"请 {contradiction['approvers']} 回应这些担忧")
+>>>>>>> e2df45bcf4fae044c2ec81c7ea50a183bdc8bd86
 
             elif contradiction["type"] == "certainty_gap":
                 questions.append(
@@ -275,7 +320,8 @@ class Facilitator:
             "entropy_trend": self.current_meeting.semantic_entropy_history,
             "current_status": (
                 self.current_meeting.rounds[-1].consensus_result.decision.value
-                if self.current_meeting.rounds and self.current_meeting.rounds[-1].consensus_result
+                if self.current_meeting.rounds
+                and self.current_meeting.rounds[-1].consensus_result
                 else "pending"
             ),
         }

@@ -5,7 +5,11 @@ Coder - 工程师智能体
 
 from typing import Optional, Dict, Any
 from council.agents.base_agent import (
-    BaseAgent, Vote, VoteDecision, ThinkResult, ExecuteResult
+    BaseAgent,
+    Vote,
+    VoteDecision,
+    ThinkResult,
+    ExecuteResult,
 )
 
 
@@ -80,6 +84,7 @@ class Coder(BaseAgent):
         concerns = []
         suggestions = []
         confidence = 0.5
+<<<<<<< HEAD
 
         current_section = None
         for line in response.split('\n'):
@@ -104,6 +109,38 @@ class Coder(BaseAgent):
             "task": task,
             "context": context
         })
+=======
+
+        current_section = None
+        for line in response.split("\n"):
+            line = line.strip()
+            if not line:
+                continue
+
+            if line.startswith("[Plan]"):
+                current_section = "analysis"
+            elif line.startswith("[Concerns]"):
+                current_section = "concerns"
+            elif line.startswith("[Suggestions]"):
+                current_section = "suggestions"
+            elif line.startswith("[Confidence]"):
+                current_section = "confidence"
+            elif current_section == "analysis":
+                analysis += line + "\n"
+            elif current_section == "concerns":
+                if line.startswith("-") or line[0].isdigit():
+                    concerns.append(line.lstrip("- 1234567890."))
+            elif current_section == "suggestions":
+                if line.startswith("-") or line[0].isdigit():
+                    suggestions.append(line.lstrip("- 1234567890."))
+            elif current_section == "confidence":
+                try:
+                    confidence = float(line)
+                except:
+                    pass
+
+        self.add_to_history({"action": "think", "task": task, "context": context})
+>>>>>>> e2df45bcf4fae044c2ec81c7ea50a183bdc8bd86
 
         return ThinkResult(
             analysis=analysis.strip() or response,
@@ -132,10 +169,12 @@ Rationale: [理由]
         response = self._call_llm(prompt)
 
         import re
+
         decision = VoteDecision.HOLD
         confidence = 0.5
         rationale = response
 
+<<<<<<< HEAD
         decision_match = re.search(r"Vote:\s*(APPROVE_WITH_CHANGES|APPROVE|HOLD|REJECT)", response, re.IGNORECASE)
         if decision_match:
             d_str = decision_match.group(1).upper()
@@ -158,6 +197,40 @@ Rationale: [理由]
             "proposal": proposal,
             "decision": decision.value
         })
+=======
+        decision_match = re.search(
+            r"Vote:\s*(APPROVE_WITH_CHANGES|APPROVE|HOLD|REJECT)",
+            response,
+            re.IGNORECASE,
+        )
+        if decision_match:
+            d_str = decision_match.group(1).upper()
+            if d_str == "APPROVE":
+                decision = VoteDecision.APPROVE
+            elif d_str == "APPROVE_WITH_CHANGES":
+                decision = VoteDecision.APPROVE_WITH_CHANGES
+            elif d_str == "HOLD":
+                decision = VoteDecision.HOLD
+            elif d_str == "REJECT":
+                decision = VoteDecision.REJECT
+
+        conf_match = re.search(r"Confidence:\s*(\d*\.?\d+)", response)
+        if conf_match:
+            try:
+                confidence = float(conf_match.group(1))
+            except:
+                pass
+
+        rationale_match = re.search(
+            r"Rationale:\s*(.+)", response, re.DOTALL | re.IGNORECASE
+        )
+        if rationale_match:
+            rationale = rationale_match.group(1).strip()
+
+        self.add_to_history(
+            {"action": "vote", "proposal": proposal, "decision": decision.value}
+        )
+>>>>>>> e2df45bcf4fae044c2ec81c7ea50a183bdc8bd86
 
         return Vote(
             agent_name=self.name,
@@ -166,6 +239,7 @@ Rationale: [理由]
             rationale=rationale,
         )
 
+<<<<<<< HEAD
     def execute(self, task: str, plan: Optional[Dict[str, Any]] = None) -> ExecuteResult:
         """
         执行代码实现任务
@@ -175,6 +249,21 @@ Rationale: [理由]
             "task": task,
             "plan": plan,
         })
+=======
+    def execute(
+        self, task: str, plan: Optional[Dict[str, Any]] = None
+    ) -> ExecuteResult:
+        """
+        执行代码实现任务
+        """
+        self.add_to_history(
+            {
+                "action": "execute",
+                "task": task,
+                "plan": plan,
+            }
+        )
+>>>>>>> e2df45bcf4fae044c2ec81c7ea50a183bdc8bd86
 
         return ExecuteResult(
             success=True,

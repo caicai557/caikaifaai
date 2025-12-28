@@ -3,6 +3,7 @@
 MCP Guard - JSON-RPC Proxy with RBAC enforcement.
 Intercepts tool calls and checks permissions before forwarding.
 """
+
 import argparse
 import json
 import subprocess
@@ -14,16 +15,18 @@ import signal
 # Constants
 PERMISSIONS_FILE = ".council/permissions.json"
 
+
 def load_policy():
     """Load full policy including permissions and aliases."""
     if not os.path.exists(PERMISSIONS_FILE):
         return {"roles": {}, "tool_aliases": {}, "default_role": "claude"}
 
     try:
-        with open(PERMISSIONS_FILE, 'r') as f:
+        with open(PERMISSIONS_FILE, "r") as f:
             return json.load(f)
     except Exception:
         return {"roles": {}, "tool_aliases": {}, "default_role": "claude"}
+
 
 def get_permissions(policy: dict, role: str) -> list:
     """Get allowed permissions for a role."""
@@ -33,15 +36,26 @@ def get_permissions(policy: dict, role: str) -> list:
         role_def = policy.get("roles", {}).get(default_role)
     return role_def.get("permissions", []) if role_def else []
 
+
 def resolve_tool_name(policy: dict, tool_name: str) -> str:
     """Resolve tool name through aliases."""
     aliases = policy.get("tool_aliases", {})
     return aliases.get(tool_name, tool_name)
 
+
 def main():
     parser = argparse.ArgumentParser(description="MCP Guard (JSON-RPC Proxy)")
+<<<<<<< HEAD
     parser.add_argument("--role", required=True, help="Agent Role (e.g., codex, claude)")
     parser.add_argument("--cmd", required=True, nargs=argparse.REMAINDER, help="Command to run")
+=======
+    parser.add_argument(
+        "--role", required=True, help="Agent Role (e.g., codex, claude)"
+    )
+    parser.add_argument(
+        "--cmd", required=True, nargs=argparse.REMAINDER, help="Command to run"
+    )
+>>>>>>> e2df45bcf4fae044c2ec81c7ea50a183bdc8bd86
 
     args = parser.parse_args()
 
@@ -51,11 +65,19 @@ def main():
 
     # 2. Start Subprocess
     cmd = args.cmd
-    if cmd and cmd[0] == '--':
+    if cmd and cmd[0] == "--":
         cmd = cmd[1:]
 
     if not cmd:
-        print(json.dumps({"jsonrpc": "2.0", "error": {"code": -32600, "message": "No command provided"}, "id": None}))
+        print(
+            json.dumps(
+                {
+                    "jsonrpc": "2.0",
+                    "error": {"code": -32600, "message": "No command provided"},
+                    "id": None,
+                }
+            )
+        )
         sys.exit(1)
 
     proc = subprocess.Popen(
@@ -64,7 +86,7 @@ def main():
         stdout=subprocess.PIPE,
         stderr=sys.stderr,
         text=True,
-        bufsize=1
+        bufsize=1,
     )
 
     # Graceful shutdown handler
@@ -99,9 +121,9 @@ def main():
                                 "jsonrpc": "2.0",
                                 "error": {
                                     "code": -32001,
-                                    "message": f"Permission Denied: Role '{args.role}' cannot use tool '{tool_name}' (resolved: '{resolved_name}')."
+                                    "message": f"Permission Denied: Role '{args.role}' cannot use tool '{tool_name}' (resolved: '{resolved_name}').",
                                 },
-                                "id": request.get("id")
+                                "id": request.get("id"),
                             }
                             print(json.dumps(error_response), flush=True)
                             continue
@@ -124,7 +146,7 @@ def main():
                 line = proc.stdout.readline()
                 if not line:
                     break
-                print(line, end='', flush=True)
+                print(line, end="", flush=True)
         except Exception:
             pass
 
@@ -136,6 +158,6 @@ def main():
 
     proc.wait()
 
+
 if __name__ == "__main__":
     main()
-

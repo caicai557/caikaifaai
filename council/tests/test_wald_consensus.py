@@ -37,9 +37,17 @@ class TestWaldConsensusAutoCommit:
         """approve_with_changes should be treated as approval"""
         detector = WaldConsensus()
         votes = [
-            {"agent": "Architect", "decision": "approve_with_changes", "confidence": 0.90},
+            {
+                "agent": "Architect",
+                "decision": "approve_with_changes",
+                "confidence": 0.90,
+            },
             {"agent": "Coder", "decision": "approve", "confidence": 0.95},
-            {"agent": "SecurityAuditor", "decision": "approve_with_changes", "confidence": 0.88},
+            {
+                "agent": "SecurityAuditor",
+                "decision": "approve_with_changes",
+                "confidence": 0.88,
+            },
         ]
         result = detector.evaluate(votes)
         assert result.decision == ConsensusDecision.AUTO_COMMIT
@@ -129,7 +137,10 @@ class TestWaldConsensusEdgeCases:
         ]
         result = detector.evaluate(votes)
         # With lower threshold, should auto-commit easier
-        assert result.pi_approve >= 0.80 or result.decision == ConsensusDecision.AUTO_COMMIT
+        assert (
+            result.pi_approve >= 0.80
+            or result.decision == ConsensusDecision.AUTO_COMMIT
+        )
 
 
 class TestWaldConsensusSemanticEntropy:

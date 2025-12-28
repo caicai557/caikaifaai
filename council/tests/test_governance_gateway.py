@@ -56,35 +56,58 @@ class TestProtectedPathDetection:
     def test_deploy_path_requires_approval(self):
         """deploy/** paths should require approval"""
         gateway = GovernanceGateway()
-        assert gateway.requires_approval(ActionType.FILE_MODIFY, ["deploy/kubernetes.yaml"]) is True
+        assert (
+            gateway.requires_approval(
+                ActionType.FILE_MODIFY, ["deploy/kubernetes.yaml"]
+            )
+            is True
+        )
 
     def test_production_config_requires_approval(self):
         """config/production/** paths should require approval"""
         gateway = GovernanceGateway()
-        assert gateway.requires_approval(ActionType.FILE_MODIFY, ["config/production/db.yaml"]) is True
+        assert (
+            gateway.requires_approval(
+                ActionType.FILE_MODIFY, ["config/production/db.yaml"]
+            )
+            is True
+        )
 
     def test_env_files_require_approval(self):
         """.env* files should require approval"""
         gateway = GovernanceGateway()
         assert gateway.requires_approval(ActionType.FILE_MODIFY, [".env"]) is True
-        assert gateway.requires_approval(ActionType.FILE_MODIFY, [".env.production"]) is True
+        assert (
+            gateway.requires_approval(ActionType.FILE_MODIFY, [".env.production"])
+            is True
+        )
 
     def test_secrets_require_approval(self):
         """secrets/** should require approval"""
         gateway = GovernanceGateway()
-        assert gateway.requires_approval(ActionType.FILE_MODIFY, ["secrets/api_key.txt"]) is True
+        assert (
+            gateway.requires_approval(ActionType.FILE_MODIFY, ["secrets/api_key.txt"])
+            is True
+        )
 
     def test_key_files_require_approval(self):
         """*.key and *.pem files should require approval"""
         gateway = GovernanceGateway()
         assert gateway.requires_approval(ActionType.FILE_MODIFY, ["server.key"]) is True
-        assert gateway.requires_approval(ActionType.FILE_MODIFY, ["ssl/cert.pem"]) is True
+        assert (
+            gateway.requires_approval(ActionType.FILE_MODIFY, ["ssl/cert.pem"]) is True
+        )
 
     def test_normal_files_no_approval(self):
         """Normal source files should NOT require approval"""
         gateway = GovernanceGateway()
-        assert gateway.requires_approval(ActionType.FILE_MODIFY, ["src/main.py"]) is False
-        assert gateway.requires_approval(ActionType.FILE_MODIFY, ["tests/test_main.py"]) is False
+        assert (
+            gateway.requires_approval(ActionType.FILE_MODIFY, ["src/main.py"]) is False
+        )
+        assert (
+            gateway.requires_approval(ActionType.FILE_MODIFY, ["tests/test_main.py"])
+            is False
+        )
 
 
 class TestApprovalWorkflow:

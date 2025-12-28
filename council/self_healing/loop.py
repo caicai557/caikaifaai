@@ -19,6 +19,7 @@ import subprocess
 
 class HealingStatus(Enum):
     """Status of the healing process"""
+
     SUCCESS = "success"
     PARTIAL = "partial"  # Some tests fixed, some remain
     FAILED = "failed"
@@ -29,6 +30,7 @@ class HealingStatus(Enum):
 @dataclass
 class TestResult:
     """Result from running tests"""
+
     passed: bool
     total_tests: int
     passed_count: int
@@ -41,6 +43,7 @@ class TestResult:
 @dataclass
 class Diagnosis:
     """Diagnosis of a test failure"""
+
     failed_test: str
     error_type: str
     error_message: str
@@ -53,6 +56,7 @@ class Diagnosis:
 @dataclass
 class Patch:
     """A code patch to fix an issue"""
+
     file_path: str
     original_content: str
     patched_content: str
@@ -63,6 +67,7 @@ class Patch:
 @dataclass
 class HealingIteration:
     """Record of a single healing iteration"""
+
     iteration: int
     test_result: TestResult
     diagnosis: Optional[Diagnosis] = None
@@ -74,6 +79,7 @@ class HealingIteration:
 @dataclass
 class HealingReport:
     """Final report from the healing loop"""
+
     status: HealingStatus
     iterations: List[HealingIteration]
     total_iterations: int
@@ -166,18 +172,22 @@ class SelfHealingLoop:
                     for i, part in enumerate(parts):
                         if part == "passed":
                             try:
-                                passed_count = int(parts[i-1])
+                                passed_count = int(parts[i - 1])
                             except (ValueError, IndexError):
                                 pass
                         elif part == "failed":
                             try:
-                                failed_count = int(parts[i-1])
+                                failed_count = int(parts[i - 1])
                             except (ValueError, IndexError):
                                 pass
                 elif "FAILED" in line:
                     # Extract failed test name
                     if "::" in line:
-                        test_name = line.split("FAILED")[1].strip() if "FAILED" in line else line
+                        test_name = (
+                            line.split("FAILED")[1].strip()
+                            if "FAILED" in line
+                            else line
+                        )
                         failed_tests.append(test_name.strip())
 
             total = passed_count + failed_count
@@ -288,19 +298,26 @@ class SelfHealingLoop:
             return False
 
         try:
-            with open(patch.file_path, 'r') as f:
+            with open(patch.file_path, "r") as f:
                 current = f.read()
 
             if patch.original_content not in current:
                 return False
 
             new_content = current.replace(
+<<<<<<< HEAD
                 patch.original_content,
                 patch.patched_content,
                 1
             )
 
             with open(patch.file_path, 'w') as f:
+=======
+                patch.original_content, patch.patched_content, 1
+            )
+
+            with open(patch.file_path, "w") as f:
+>>>>>>> e2df45bcf4fae044c2ec81c7ea50a183bdc8bd86
                 f.write(new_content)
 
             self.patches_applied.append(patch)
@@ -319,16 +336,14 @@ class SelfHealingLoop:
         rolled_back = 0
         for patch in reversed(self.patches_applied):
             try:
-                with open(patch.file_path, 'r') as f:
+                with open(patch.file_path, "r") as f:
                     current = f.read()
 
                 if patch.patched_content in current:
                     new_content = current.replace(
-                        patch.patched_content,
-                        patch.original_content,
-                        1
+                        patch.patched_content, patch.original_content, 1
                     )
-                    with open(patch.file_path, 'w') as f:
+                    with open(patch.file_path, "w") as f:
                         f.write(new_content)
                     rolled_back += 1
             except Exception:

@@ -3,17 +3,22 @@
 Adjudicator - The Judge.
 Builds a Knowledge Graph (KG) of the codebase for semantic validation.
 """
+
 import argparse
 import os
 import sys
 import ast
+
 try:
     import networkx as nx
 except ImportError:
-    print("❌ networkx is required. Install with: pip install networkx", file=sys.stderr)
+    print(
+        "❌ networkx is required. Install with: pip install networkx", file=sys.stderr
+    )
     raise SystemExit(2)
 
 KG_FILE = ".council/knowledge_graph.gml"
+
 
 def build_graph(root_dir: str) -> nx.DiGraph:
     """Build a dependency graph from Python files."""
@@ -48,6 +53,7 @@ def build_graph(root_dir: str) -> nx.DiGraph:
 
     return G
 
+
 def validate_change(graph: nx.DiGraph, file_path: str) -> bool:
     """Validate a change against the KG (Mock logic)."""
     # In a real system, this would check for circular dependencies,
@@ -60,6 +66,7 @@ def validate_change(graph: nx.DiGraph, file_path: str) -> bool:
                 print(f"❌ Violation: {file_path} imports from test module {succ}")
                 return False
     return True
+
 
 def main():
     parser = argparse.ArgumentParser(description="Adjudicator (Knowledge Graph)")
@@ -79,7 +86,13 @@ def main():
         G = build_graph(args.root)
         os.makedirs(os.path.dirname(KG_FILE), exist_ok=True)
         nx.write_gml(G, KG_FILE)
+<<<<<<< HEAD
         print(f"✅ Knowledge Graph built: {G.number_of_nodes()} nodes, {G.number_of_edges()} edges.")
+=======
+        print(
+            f"✅ Knowledge Graph built: {G.number_of_nodes()} nodes, {G.number_of_edges()} edges."
+        )
+>>>>>>> e2df45bcf4fae044c2ec81c7ea50a183bdc8bd86
 
     elif args.command == "validate":
         if os.path.exists(KG_FILE):
@@ -90,6 +103,7 @@ def main():
                 sys.exit(1)
         else:
             print("⚠️ KG not found. Run 'build' first.")
+
 
 if __name__ == "__main__":
     main()

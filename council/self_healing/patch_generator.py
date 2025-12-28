@@ -219,6 +219,7 @@ class PatchGenerator:
         if self._has_gemini:
             try:
                 import google.generativeai as genai
+
                 genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
                 model = genai.GenerativeModel(
                     self.model,
@@ -234,13 +235,14 @@ class PatchGenerator:
         if self._has_openai:
             try:
                 from openai import AsyncOpenAI
+
                 client = AsyncOpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
                 response = await client.chat.completions.create(
                     model="gpt-4o-mini",
                     messages=[
                         {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": prompt}
-                    ]
+                        {"role": "user", "content": prompt},
+                    ],
                 )
                 return response.choices[0].message.content
             except Exception:
@@ -260,7 +262,11 @@ class PatchGenerator:
         # But safer to return original text if no blocks found, or try to be smart
         # For this implementation, we'll assume valid LLM output has blocks or is raw code
         if "def " in text or "import " in text or "class " in text:
+<<<<<<< HEAD
              return text.strip()
+=======
+            return text.strip()
+>>>>>>> e2df45bcf4fae044c2ec81c7ea50a183bdc8bd86
 
         return ""
 
@@ -305,7 +311,7 @@ Do not include any explanations, markers, or text outside the code block.
 
         # Read the file
         try:
-            with open(diagnosis.suspected_file, 'r') as f:
+            with open(diagnosis.suspected_file, "r") as f:
                 file_content = f.read()
         except Exception:
             return Patch(
@@ -323,7 +329,7 @@ Do not include any explanations, markers, or text outside the code block.
         raw_response = await self._call_llm(prompt)
 
         if not raw_response:
-             return Patch(
+            return Patch(
                 file_path=diagnosis.suspected_file,
                 original_content=file_content,
                 patched_content=file_content,

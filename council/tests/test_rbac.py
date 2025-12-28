@@ -109,27 +109,50 @@ class TestPathBasedPermissions:
         """AUDITOR should be blocked on sensitive paths even for READ"""
         rbac = RBAC()
         # AUDITOR has READ permission but denied_paths includes sensitive
-        assert rbac.check_permission(Role.AUDITOR, Permission.READ, ".ssh/id_rsa") is False
-        assert rbac.check_permission(Role.AUDITOR, Permission.READ, "secrets/api_key") is False
+        assert (
+            rbac.check_permission(Role.AUDITOR, Permission.READ, ".ssh/id_rsa") is False
+        )
+        assert (
+            rbac.check_permission(Role.AUDITOR, Permission.READ, "secrets/api_key")
+            is False
+        )
 
     def test_coder_allowed_on_source_files(self):
         """CODER should be allowed on source files"""
         rbac = RBAC()
-        assert rbac.check_permission(Role.CODER, Permission.WRITE, "src/main.py") is True
-        assert rbac.check_permission(Role.CODER, Permission.WRITE, "tests/test_main.py") is True
+        assert (
+            rbac.check_permission(Role.CODER, Permission.WRITE, "src/main.py") is True
+        )
+        assert (
+            rbac.check_permission(Role.CODER, Permission.WRITE, "tests/test_main.py")
+            is True
+        )
 
     def test_coder_blocked_on_config_deploy(self):
         """CODER should be blocked on config/** and deploy/**"""
         rbac = RBAC()
-        assert rbac.check_permission(Role.CODER, Permission.WRITE, "config/production.yaml") is False
-        assert rbac.check_permission(Role.CODER, Permission.WRITE, "deploy/kubernetes.yaml") is False
+        assert (
+            rbac.check_permission(
+                Role.CODER, Permission.WRITE, "config/production.yaml"
+            )
+            is False
+        )
+        assert (
+            rbac.check_permission(
+                Role.CODER, Permission.WRITE, "deploy/kubernetes.yaml"
+            )
+            is False
+        )
 
     def test_admin_can_access_sensitive_paths(self):
         """ADMIN should be able to access sensitive paths (empty denied_paths)"""
         rbac = RBAC()
         # Admin has empty denied_paths, so should be able to access
         assert rbac.check_permission(Role.ADMIN, Permission.READ, ".ssh/id_rsa") is True
-        assert rbac.check_permission(Role.ADMIN, Permission.WRITE, "secrets/api_key") is True
+        assert (
+            rbac.check_permission(Role.ADMIN, Permission.WRITE, "secrets/api_key")
+            is True
+        )
 
 
 class TestGlobPatternMatching:
@@ -192,8 +215,10 @@ class TestRoleSummary:
     def test_unknown_role_summary(self):
         """Unknown role should return error"""
         rbac = RBAC()
+
         # Create a mock role that doesn't exist
         class FakeRole:
             pass
+
         summary = rbac.get_role_summary(FakeRole)
         assert "error" in summary

@@ -8,33 +8,41 @@ import sys
 try:
     sys.path.append(os.path.dirname(os.path.abspath(__file__)))
     from vector_store import VectorStore
+
     VECTOR_AVAILABLE = True
 except ImportError:
     VECTOR_AVAILABLE = False
-    print("⚠️ Vector Store not available (chromadb missing). Running in SQL-only mode.", file=sys.stderr)
+    print(
+        "⚠️ Vector Store not available (chromadb missing). Running in SQL-only mode.",
+        file=sys.stderr,
+    )
 
 KB_FILE = ".council/playbook.db"
+
 
 def init_db():
     """Initialize the SQLite knowledge base."""
     conn = sqlite3.connect(KB_FILE)
     c = conn.cursor()
-    c.execute('''CREATE TABLE IF NOT EXISTS lessons
+    c.execute("""CREATE TABLE IF NOT EXISTS lessons
                  (id INTEGER PRIMARY KEY AUTOINCREMENT,
                   tags TEXT,
                   problem TEXT,
                   solution TEXT,
-                  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
+                  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""")
     conn.commit()
     conn.close()
+
 
 def add_lesson(tags: str, problem: str, solution: str):
     """Add a new lesson to the knowledge base (SQL + Vector)."""
     # 1. Write to SQL
     conn = sqlite3.connect(KB_FILE)
     c = conn.cursor()
-    c.execute("INSERT INTO lessons (tags, problem, solution) VALUES (?, ?, ?)",
-              (tags, problem, solution))
+    c.execute(
+        "INSERT INTO lessons (tags, problem, solution) VALUES (?, ?, ?)",
+        (tags, problem, solution),
+    )
     lesson_id = c.lastrowid
     conn.commit()
     conn.close()
@@ -53,9 +61,10 @@ def add_lesson(tags: str, problem: str, solution: str):
         except Exception as e:
             print(f"⚠️ Failed to add to Vector Store: {e}", file=sys.stderr)
 
+
 def search_lessons(query: str):
     """Search lessons by tags or content (Hybrid: SQL + Vector)."""
-    results_map = {} # Map ID -> Lesson Data to deduplicate
+    results_map = {}  # Map ID -> Lesson Data to deduplicate
 
     # 1. SQL Search (Keyword)
     conn = sqlite3.connect(KB_FILE)
@@ -63,6 +72,7 @@ def search_lessons(query: str):
     c = conn.cursor()
 
     search_term = f"%{query}%"
+<<<<<<< HEAD
     c.execute("SELECT * FROM lessons WHERE tags LIKE ? OR problem LIKE ? OR solution LIKE ?",
               (search_term, search_term, search_term))
 
@@ -70,6 +80,17 @@ def search_lessons(query: str):
     for row in sql_results:
         results_map[row['id']] = dict(row)
         results_map[row['id']]['source'] = 'SQL (Keyword)'
+=======
+    c.execute(
+        "SELECT * FROM lessons WHERE tags LIKE ? OR problem LIKE ? OR solution LIKE ?",
+        (search_term, search_term, search_term),
+    )
+
+    sql_results = c.fetchall()
+    for row in sql_results:
+        results_map[row["id"]] = dict(row)
+        results_map[row["id"]]["source"] = "SQL (Keyword)"
+>>>>>>> e2df45bcf4fae044c2ec81c7ea50a183bdc8bd86
 
     conn.close()
 
@@ -79,9 +100,15 @@ def search_lessons(query: str):
             vs = VectorStore()
             vector_results = vs.search(query, n_results=3)
 
+<<<<<<< HEAD
             if vector_results and vector_results['ids']:
                 ids = vector_results['ids'][0]
                 distances = vector_results['distances'][0]
+=======
+            if vector_results and vector_results["ids"]:
+                ids = vector_results["ids"][0]
+                distances = vector_results["distances"][0]
+>>>>>>> e2df45bcf4fae044c2ec81c7ea50a183bdc8bd86
 
                 # Fetch full details from SQL for these IDs
                 conn = sqlite3.connect(KB_FILE)
@@ -95,7 +122,9 @@ def search_lessons(query: str):
                         row = c.fetchone()
                         if row:
                             results_map[lid_int] = dict(row)
-                            results_map[lid_int]['source'] = f'Vector (Dist: {distances[i]:.2f})'
+                            results_map[lid_int]["source"] = (
+                                f"Vector (Dist: {distances[i]:.2f})"
+                            )
                 conn.close()
         except Exception as e:
             print(f"⚠️ Vector search failed: {e}", file=sys.stderr)
@@ -110,6 +139,7 @@ def search_lessons(query: str):
             print(f"🏷️ Tags: {row['tags']}")
             print(f"❓ Problem: {row['problem']}")
             print(f"💡 Solution: {row['solution']}")
+
 
 def main():
     parser = argparse.ArgumentParser(description="Collective Memory (Playbook)")
@@ -133,6 +163,7 @@ def main():
         add_lesson(args.tags, args.problem, args.solution)
     elif args.command == "search":
         search_lessons(args.query)
+
 
 if __name__ == "__main__":
     main()

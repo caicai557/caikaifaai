@@ -1,9 +1,12 @@
-
 import math
 from typing import List, Dict, Any
 from dataclasses import dataclass
 from datetime import datetime
 from council.facilitator.wald_consensus import ConsensusResult
+<<<<<<< HEAD
+=======
+
+>>>>>>> e2df45bcf4fae044c2ec81c7ea50a183bdc8bd86
 
 @dataclass
 class MetricPoint:
@@ -13,6 +16,7 @@ class MetricPoint:
     entropy: float
     decision: str
     latency_ms: float
+
 
 class SemanticEntropyMonitor:
     """
@@ -32,9 +36,11 @@ class SemanticEntropyMonitor:
         """Calculate logical entropy of the consensus probability"""
         # Clip to avoid domain errors
         p = max(0.0001, min(0.9999, pi))
-        return -(p * math.log2(p) + (1-p) * math.log2(1-p))
+        return -(p * math.log2(p) + (1 - p) * math.log2(1 - p))
 
-    def log_response(self, query: str, wald_result: ConsensusResult, latency_ms: float) -> None:
+    def log_response(
+        self, query: str, wald_result: ConsensusResult, latency_ms: float
+    ) -> None:
         """Log a new consensus event"""
         entropy = self._calculate_binary_entropy(wald_result.pi_approve)
 
@@ -44,7 +50,7 @@ class SemanticEntropyMonitor:
             wald_pi=wald_result.pi_approve,
             entropy=entropy,
             decision=wald_result.decision.value,
-            latency_ms=latency_ms
+            latency_ms=latency_ms,
         )
         self.history.append(point)
 
@@ -55,7 +61,7 @@ class SemanticEntropyMonitor:
             "entropy": [round(p.entropy, 3) for p in self.history],
             "wald_pi": [round(p.wald_pi, 3) for p in self.history],
             "labels": [f"{p.query_preview} ({p.decision})" for p in self.history],
-            "latency": [round(p.latency_ms, 0) for p in self.history]
+            "latency": [round(p.latency_ms, 0) for p in self.history],
         }
 
     def clear(self):

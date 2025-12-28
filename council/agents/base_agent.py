@@ -12,6 +12,7 @@ from datetime import datetime
 
 class VoteDecision(Enum):
     """投票决策枚举"""
+
     APPROVE = "approve"
     APPROVE_WITH_CHANGES = "approve_with_changes"
     HOLD = "hold"
@@ -21,6 +22,7 @@ class VoteDecision(Enum):
 @dataclass
 class Vote:
     """投票结果"""
+
     agent_name: str
     decision: VoteDecision
     confidence: float  # 0.0 - 1.0
@@ -32,6 +34,7 @@ class Vote:
 @dataclass
 class ThinkResult:
     """思考结果"""
+
     analysis: str
     concerns: List[str] = field(default_factory=list)
     suggestions: List[str] = field(default_factory=list)
@@ -42,6 +45,7 @@ class ThinkResult:
 @dataclass
 class ExecuteResult:
     """执行结果"""
+
     success: bool
     output: str
     changes_made: List[str] = field(default_factory=list)
@@ -80,6 +84,7 @@ class BaseAgent(ABC):
 
         # API key detection
         import os
+
         self._has_gemini = bool(os.environ.get("GEMINI_API_KEY"))
         self._has_openai = bool(os.environ.get("OPENAI_API_KEY"))
 
@@ -95,12 +100,14 @@ class BaseAgent(ABC):
             LLM 响应文本
         """
         import os
+
         system = system_override or self.system_prompt
 
         # Try Gemini first
         if self._has_gemini:
             try:
                 import google.generativeai as genai
+
                 genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
                 model = genai.GenerativeModel(
                     self.model,
@@ -116,6 +123,7 @@ class BaseAgent(ABC):
         if self._has_openai:
             try:
                 from openai import OpenAI
+
                 client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
                 response = client.chat.completions.create(
                     model="gpt-4o-mini",
@@ -164,7 +172,9 @@ class BaseAgent(ABC):
         pass
 
     @abstractmethod
-    def execute(self, task: str, plan: Optional[Dict[str, Any]] = None) -> ExecuteResult:
+    def execute(
+        self, task: str, plan: Optional[Dict[str, Any]] = None
+    ) -> ExecuteResult:
         """
         执行具体任务
 

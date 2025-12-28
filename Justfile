@@ -8,7 +8,7 @@ codemap:
 # === 理事会命令 ===
 
 plan TASK:
-  @bash scripts/plan_codex.sh "{{TASK}}"
+  @bash scripts/plan_claude.sh "{{TASK}}"
 
 audit:
   @bash scripts/audit_gemini.sh
@@ -71,3 +71,17 @@ dev TASK:
   @echo "  3. just impl-gemini 或 /impl"
   @echo "  4. just verify"
   @echo "  5. just ship"
+
+# === PTC V2 自修正执行引擎 ===
+
+ptc-build:
+  @docker build -f Dockerfile.ptc -t ptc-runner .
+
+ptc-demo:
+  @source .venv/bin/activate && python scripts/ptc_v2_autofix.py demo
+
+ptc-run TASK:
+  @source .venv/bin/activate && python scripts/ptc_v2_autofix.py "{{TASK}}"
+
+ptc-run-docker TASK: ptc-build
+  @source .venv/bin/activate && python scripts/ptc_v2_autofix.py --docker "{{TASK}}"

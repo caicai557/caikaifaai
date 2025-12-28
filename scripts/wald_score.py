@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import argparse
+import json
 import os
 import subprocess
 import sys
@@ -7,6 +8,8 @@ import xml.etree.ElementTree as ET
 from typing import Optional
 
 LINT_TARGETS = ["src", "tests", "tools"]
+WALD_STATE_FILE = ".council/wald_state.json"
+
 
 def resolve_ruff() -> Optional[str]:
     venv_ruff = os.path.join(os.getcwd(), ".venv", "bin", "ruff")
@@ -15,6 +18,7 @@ def resolve_ruff() -> Optional[str]:
     if command_exists("ruff"):
         return "ruff"
     return None
+
 
 def get_coverage() -> Optional[float]:
     coverage_xml = "coverage.xml"
@@ -31,6 +35,7 @@ def get_coverage() -> Optional[float]:
             return parse_coverage_xml(coverage_xml)
 
     return None
+
 
 def parse_coverage_xml(path: str) -> Optional[float]:
     try:
@@ -58,6 +63,7 @@ def parse_coverage_xml(path: str) -> Optional[float]:
 
     return None
 
+
 def get_lint_errors() -> Optional[int]:
     ruff_cmd = resolve_ruff()
     if not ruff_cmd:
@@ -74,17 +80,23 @@ def get_lint_errors() -> Optional[int]:
     lines = [line for line in result.stdout.splitlines() if line.strip()]
     return len(lines)
 
+
 def check_spec_compliance() -> float:
     # Placeholder for semantic check
     if os.path.exists("SPEC.md") or os.path.exists(os.path.join(".council", "SPEC.md")):
         return 1.0
     return 0.5
 
+
 def command_exists(cmd: str) -> bool:
-    return subprocess.run(
-        ["bash", "-lc", f"command -v {cmd} >/dev/null 2>&1"],
-        capture_output=True,
-    ).returncode == 0
+    return (
+        subprocess.run(
+            ["bash", "-lc", f"command -v {cmd} >/dev/null 2>&1"],
+            capture_output=True,
+        ).returncode
+        == 0
+    )
+
 
 def calculate_wald_score(
     coverage: Optional[float],
@@ -124,14 +136,66 @@ def calculate_wald_score(
     pi = pi / total_weight
     return min(1.0, max(0.0, pi))
 
+
 def main():
     parser = argparse.ArgumentParser(description="Wald Score Calculator")
     parser.add_argument("--coverage", type=float, help="Override coverage (0.0-1.0)")
     parser.add_argument("--lint", type=int, help="Override lint error count")
+<<<<<<< HEAD
     parser.add_argument("--risk", choices=["low", "medium", "high"], default="medium", help="Risk level for this operation")
 
     args = parser.parse_args()
 
+=======
+    parser.add_argument(
+        "--risk",
+        choices=["low", "medium", "high"],
+        default="medium",
+        help="Risk level for this operation",
+    )
+    parser.add_argument(
+        "--update",
+        choices=["success", "failure"],
+        help="Update pi state (success: +0.15, failure: -0.1)",
+    )
+    parser.add_argument(
+        "--reset",
+        action="store_true",
+        help="Reset pi state to initial value (0.5)",
+    )
+
+    args = parser.parse_args()
+
+    # Handle --reset
+    if args.reset:
+        state = {"pi": 0.5, "successes": 0, "failures": 0}
+        os.makedirs(os.path.dirname(WALD_STATE_FILE), exist_ok=True)
+        with open(WALD_STATE_FILE, "w") as f:
+            json.dump(state, f)
+        print("🔄 Wald state reset to pi=0.5")
+        return
+
+    # Handle --update
+    if args.update:
+        state = {"pi": 0.5, "successes": 0, "failures": 0}
+        if os.path.exists(WALD_STATE_FILE):
+            with open(WALD_STATE_FILE) as f:
+                state = json.load(f)
+        if args.update == "success":
+            state["successes"] += 1
+            state["pi"] = min(1.0, state["pi"] + 0.15)
+        else:
+            state["failures"] += 1
+            state["pi"] = max(0.0, state["pi"] - 0.1)
+        os.makedirs(os.path.dirname(WALD_STATE_FILE), exist_ok=True)
+        with open(WALD_STATE_FILE, "w") as f:
+            json.dump(state, f)
+        print(
+            f"📊 Wald π updated: {state['pi']:.4f} (s={state['successes']}, f={state['failures']})"
+        )
+        return
+
+>>>>>>> e2df45bcf4fae044c2ec81c7ea50a183bdc8bd86
     coverage = args.coverage if args.coverage is not None else get_coverage()
     lint_errors = args.lint if args.lint is not None else get_lint_errors()
     spec_compliance = check_spec_compliance()
@@ -139,16 +203,16 @@ def main():
     pi = calculate_wald_score(coverage, lint_errors, spec_compliance)
 
     # Dynamic Thresholds
-    thresholds = {
-        "low": 0.80,
-        "medium": 0.95,
-        "high": 0.99
-    }
+    thresholds = {"low": 0.80, "medium": 0.95, "high": 0.99}
     required_pi = thresholds[args.risk]
 
     print(f"📊 Wald Score Calculation (Risk: {args.risk.upper()}):")
     print(f"  Coverage: {coverage:.2f}" if coverage is not None else "  Coverage: N/A")
-    print(f"  Lint Errors: {lint_errors}" if lint_errors is not None else "  Lint Errors: N/A")
+    print(
+        f"  Lint Errors: {lint_errors}"
+        if lint_errors is not None
+        else "  Lint Errors: N/A"
+    )
     print(f"  Spec Compliance: {spec_compliance:.2f}")
     if coverage is None:
         print("  Warning: coverage.xml not found; skipping coverage metric.")
@@ -161,7 +225,7 @@ def main():
     if pi >= required_pi:
         if args.risk == "high":
             print("⚠️ Status: HUMAN_APPROVAL_REQUIRED (High Risk Passed)")
-            exit(0) # Technically a pass, but needs HITL
+            exit(0)  # Technically a pass, but needs HITL
         else:
             print("✅ Status: AUTO_COMMIT")
             exit(0)
@@ -171,6 +235,7 @@ def main():
     else:
         print("❌ Status: REJECT")
         exit(2)
+
 
 if __name__ == "__main__":
     main()

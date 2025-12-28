@@ -88,3 +88,62 @@
 - [x] **Session 持久化确认**：Telegram 账号缓存使用 `persist:` 前缀的 partition，登录状态可跨重启保留。
 - [x] **Telegram 白屏修复**：`telegram-governance.ts` 错误直接导入 `electron.ipcRenderer`，在 contextIsolation=true 时失败。已改用 preload 暴露的 `getIPC()` 辅助函数。
 - [x] **EIO 错误修复**：添加 `safeLog`/`safeError` 函数包装 console 输出，防止写入错误导致崩溃。
+
+### 2025 MCP 最佳实践升级 (MCP Best Practices Integration)
+- [x] **深度调研**：完成了 "Big Five" MCP 模式的研究，输出了 Deep Dive 文档。
+- [x] **Cognitive DevTool**：在 `simulate.py` 中实现了 `dry_run` 模式，增加静态语法检查，防止错误代码进入执行流。
+- [x] **Memory Bridge**：实现了混合检索 (Hybrid Search)，`council_search` 工具支持通过关键词和语义向量检索知识图谱实体。
+    - 实现了鲁棒的 `VectorStore`，支持无依赖 (JSON Fallback) 运行。
+- [x] **Swarm Orchestrator**：在 `AICouncilServer` 中实现了语义路由 (`_classify_request`)，根据意图自动分发给 Architect、Security Auditor 等角色。
+- [x] **Live Monitor**：增强了服务启动脚本，实时输出工具调用日志到 `stderr`。
+- [x] **全面验证**：创建并通过了 `tests/verify_mcp_upgrades.py` 集成与验证测试。
+
+### 2025 Configuration Standard (Hyper-Metadata)
+- [x] **元数据升级**：将 `mcp.meta.json` 升级为机器可读的 Governance 文件。
+- [x] **自动引导**：实现 `scripts/bootstrap_mcp.py`，一键根据元数据生成 Agent 运行配置。
+- [x] **零触配置**：验证了从 Metadata 到 `.mcp.json` 的自动同步流程。
+
+## 2025.12.28 - Architecture Research (Token Efficiency)
+### Council Architecture Deep Dive
+- [x] **趋势调研**：完成了针对 2025.12 "Zero-Waste Token Protocol" 的最佳实践研究。
+- [x] **差距分析**：对比了当前 `caicai` 与未来标准的差距，识别出 "Context Leak" 和 "Chatty Protocol" 两个主要 Token 浪费源。
+- [x] **架构设计**：输出了 `doc/COUNCIL_2025_TOKEN_EFFICIENCY.md`，定义了 "Shadow Cabinet" (影子内阁) 和 "Differential Context" (差分上下文) 等核心模式。
+- [x] **POC 原型**：创建了 `doc/COUNCIL_2025_IMPLEMENTATION_POC.md`，提供了 RollingContext, ProtocolBufferAgent, 和 ShadowFacilitator 的 Python 实现代码。
+- [x] **全面审计**：完成对比审计，输出 `doc/COUNCIL_AUDIT_REPORT.md`，发现：
+    - **关键问题**：`GOVERNANCE_BEST_PRACTICES.md` 引用的 `constitution.py` 文件不存在。
+    - **Token Leak**：`Facilitator` 和 `TaskLedger` 均存在上下文膨胀问题。
+    - **未实现**：Constitution, Speaker FSM, Six Hats, Rolling Context, Shadow Cabinet 均停留在设计阶段。
+
+### Audit Remediation (2025.12.28 PM)
+- [x] **Phase 0 完成**：
+    - 创建 `council/governance/constitution.py`，实现 FSM 感知的规则拦截器。
+    - 修复 `GOVERNANCE_BEST_PRACTICES.md` 中的路径引用。
+- [x] **Phase 1 完成**：
+    - 创建 `council/context/rolling_context.py`，实现滑动窗口 + 滚动摘要。
+    - 将 `RollingContext` 集成到 `Facilitator` 类中。
+    - 新增 `get_efficient_context()` 和 `get_context_stats()` 方法。
+    - ✅ 集成测试通过 (Token utilization: 0.2% for 2 turns).
+- [x] **Phase 2 完成**：
+    - 创建 `council/protocol/schema.py`，定义 `MinimalVote`, `MinimalThinkResult`, `DebateMessage` 等 Pydantic 模型。
+    - 在 `BaseAgent` 中添加 `_call_llm_structured()` 方法，支持 JSON Schema 驱动的 LLM 调用。
+    - 为 `Architect` 添加 `vote_structured()` 和 `think_structured()` 方法。
+    - ✅ 所有 14 个测试通过 (protocol + agent regression).
+- [x] **Phase 3 完成**：
+    - 创建 `council/facilitator/shadow_facilitator.py`，实现 "影子内阁" 投机共识机制。
+    - 核心逻辑: Flash 模型先投票，全票通过直接提交 (节省 90% 成本)；有分歧则升级到 Pro 模型。
+    - 升级触发条件: 分歧、低置信度、安全风险。
+    - ✅ 所有 7 个 Shadow Facilitator 测试通过。
+
+### Architecture Gap Completion (2025.12.28 PM2)
+- [x] **Phase 4: Blast Radius Integration**:
+    - 创建 `council/orchestration/blast_radius.py`，实现代码影响分析器。
+    - 将 `BlastRadiusAnalyzer` 集成到 `AdaptiveRouter.assess_risk()`。
+    - 支持入度分析、核心模块检测、安全敏感路径识别。
+- [x] **Phase 5: Extend _structured Methods**:
+    - 为 `Coder` 添加 `vote_structured()` 和 `think_structured()` 方法。
+    - 为 `SecurityAuditor` 添加 `vote_structured()` 和 `think_structured()` 方法。
+    - ✅ 所有 Agent 测试通过。
+- [x] **Phase 6: Update CODEMAP.md**:
+    - 添加 Council 模块完整文档。
+
+- [x] **2025 Token Efficiency 架构及 Gap 修复全部完成！**

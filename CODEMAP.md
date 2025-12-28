@@ -266,3 +266,60 @@ instances:
 2. **Playwright 集成**: 实现实际的浏览器启动逻辑
 3. **JS 注入测试**: 在真实 Telegram Web A 中测试拦截脚本
 4. **DeepL 提供商**: 实现 `translators/deepl.py`
+
+---
+
+## Council 模块 (2025 Multi-Agent Architecture)
+
+### 目录结构
+
+```
+council/
+├── agents/           # 智能体实现 (13 files)
+│   ├── base_agent.py   # 抽象基类 + _call_llm_structured()
+│   ├── architect.py    # 架构师 + vote_structured()
+│   ├── coder.py        # 工程师 + vote_structured()
+│   └── security_auditor.py  # 安全审计 + vote_structured()
+├── facilitator/      # 共识机制 (4 files)
+│   ├── facilitator.py      # 辩论管理 + RollingContext
+│   ├── wald_consensus.py   # SPRT 算法
+│   └── shadow_facilitator.py  # 影子内阁 (投机共识)
+├── orchestration/    # 编排层 (6 files)
+│   ├── adaptive_router.py  # 自适应路由 + BlastRadius
+│   ├── ledger.py           # 双账本 (Task/Progress)
+│   └── blast_radius.py     # 代码影响分析器
+├── governance/       # 治理层 (3 files)
+│   ├── constitution.py     # FSM 规则拦截器
+│   └── gateway.py          # 输出过滤网关
+├── protocol/         # 通信协议 (2 files)
+│   └── schema.py           # Pydantic 结构化协议
+├── context/          # 上下文管理 (2 files)
+│   └── rolling_context.py  # 滑动窗口上下文
+├── memory/           # 长期记忆 (4 files)
+│   ├── knowledge_graph.py  # 语义关系图谱
+│   └── session.py          # 跨会话上下文
+└── self_healing/     # 自愈循环 (3 files)
+    └── patch_generator.py  # LLM 驱动的补丁生成
+```
+
+### 核心类
+
+| 类名 | 文件 | 职责 |
+|------|------|------|
+| `BaseAgent` | agents/base_agent.py | 抽象基类，提供 `_call_llm_structured()` |
+| `WaldConsensus` | facilitator/wald_consensus.py | SPRT 共识算法 |
+| `ShadowFacilitator` | facilitator/shadow_facilitator.py | Flash→Pro 投机共识 |
+| `AdaptiveRouter` | orchestration/adaptive_router.py | 风险分级路由 |
+| `BlastRadiusAnalyzer` | orchestration/blast_radius.py | 代码影响分析 |
+| `RollingContext` | context/rolling_context.py | Token 高效上下文 |
+| `MinimalVote` | protocol/schema.py | 结构化投票协议 |
+
+### 2025 Token Efficiency 实现
+
+| Pattern | 实现位置 | Token 节省 |
+|---------|----------|------------|
+| Rolling Context | `context/rolling_context.py` | O(N)→O(1) |
+| Protocol Buffers | `protocol/schema.py` | ~70% |
+| Shadow Cabinet | `facilitator/shadow_facilitator.py` | ~90% |
+| Blast Radius | `orchestration/blast_radius.py` | 智能路由 |
+

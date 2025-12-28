@@ -16,7 +16,7 @@ In advanced Multi-Agent Systems, pure autonomy leads to entropy. We adopt a **Fe
 
 ### Pattern A: The Constitution (规则拦截器)
 **Definition**: A static, hard-coded ruleset that runs *before* any LLM inference.
-**Implementation**: `src/telegram_multi/cortex/governance/constitution.py`
+**Implementation**: `council/governance/constitution.py`
 
 *   **Rule 1 (Safety)**: No destructive shell commands (`rm`, `dd`) allowed without `sudo_token`.
 *   **Rule 2 (Order)**: Agents cannot interrupt `Speaker` during a `VOTING` phase.

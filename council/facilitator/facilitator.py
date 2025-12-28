@@ -14,6 +14,7 @@ from council.facilitator.wald_consensus import (
     ConsensusResult,
     ConsensusDecision,
 )
+from council.context.rolling_context import RollingContext
 
 
 @dataclass
@@ -70,7 +71,8 @@ class Facilitator:
     """
 
     def __init__(
-        self, wald_config: Optional[WaldConfig] = None, max_iterations: int = 5
+        self, wald_config: Optional[WaldConfig] = None, max_iterations: int = 5,
+        max_context_tokens: int = 8000,
     ):
         """
         初始化促进者
@@ -78,11 +80,15 @@ class Facilitator:
         Args:
             wald_config: Wald 算法配置
             max_iterations: 最大迭代轮次
+            max_context_tokens: 滚动上下文的最大 Token 预算
         """
         self.wald = WaldConsensus(wald_config)
         self.max_iterations = max_iterations
         self.current_meeting: Optional[MeetingMinutes] = None
         self.current_round = 0
+        
+        # 2025 Token Efficiency: Rolling Context
+        self.rolling_context = RollingContext(max_tokens=max_context_tokens)
 
     def start_meeting(self, topic: str, participants: List[str]) -> None:
         """
@@ -98,6 +104,12 @@ class Facilitator:
             rounds=[],
         )
         self.current_round = 0
+        
+        # Initialize rolling context with meeting info
+        self.rolling_context.reset()
+        self.rolling_context.set_static_context(
+            f"会议主题: {topic}\n参与者: {', '.join(participants)}"
+        )
 
     def process_round(self, votes: List[Vote]) -> ConsensusResult:
         """
@@ -292,6 +304,23 @@ class Facilitator:
             ),
         }
 
+    def get_efficient_context(self) -> str:
+        """
+        [2025 Best Practice] 获取 Token 高效的上下文
+        
+        使用滚动上下文 (Rolling Context) 而非全量历史，
+        将上下文长度从 O(N) 降低到 O(1)。
+        
+        Returns:
+            用于 LLM 调用的精简上下文字符串
+        """
+        return self.rolling_context.get_context_for_prompt()
+    
+    def get_context_stats(self) -> Dict[str, Any]:
+        """获取上下文统计信息"""
+        return self.rolling_context.get_stats()
+
 
 # 导出
 __all__ = ["Facilitator", "DebateRound", "MeetingMinutes"]
+

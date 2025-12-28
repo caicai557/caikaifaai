@@ -1,4 +1,44 @@
 {
-  "mcp_config_version": "2025-06-18",
-  "notes": "Core servers live in .mcp.json; optional servers belong to user/local scope."
+  "schema_version": "2025.1",
+  "project_id": "caicai-council",
+  "description": "Agent Council Orchestration & Memory Layer",
+  "governance": {
+    "policy": "strict",
+    "required_env": [
+      "GEMINI_API_KEY",
+      "OPENAI_API_KEY"
+    ],
+    "allowed_modes": [
+      "development",
+      "production"
+    ]
+  },
+  "servers": {
+    "council": {
+      "type": "local",
+      "status": "core",
+      "command": "python3",
+      "args": [
+        "scripts/start_council_server.py"
+      ],
+      "capabilities": {
+        "tools": [
+          "simulate_plan_step",
+          "council_query",
+          "council_search"
+        ],
+        "resources": [
+          "council://graph/summary"
+        ]
+      },
+      "security_scope": {
+        "filesystem": [
+          "read-only"
+        ],
+        "network": [
+          "allow-outbound"
+        ]
+      }
+    }
+  }
 }

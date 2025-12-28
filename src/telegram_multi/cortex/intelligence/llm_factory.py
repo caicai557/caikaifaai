@@ -76,15 +76,13 @@ class LLMFactory:
         if provider == "gemini":
             api_key = os.getenv("GEMINI_API_KEY")
             
-            # Support "Automatic Login" (ADC / Environment Defaults)
+            # Raise ValueError if no valid API key
             if not api_key or "your_" in api_key:
-                # Try to use default credentials or rely on library defaults
-                # genai.configure() without params checks GOOGLE_API_KEY etc.
-                genai.configure() 
-            else:
-                genai.configure(api_key=api_key)
+                raise ValueError("GEMINI_API_KEY environment variable is not set or invalid")
+            
+            genai.configure(api_key=api_key)
             
             model = model_name or "gemini-2.0-flash"
-            return GeminiClient(api_key if api_key and "your_" not in api_key else None, model)
+            return GeminiClient(api_key, model)
         
         raise ValueError(f"Unknown provider: {provider}")

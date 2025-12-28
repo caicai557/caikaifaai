@@ -143,6 +143,97 @@ class BaseAgent(ABC):
         """检查是否有可用的 LLM API"""
         return self._has_gemini or self._has_openai
 
+    def _call_llm_structured(
+        self, 
+        prompt: str, 
+        schema_class: type,
+        system_override: Optional[str] = None,
+    ) -> Any:
+        """
+        [2025 Best Practice] 调用 LLM 并期望结构化 JSON 输出
+        
+        Args:
+            prompt: 用户提示词
+            schema_class: Pydantic 模型类 (用于验证)
+            system_override: 可选的系统提示词覆盖
+            
+        Returns:
+            已验证的 Pydantic 模型实例
+        """
+        import json
+        from pydantic import ValidationError
+        
+        # 生成 JSON Schema 指令
+        schema_example = schema_class.model_json_schema()
+        json_instruction = f"""
+Respond ONLY with valid JSON matching this schema (no markdown, no explanation):
+{json.dumps(schema_example, indent=2, ensure_ascii=False)}
+
+Example format:
+{json.dumps(self._generate_example(schema_class), ensure_ascii=False)}
+"""
+        enhanced_prompt = f"{prompt}\n\n{json_instruction}"
+        
+        # 调用 LLM
+        response = self._call_llm(enhanced_prompt, system_override)
+        
+        # 尝试解析 JSON
+        try:
+            # 清理响应 (移除可能的 markdown 包装)
+            cleaned = self._clean_json_response(response)
+            data = json.loads(cleaned)
+            return schema_class(**data)
+        except (json.JSONDecodeError, ValidationError) as e:
+            # 回退: 返回默认实例并记录错误
+            self.add_to_history({
+                "action": "structured_call_fallback",
+                "error": str(e),
+                "raw_response": response[:200],
+            })
+            # 返回带默认值的实例
+            return self._create_default_instance(schema_class)
+    
+    def _clean_json_response(self, response: str) -> str:
+        """清理 LLM 响应中的非 JSON 内容"""
+        import re
+        # 移除 markdown 代码块
+        if "```json" in response:
+            match = re.search(r"```json\s*(.*?)\s*```", response, re.DOTALL)
+            if match:
+                return match.group(1)
+        if "```" in response:
+            match = re.search(r"```\s*(.*?)\s*```", response, re.DOTALL)
+            if match:
+                return match.group(1)
+        # 尝试找到 JSON 对象
+        match = re.search(r"\{.*\}", response, re.DOTALL)
+        if match:
+            return match.group(0)
+        return response
+    
+    def _generate_example(self, schema_class: type) -> dict:
+        """生成 schema 的示例 JSON"""
+        from council.protocol.schema import VoteEnum, RiskCategory
+        
+        # 简单的示例生成
+        if schema_class.__name__ == "MinimalVote":
+            return {"vote": 1, "confidence": 0.8, "risks": ["sec"], "blocking_reason": None}
+        elif schema_class.__name__ == "MinimalThinkResult":
+            return {"summary": "Analysis summary", "concerns": ["Issue 1"], "suggestions": ["Fix 1"], "confidence": 0.7}
+        else:
+            return {}
+    
+    def _create_default_instance(self, schema_class: type) -> Any:
+        """创建带默认值的 schema 实例"""
+        if schema_class.__name__ == "MinimalVote":
+            from council.protocol.schema import MinimalVote, VoteEnum
+            return MinimalVote(vote=VoteEnum.HOLD, confidence=0.5)
+        elif schema_class.__name__ == "MinimalThinkResult":
+            from council.protocol.schema import MinimalThinkResult
+            return MinimalThinkResult(summary="Parse failed", confidence=0.3)
+        else:
+            return schema_class()
+
     @abstractmethod
     def think(self, task: str, context: Optional[Dict[str, Any]] = None) -> ThinkResult:
         """

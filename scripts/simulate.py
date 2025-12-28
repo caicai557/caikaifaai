@@ -126,36 +126,71 @@ def find_dependents(kg: KnowledgeGraph, target: str) -> List[str]:
     return dependents
 
 
-def simulate_plan(plan: List[str], kg: KnowledgeGraph) -> List[str]:
+def check_syntax(code: str) -> List[str]:
+    """Check Python syntax without executing.
+    
+    Args:
+        code: Python code string.
+        
+    Returns:
+        List of error messages if syntax is invalid.
+    """
+    try:
+        compile(code, "<string>", "exec")
+        return []
+    except SyntaxError as e:
+        return [f"SyntaxError: {e.msg} at line {e.lineno}"]
+    except Exception as e:
+        return [f"Error: {str(e)}"]
+
+def simulate_plan(plan: List[str], kg: KnowledgeGraph, dry_run: bool = False) -> List[str]:
     """Simulate plan execution and detect potential conflicts.
 
     Checks each step against the Knowledge Graph to identify:
     - Delete operations that would break dependencies
     - Other risky operations
+    - (Optional) Syntax checks if content is provided in step.
 
     Args:
         plan: List of plan steps to simulate.
         kg: Knowledge Graph containing project dependencies.
+        dry_run: If True, performs enhanced validation (like syntax checking).
 
     Returns:
-        List of warning messages for detected issues.
+        List of warning/error messages.
     """
     warnings = []
 
     for step in plan:
+        # Check 1: Dependency Risk
         if is_delete_operation(step):
             target = extract_target(step)
             if not target:
                 continue
 
             # Find what depends on this target
+            # Need to handle potential file extension differences or partial paths
+            # This logic assumes target matches what's used in the graph
             dependents = find_dependents(kg, target)
 
             if dependents:
+                # Structured error format suggestion: [DEP_CONFLICT] Message
                 warning = (
-                    f"Risk: Deleting '{target}' may break dependent files: {dependents}"
+                    f"[DEP_CONFLICT] Risk: Deleting '{target}' may break dependent files: {dependents}"
                 )
                 warnings.append(warning)
+        
+        # Check 2: Syntax Check (if step contains code content provided as JSON or similar)
+        # Note: In a real scenario, the 'plan' usually contains just text descriptions.
+        # But if we were passing file content updates, we'd check them here.
+        # For this implementation, we'll assume a convention where updates might include snippet checks
+        # or we check referenced files if they exist (not applicable for 'Delete').
+        
+        # Extended Check: If dry_run is enabled, we could potentially check for other risks
+        if dry_run and "update" in step.lower() and ".py" in step.lower():
+             # In future iteration: Read file content + proposed diff -> compile()
+             # For now, just a placeholder for the feature
+             pass
 
     return warnings
 

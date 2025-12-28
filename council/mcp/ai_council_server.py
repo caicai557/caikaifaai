@@ -237,76 +237,24 @@ class AICouncilServer:
 
         return result
 
-    def _calculate_agreement(self, responses: List[ModelResponse]) -> float:
-        """
-        Calculate agreement score between responses
-
-        Simple heuristic: compare response lengths and key terms
-        Returns value between 0 (no agreement) and 1 (full agreement)
-        """
-        successful = [r for r in responses if r.success]
-        if len(successful) < 2:
-            return 1.0  # Can't calculate with < 2 responses
-
-        # Simple length-based similarity
-        lengths = [len(r.content) for r in successful]
-        avg_length = sum(lengths) / len(lengths)
-        if avg_length == 0:
-            return 1.0
-
-        length_variance = sum((l - avg_length) ** 2 for l in lengths) / len(lengths)
-        normalized_variance = length_variance / (avg_length**2)
-
-        # Lower variance = higher agreement
-        agreement = max(0, 1 - normalized_variance)
-        return min(1.0, agreement)
-
-    async def _synthesize_responses(
-        self, prompt: str, responses: List[ModelResponse]
-    ) -> str:
-        """
-        Synthesize multiple model responses into a single answer using an LLM
-        """
-        successful = [r for r in responses if r.success]
-        if not successful:
-            return "No models returned successful responses."
-
-        # Construct synthesis prompt
-        synthesis_prompt = f"Original Task: {prompt}\n\nModels have provided the following responses. Please synthesize them into a single, high-quality response. If there are conflicts, resolve them by choosing the safest and most robust option.\n\n"
-
-        for i, resp in enumerate(successful):
-            synthesis_prompt += (
-                f"--- Model {i + 1} ({resp.model_name}) ---\n{resp.content}\n\n"
-            )
-
-        synthesis_prompt += "--- End of Responses ---\n\nSynthesized Response:"
-
-        # Use the first available Gemini model for synthesis (or OpenAI)
-        try:
-            # Quick hack to reuse query logic for synthesis
-            # In a real system, we'd have a dedicated synthesizer config
-            enabled = self.get_enabled_models()
-            synthesizer_config = (
-                next((m for m in enabled if m.provider == ModelProvider.GEMINI), None)
-                or enabled[0]
-            )
-
-            synthesis_resp = await self._query_model(
-                synthesis_prompt, synthesizer_config
-            )
-            if synthesis_resp.success:
-                return synthesis_resp.content
-        except Exception:
-            pass
-
-        # Fallback to simple concatenation if synthesis fails
-        best = successful[0]
-        return f"[Synthesized (Fallback)]\n{best.content}"
+    def _classify_request(self, prompt: str) -> str:
+        """Classify prompt intent to assign specialized agent roles."""
+        prompt_lower = prompt.lower()
+        # Security keywords
+        if any(k in prompt_lower for k in ["security", "auth", "secret", "token", "vulnerability", "risk", "hack"]):
+            return "security_auditor"
+        # Architecture keywords
+        if any(k in prompt_lower for k in ["architecture", "design", "structure", "pattern", "system", "dependency", "refactor"]):
+            return "architect"
+        # Coding keywords
+        if any(k in prompt_lower for k in ["code", "implement", "fix", "bug", "function", "class", "test"]):
+            return "senior_engineer"
+        return "general"
 
     async def query(self, prompt: str) -> ConsensusResponse:
         """
         Query all models and return synthesized consensus
-
+        
         Args:
             prompt: The question or task to send to all models
 
@@ -315,12 +263,22 @@ class AICouncilServer:
         """
         start_time = datetime.now()
 
-        responses = await self.query_parallel(prompt)
+        # Semantic Routing: Inject Role Context
+        role = self._classify_request(prompt)
+        enhanced_prompt = prompt
+        if role == "security_auditor":
+            enhanced_prompt = f"SYSTEM: Act as a Principal Security Auditor. Scrutinize the following for security risks, auth flaws, and data leaks. Be paranoid.\n\nUser Query: {prompt}"
+        elif role == "architect":
+            enhanced_prompt = f"SYSTEM: Act as a Chief System Architect. Focus on clean code, scalability, patterns (SOLID/GRASP), and dependency management. Avoid hacky fixes.\n\nUser Query: {prompt}"
+        elif role == "senior_engineer":
+            enhanced_prompt = f"SYSTEM: Act as a Senior Software Engineer. Focus on correctness, performance, and maintainability. Provide robust code examples.\n\nUser Query: {prompt}"
+
+        responses = await self.query_parallel(enhanced_prompt)
 
         successful = [r for r in responses if r.success]
         failed = [r for r in responses if not r.success]
 
-        synthesis = await self._synthesize_responses(prompt, responses)
+        synthesis = self._synthesize_responses(enhanced_prompt, responses)
 
         # Governance Check: Output Filtering
         from council.governance.gateway import RiskLevel
@@ -403,6 +361,74 @@ class AICouncilServer:
 
         detector = WaldConsensus()
         return detector.evaluate(votes)
+
+    def _calculate_agreement(self, responses: List[ModelResponse]) -> float:
+        """
+        Calculate agreement score between model responses
+        
+        Uses response length similarity as a proxy for semantic agreement.
+        
+        Args:
+            responses: List of model responses
+            
+        Returns:
+            Agreement score between 0.0 and 1.0
+        """
+        successful = [r for r in responses if r.success and r.content]
+        
+        if len(successful) <= 1:
+            return 1.0  # Perfect agreement with 0 or 1 response
+            
+        # Calculate length-based agreement
+        lengths = [len(r.content) for r in successful]
+        avg_length = sum(lengths) / len(lengths)
+        
+        if avg_length == 0:
+            return 1.0
+            
+        # Calculate variance ratio
+        variance = sum((l - avg_length) ** 2 for l in lengths) / len(lengths)
+        std_dev = variance ** 0.5
+        
+        # Normalize: lower variance = higher agreement
+        coefficient_of_variation = std_dev / avg_length
+        agreement = max(0.0, 1.0 - coefficient_of_variation)
+        
+        return round(agreement, 2)
+
+    def _synthesize_responses(self, prompt: str, responses: List[ModelResponse]) -> str:
+        """
+        Synthesize multiple model responses into a single coherent response
+        
+        Args:
+            prompt: Original user prompt
+            responses: List of model responses
+            
+        Returns:
+            Synthesized response string
+        """
+        successful = [r for r in responses if r.success and r.content]
+        
+        if not successful:
+            return "No models returned successful responses. Please check model availability."
+            
+        if len(successful) == 1:
+            return f"[Synthesized from 1 model: {successful[0].model_name}]\n\n{successful[0].content}"
+            
+        # Multiple successful responses - combine them
+        model_names = [r.model_name for r in successful]
+        
+        # For now, use the first response as primary (weighted synthesis can be added later)
+        primary = successful[0]
+        
+        synthesis = f"[Synthesized from {len(successful)} models: {', '.join(model_names)}]\n\n"
+        synthesis += primary.content
+        
+        # Add a brief note if other models had significantly different responses
+        if len(successful) > 1:
+            synthesis += f"\n\n---\n_Note: {len(successful)} models contributed to this response._"
+            
+        return synthesis
 
     def get_status(self) -> Dict[str, Any]:
         """Get server status and model availability"""

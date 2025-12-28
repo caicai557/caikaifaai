@@ -13,6 +13,8 @@ from typing import List, Optional
 from enum import Enum
 import re
 
+from council.orchestration.blast_radius import BlastRadiusAnalyzer, ImpactLevel
+
 
 class RiskLevel(Enum):
     """风险级别"""
@@ -101,43 +103,75 @@ class AdaptiveRouter:
             pass
     """
 
-    def __init__(self):
+    def __init__(self, project_root: str = "."):
         self._high_patterns = [re.compile(p, re.IGNORECASE) for p in HIGH_RISK_KEYWORDS]
         self._medium_patterns = [
             re.compile(p, re.IGNORECASE) for p in MEDIUM_RISK_KEYWORDS
         ]
         self._low_patterns = [re.compile(p, re.IGNORECASE) for p in LOW_RISK_KEYWORDS]
+        
+        # 2025 Best Practice: Impact-Aware Routing
+        self._blast_analyzer = BlastRadiusAnalyzer(project_root)
 
-    def assess_risk(self, task: str, context: Optional[str] = None) -> RiskLevel:
+    def assess_risk(
+        self, 
+        task: str, 
+        context: Optional[str] = None,
+        affected_files: Optional[List[str]] = None,
+    ) -> RiskLevel:
         """
-        评估任务风险级别
+        评估任务风险级别 (含代码影响分析)
 
         Args:
             task: 任务描述
             context: 额外上下文
+            affected_files: 受影响的文件列表 (可选，用于 Blast Radius 分析)
 
         Returns:
             RiskLevel
         """
         text = f"{task} {context or ''}"
-
-        # 检查高风险
+        
+        # Step 1: 基于关键词的风险评估
+        keyword_risk = RiskLevel.MEDIUM
+        
         for pattern in self._high_patterns:
             if pattern.search(text):
-                return RiskLevel.HIGH
-
-        # 检查中等风险
-        for pattern in self._medium_patterns:
-            if pattern.search(text):
-                return RiskLevel.MEDIUM
-
-        # 检查低风险
-        for pattern in self._low_patterns:
-            if pattern.search(text):
-                return RiskLevel.LOW
-
-        # 默认中等风险 (保守策略)
-        return RiskLevel.MEDIUM
+                keyword_risk = RiskLevel.HIGH
+                break
+        else:
+            for pattern in self._medium_patterns:
+                if pattern.search(text):
+                    keyword_risk = RiskLevel.MEDIUM
+                    break
+            else:
+                for pattern in self._low_patterns:
+                    if pattern.search(text):
+                        keyword_risk = RiskLevel.LOW
+                        break
+        
+        # Step 2: Blast Radius 分析 (如果提供了文件列表)
+        if affected_files:
+            blast_result = self._blast_analyzer.analyze_multiple(affected_files)
+            
+            # 影响级别映射到风险级别
+            impact_risk_map = {
+                ImpactLevel.LEAF: RiskLevel.LOW,
+                ImpactLevel.LOW: RiskLevel.LOW,
+                ImpactLevel.MEDIUM: RiskLevel.MEDIUM,
+                ImpactLevel.HIGH: RiskLevel.HIGH,
+                ImpactLevel.CORE: RiskLevel.CRITICAL,
+            }
+            blast_risk = impact_risk_map.get(blast_result.impact_level, RiskLevel.MEDIUM)
+            
+            # 取两者中更高的风险级别
+            risk_order = [RiskLevel.LOW, RiskLevel.MEDIUM, RiskLevel.HIGH, RiskLevel.CRITICAL]
+            keyword_idx = risk_order.index(keyword_risk) if keyword_risk in risk_order else 1
+            blast_idx = risk_order.index(blast_risk) if blast_risk in risk_order else 1
+            
+            return risk_order[max(keyword_idx, blast_idx)]
+        
+        return keyword_risk
 
     def route(self, task: str, context: Optional[str] = None) -> RoutingDecision:
         """

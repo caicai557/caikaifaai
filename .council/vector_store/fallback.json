@@ -1,0 +1,56 @@
+{
+  "documents": [
+    "file: auth_module\\nProperties: {\"path\": \"src/auth.py\"}",
+    "file: auth_test\\nProperties: {\"path\": \"tests/auth_test.py\"}",
+    "file: core.py\\nProperties: {}",
+    "file: plugin.py\\nProperties: {}",
+    "file: auth.py\\nProperties: {\"path\": \"src/auth.py\"}",
+    "decision: \u4f7f\u7528JWT\u8ba4\u8bc1\\nProperties: {}",
+    "task: \u9700\u6c42\u5206\u6790\\nProperties: {\"priority\": \"high\"}",
+    "agent: Coder\\nProperties: {}"
+  ],
+  "metadatas": [
+    {
+      "type": "file",
+      "name": "auth_module"
+    },
+    {
+      "type": "file",
+      "name": "auth_test"
+    },
+    {
+      "type": "file",
+      "name": "core.py"
+    },
+    {
+      "type": "file",
+      "name": "plugin.py"
+    },
+    {
+      "type": "file",
+      "name": "auth.py"
+    },
+    {
+      "type": "decision",
+      "name": "\u4f7f\u7528JWT\u8ba4\u8bc1"
+    },
+    {
+      "type": "task",
+      "name": "\u9700\u6c42\u5206\u6790"
+    },
+    {
+      "type": "agent",
+      "name": "Coder"
+    }
+  ],
+  "ids": [
+    "auth.py",
+    "auth_test.py",
+    "core.py",
+    "plugin.py",
+    "file_1",
+    "decision_1",
+    "task_1",
+    "agent_coder"
+  ]
+}

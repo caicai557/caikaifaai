@@ -137,6 +137,13 @@ class KnowledgeGraph:
 
         if auto_load:
             self.load()
+            
+        # Hybrid Search: Initialize Vector Store
+        try:
+            from council.memory.vector_store import VectorStore
+            self.vector_store = VectorStore(use_fallback=True) # Default to fallback to be safe, actual class handles import
+        except ImportError:
+            self.vector_store = None
 
     @staticmethod
     def _parse_datetime(value: Any) -> datetime:
@@ -178,6 +185,19 @@ class KnowledgeGraph:
             return "json"
         return "unknown"
 
+        return entity
+
+    def _sync_to_vector_store(self, entity: Entity):
+        """Sync entity to vector store for semantic search."""
+        if self.vector_store:
+            # Create a rich text representation
+            text = f"{entity.entity_type.value}: {entity.name}\\nProperties: {json.dumps(entity.properties, ensure_ascii=False)}"
+            self.vector_store.add_lesson(
+                lesson_id=entity.id,
+                text=text,
+                metadata={"type": entity.entity_type.value, "name": entity.name}
+            )
+
     def add_entity(
         self,
         entity_id: str,
@@ -189,17 +209,6 @@ class KnowledgeGraph:
     ) -> Entity:
         """
         添加实体
-
-        Args:
-            entity_id: 实体ID
-            entity_type: 实体类型
-            name: 实体名称
-            properties: 属性
-            created_at: 创建时间（用于持久化恢复）
-            updated_at: 更新时间（用于持久化恢复）
-
-        Returns:
-            创建的实体
         """
         entity = Entity(
             id=entity_id,
@@ -215,6 +224,9 @@ class KnowledgeGraph:
         if entity_type not in self._entity_by_type:
             self._entity_by_type[entity_type] = set()
         self._entity_by_type[entity_type].add(entity_id)
+        
+        # Sync to Vector Store
+        self._sync_to_vector_store(entity)
 
         return entity
 
@@ -342,6 +354,20 @@ class KnowledgeGraph:
             else:
                 results.append(entity)
 
+        return results
+
+    def search_hybrid(self, query_text: str, limit: int = 5) -> List[Entity]:
+        """
+        混合搜索: 语义搜索 + 图谱实体
+        """
+        results = []
+        if self.vector_store:
+            # Semantic search
+            search_res = self.vector_store.search(query_text, n_results=limit)
+            if search_res and search_res["ids"] and search_res["ids"][0]:
+                for eid in search_res["ids"][0]:
+                    if eid in self.entities:
+                        results.append(self.entities[eid])
         return results
 
     def record_decision(

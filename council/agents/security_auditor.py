@@ -309,5 +309,62 @@ Rationale: [理由]
             "passed": len(violations) == 0,
         }
 
+    # ============================================================
+    # 2025 Best Practice: Structured Protocol Methods
+    # These methods save ~70% tokens compared to NL versions
+    # ============================================================
+    
+    def vote_structured(self, proposal: str, context: Optional[Dict[str, Any]] = None):
+        """
+        [2025 Best Practice] 对提案进行安全评审投票 (结构化输出)
+        
+        使用 MinimalVote schema，保持怀疑态度。
+        """
+        from council.protocol.schema import MinimalVote, RiskCategory
+        
+        prompt = f"""
+作为安全审计员 (怀疑论者)，评估以下提案的安全风险:
+提案: {proposal}
+上下文: {context or {}}
+
+请投票并识别风险类别。默认倾向于 HOLD (3) 或 REJECT (0)，除非确信安全。
+sec=安全, perf=性能, maint=维护, arch=架构, data=数据
+"""
+        result = self._call_llm_structured(prompt, MinimalVote)
+        
+        self.add_to_history({
+            "action": "vote_structured",
+            "proposal": proposal[:100],
+            "vote": result.vote.to_legacy(),
+        })
+        
+        return result
+    
+    def think_structured(self, task: str, context: Optional[Dict[str, Any]] = None):
+        """
+        [2025 Best Practice] 从安全角度分析任务 (结构化输出)
+        
+        使用 MinimalThinkResult schema，强制提出安全问题。
+        """
+        from council.protocol.schema import MinimalThinkResult
+        
+        prompt = f"""
+作为安全审计员，进行零信任分析:
+任务: {task}
+上下文: {context or {}}
+
+必须找出可能的安全隐患。请提供简短摘要、安全担忧 (必须至少2点)、和加固建议。
+"""
+        result = self._call_llm_structured(prompt, MinimalThinkResult)
+        result.perspective = "security"
+        
+        self.add_to_history({
+            "action": "think_structured",
+            "task": task[:100],
+            "confidence": result.confidence,
+        })
+        
+        return result
+
 
 __all__ = ["SecurityAuditor", "SECURITY_AUDITOR_SYSTEM_PROMPT"]

@@ -2,6 +2,58 @@
 
 ---
 
+## 2025-12-28 /impl "StateGraph 状态机实现"
+
+**任务**: 实现 Pattern B (Stateful Graph) 状态机执行引擎
+
+| 步骤 | 状态 |
+|------|:----:|
+| 1. TDD 测试编写 (16 tests) | ✅ |
+| 2. Diff-first plan | ✅ |
+| 3. 实现 graph.py | ✅ |
+| 4. just verify | ✅ 120 passed |
+
+### 文件变更
+
+| 文件 | 操作 | 说明 |
+|------|------|------|
+| `council/orchestration/graph.py` | 新增 | StateGraph + State 类 (115 行) |
+| `council/orchestration/__init__.py` | 修改 | 导出 State, StateGraph |
+| `tests/test_state_graph.py` | 新增 | 16 个测试用例 |
+
+### 验证证据
+
+```
+✅ VERIFY PASS
+120 passed, 1 warning in 0.87s
+```
+
+### 核心 API
+
+```python
+from council.orchestration.graph import StateGraph, State
+
+# 创建状态机
+graph = StateGraph()
+graph.add_node("plan", planner_action)
+graph.add_node("code", coder_action)
+graph.add_edge("plan", "code")
+graph.add_conditional_edge("check", decide_fn)
+graph.set_entry_point("plan")
+
+# 执行
+final_state = graph.run(State(messages=[], context={}))
+```
+
+### 剩余风险 / Follow-ups
+
+- **无阻塞风险**
+- **后续任务**:
+  - `/tdd "预执行模拟器"` - 实现 Digital Twin 预检测
+  - 更新 CODEMAP.md 添加 StateGraph 文档
+
+---
+
 ## 2025-12-27 /audit (自动化模块整体设计)
 
 **任务**: 使用 Gemini 3 Pro 审计自动化模块对现有架构的影响

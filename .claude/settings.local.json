@@ -9,7 +9,16 @@
       "Bash(git reset:*)",
       "Bash(git commit:*)",
       "Bash(.venv/bin/python -m pytest:*)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(find:*)",
+      "Bash(gemini -m pro \"架构审计任务: Telegram 自动化模块设计\n\n## 审计范围\n- 4 个新模块: keyword_monitor, delay_manager, auto_responder, group_creator\n- 3 个现有模块集成点: message_interceptor, browser_context, config\n\n## 当前状态\n- CODEMAP.md 已读取\n- BRIEF.md 定义了完整任务树和技术设计\n- NOTES.md 记录了之前审计结果\n\n## 请分析以下内容:\n\n### 1. 模块集成冲突检测\n请分析这些新模块与现有架构的集成可能产生的冲突:\n- MessageInterceptor 目前仅支持被动拦截，缺乏主动发送能力\n- InstanceConfig 嵌套复杂度问题\n- 自动化模块需要 Playwright Page 对象的获取方式\n\n### 2. 设计决策验证\n验证以下决策是否合理:\n- Playwright 直接控制 vs JS 注入\n- asyncio.sleep 异步延时\n- Python 侧正则匹配 vs JS 侧过滤\n\n### 3. 风险评估\n评估以下风险:\n- 自动回复死循环风险\n- Telegram 账号封禁风险\n- DOM 选择器失效风险\n\n### 4. 实施路径建议\n- 并行开发可行性\n- 模块依赖关系\n- 优先级建议\n\n请输出结构化审计报告，格式如下:\n\\\\`\\\\`\\\\`yaml\naudit_report:\n  scope: [审计范围]\n  conflicts: [冲突列表]\n  design_decisions: [设计决策确认]\n  risks: [风险点]\n  implementation_path: [实施路径]\n  conclusion: [审计结论]\n\\\\`\\\\`\\\\`\")",
+      "Bash(grep:*)",
+      "Bash(python -m pytest:*)",
+      "Bash(cat:*)",
+      "Skill(tdd)",
+      "Bash(ruff check:*)",
+      "Bash(.venv/bin/ruff check:*)",
+      "Skill(review)"
     ]
   },
   "enabledMcpjsonServers": [

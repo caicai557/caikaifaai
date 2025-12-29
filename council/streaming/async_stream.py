@@ -262,6 +262,77 @@ class StreamingLLM:
             if count >= interrupt_at:
                 raise InterruptedError("Stream interrupted for testing")
             yield chunk
+    async def stream_with_thinking(
+        self,
+        prompt: str,
+        model: str,
+        on_thinking: Callable[[str], None] = None,
+        on_content: Callable[[str], None] = None,
+        **kwargs,
+    ) -> Dict[str, Any]:
+        """带思考过程可视化的流式"""
+        import time
+        start = time.time()
+        first_token_time = None
+        chunks = []
+        thinking_shown = False
+
+        if on_thinking:
+            on_thinking("🤔 Thinking...")
+            thinking_shown = True
+
+        async for chunk in self.stream(prompt, model, **kwargs):
+            if first_token_time is None:
+                first_token_time = time.time()
+                if thinking_shown and on_thinking:
+                    on_thinking("")
+            chunks.append(chunk)
+            if on_content:
+                on_content(chunk)
+
+        end = time.time()
+        ttft = (first_token_time - start) * 1000 if first_token_time else 0
+        return {
+            "text": "".join(chunks),
+            "metrics": {"ttft_ms": ttft, "total_latency_ms": (end - start) * 1000, "tokens": sum(len(c.split()) for c in chunks)},
+        }
+
+    async def stream_as_sse(
+        self,
+        prompt: str,
+        model: str,
+        **kwargs,
+    ) -> AsyncGenerator[str, None]:
+        """以 SSE 格式输出"""
+        import time
+        import json
+        yield f"event: start\ndata: {json.dumps({'model': model, 'timestamp': time.time()})}\n\n"
+        first_token = True
+        async for chunk in self.stream(prompt, model, **kwargs):
+            if first_token:
+                yield f"event: first_token\ndata: {json.dumps({'ttft_ms': 0})}\n\n"
+                first_token = False
+            escaped = chunk.replace("\n", "\\n")
+            yield f"data: {escaped}\n\n"
+        yield f"event: done\ndata: {json.dumps({'status': 'complete'})}\n\n"
 
 
-__all__ = ["StreamingLLM", "StreamTimeoutError"]
+class SSEFormatter:
+    """SSE 格式化工具"""
+    @staticmethod
+    def format_event(event_type: str, data: Any) -> str:
+        import json
+        data_str = json.dumps(data) if isinstance(data, dict) else str(data).replace("\n", "\\n")
+        return f"event: {event_type}\ndata: {data_str}\n\n" if event_type else f"data: {data_str}\n\n"
+
+    @staticmethod
+    def format_chunk(text: str) -> str:
+        return f"data: {text.replace(chr(10), chr(92) + 'n')}\n\n"
+
+    @staticmethod
+    def format_done() -> str:
+        return "event: done\ndata: {}\n\n"
+
+
+__all__ = ["StreamingLLM", "StreamTimeoutError", "SSEFormatter"]
+

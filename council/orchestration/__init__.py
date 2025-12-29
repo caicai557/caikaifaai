@@ -31,6 +31,12 @@ from council.orchestration.task_classifier import (
     RecommendedModel,
     TaskType,
 )
+from council.orchestration.model_router import (
+    ModelRouter,
+    ModelConfig,
+    RoutingResult,
+)
+
 
 __all__ = [
     # Ledger

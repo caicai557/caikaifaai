@@ -90,4 +90,70 @@ class RedisStateStore(StateStore):
             await self.client.delete(*keys)
 
 
-__all__ = ["RedisStateStore"]
+__all__ = ["RedisStateStore", "RedisDistributedLock"]
+
+
+class RedisDistributedLock:
+    """
+    Redis 分布式锁实现 (基于 Redlock 算法)
+    
+    支持：获取/释放/续期/Context Manager
+    """
+
+    def __init__(self, client):
+        self.client = client
+        self._locks: dict = {}
+
+    async def acquire(self, key: str, ttl: int = 30) -> bool:
+        import uuid
+        token = str(uuid.uuid4())
+        lock_key = f"council:lock:{key}"
+        result = await self.client.set(lock_key, token, nx=True, ex=ttl)
+        if result:
+            self._locks[key] = token
+            return True
+        return False
+
+    async def release(self, key: str) -> bool:
+        token = self._locks.get(key)
+        if not token:
+            return False
+        lock_key = f"council:lock:{key}"
+        current_token = await self.client.get(lock_key)
+        if current_token != token:
+            return False
+        await self.client.delete(lock_key)
+        del self._locks[key]
+        return True
+
+    async def extend(self, key: str, ttl: int = 30) -> bool:
+        token = self._locks.get(key)
+        if not token:
+            return False
+        lock_key = f"council:lock:{key}"
+        current_token = await self.client.get(lock_key)
+        if current_token != token:
+            return False
+        await self.client.expire(lock_key, ttl)
+        return True
+
+    def lock(self, key: str, ttl: int = 30):
+        return _LockContext(self, key, ttl)
+
+
+class _LockContext:
+    def __init__(self, lock: RedisDistributedLock, key: str, ttl: int):
+        self.lock = lock
+        self.key = key
+        self.ttl = ttl
+        self.acquired = False
+
+    async def __aenter__(self) -> bool:
+        self.acquired = await self.lock.acquire(self.key, self.ttl)
+        return self.acquired
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        if self.acquired:
+            await self.lock.release(self.key)
+        return False
+

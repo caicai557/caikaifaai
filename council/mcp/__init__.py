@@ -9,6 +9,13 @@ from council.mcp.ai_council_server import (
     ConsensusResponse,
 )
 from council.mcp.protocol import MCPProtocolHandler
+from council.mcp.tool_search import (
+    ToolSearchTool,
+    ToolRegistry,
+    ToolDefinition,
+    ToolCategory,
+    create_default_registry,
+)
 
 __all__ = [
     "AICouncilServer",
@@ -17,4 +24,9 @@ __all__ = [
     "ModelResponse",
     "ConsensusResponse",
     "MCPProtocolHandler",
+    "ToolSearchTool",
+    "ToolRegistry",
+    "ToolDefinition",
+    "ToolCategory",
+    "create_default_registry",
 ]

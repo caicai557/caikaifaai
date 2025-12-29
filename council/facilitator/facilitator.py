@@ -71,7 +71,9 @@ class Facilitator:
     """
 
     def __init__(
-        self, wald_config: Optional[WaldConfig] = None, max_iterations: int = 5,
+        self,
+        wald_config: Optional[WaldConfig] = None,
+        max_iterations: int = 5,
         max_context_tokens: int = 8000,
     ):
         """
@@ -86,7 +88,7 @@ class Facilitator:
         self.max_iterations = max_iterations
         self.current_meeting: Optional[MeetingMinutes] = None
         self.current_round = 0
-        
+
         # 2025 Token Efficiency: Rolling Context
         self.rolling_context = RollingContext(max_tokens=max_context_tokens)
 
@@ -104,7 +106,7 @@ class Facilitator:
             rounds=[],
         )
         self.current_round = 0
-        
+
         # Initialize rolling context with meeting info
         self.rolling_context.reset()
         self.rolling_context.set_static_context(
@@ -161,6 +163,14 @@ class Facilitator:
             contradictions=contradictions,
         )
         self.current_meeting.rounds.append(round_record)
+
+        self._update_rolling_context(
+            votes=votes,
+            result=result,
+            entropy=entropy,
+            contradictions=contradictions,
+            questions=questions,
+        )
 
         return result
 
@@ -245,6 +255,40 @@ class Facilitator:
 
         return questions
 
+    def _update_rolling_context(
+        self,
+        votes: List[Vote],
+        result: ConsensusResult,
+        entropy: float,
+        contradictions: List[Dict[str, Any]],
+        questions: List[str],
+    ) -> None:
+        """记录本轮关键信息到滚动上下文"""
+        vote_summaries = [
+            {
+                "agent": vote.agent_name,
+                "decision": vote.decision.value,
+                "confidence": vote.confidence,
+                "rationale": vote.rationale,
+                "suggested_changes": vote.suggested_changes,
+            }
+            for vote in votes
+        ]
+        round_snapshot = {
+            "round": self.current_round,
+            "votes": vote_summaries,
+            "consensus": {
+                "decision": result.decision.value,
+                "pi_approve": round(result.pi_approve, 4),
+                "pi_reject": round(result.pi_reject, 4),
+                "reason": result.reason,
+            },
+            "entropy": round(entropy, 4),
+            "contradictions": contradictions,
+            "questions": questions,
+        }
+        self.rolling_context.add_turn("Facilitator", round_snapshot)
+
     def should_continue(self) -> bool:
         """检查是否应该继续迭代"""
         if not self.current_meeting or not self.current_meeting.rounds:
@@ -307,15 +351,15 @@ class Facilitator:
     def get_efficient_context(self) -> str:
         """
         [2025 Best Practice] 获取 Token 高效的上下文
-        
+
         使用滚动上下文 (Rolling Context) 而非全量历史，
         将上下文长度从 O(N) 降低到 O(1)。
-        
+
         Returns:
             用于 LLM 调用的精简上下文字符串
         """
         return self.rolling_context.get_context_for_prompt()
-    
+
     def get_context_stats(self) -> Dict[str, Any]:
         """获取上下文统计信息"""
         return self.rolling_context.get_stats()
@@ -323,4 +367,3 @@ class Facilitator:
 
 # 导出
 __all__ = ["Facilitator", "DebateRound", "MeetingMinutes"]
-

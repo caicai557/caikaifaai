@@ -7,7 +7,7 @@ Automatically falls back to JSON storage if ChromaDB is missing.
 import os
 import sys
 import json
-from typing import List, Dict, Any, Optional
+from typing import Dict, Any, Optional
 
 # Constants
 DB_PATH = ".council/vector_store"
@@ -17,16 +17,16 @@ class VectorStore:
         self.use_fallback = use_fallback
         self.chroma_client = None
         self.collection = None
-        
+
         # Ensure base directory exists
         os.makedirs(DB_PATH, exist_ok=True)
-        
+
         # Try importing ChromaDB
         if not use_fallback:
             try:
                 import chromadb
                 from chromadb.utils import embedding_functions
-                
+
                 self.chroma_client = chromadb.PersistentClient(path=DB_PATH)
                 self.ef = embedding_functions.DefaultEmbeddingFunction()
                 self.collection = self.chroma_client.get_or_create_collection(
@@ -90,7 +90,7 @@ class VectorStore:
                 # Naive Keyword Search for fallback
                 results = {"ids": [[]], "documents": [[]], "metadatas": [[]], "distances": [[]]}
                 query_lower = query.lower()
-                
+
                 # Simple score: count query word overlap
                 scored_docs = []
                 for i, doc in enumerate(self.data["documents"]):
@@ -101,20 +101,20 @@ class VectorStore:
                     for word in query_lower.split():
                         if word in doc_lower:
                             score += 1
-                    
+
                     if score > 0:
                         scored_docs.append((score, i))
-                
+
                 # Sort by score desc
                 scored_docs.sort(key=lambda x: x[0], reverse=True)
                 top_k = scored_docs[:n_results]
-                
+
                 for score, idx in top_k:
                     results["ids"][0].append(self.data["ids"][idx])
                     results["documents"][0].append(self.data["documents"][idx])
                     results["metadatas"][0].append(self.data["metadatas"][idx])
                     results["distances"][0].append(10.0 - score) # Mock distance
-                    
+
                 return results
 
         except Exception as e:
@@ -125,7 +125,7 @@ def main():
     import argparse
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers(dest="command", required=True)
-    
+
     add_p = subparsers.add_parser("add")
     add_p.add_argument("--id", required=True)
     add_p.add_argument("--text", required=True)

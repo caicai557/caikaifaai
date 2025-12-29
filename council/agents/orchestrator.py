@@ -18,6 +18,7 @@ from council.agents.base_agent import (
     ExecuteResult,
 )
 from council.orchestration.ledger import DualLedger
+from council.governance.gateway import DecisionType, GovernanceGateway
 
 
 ORCHESTRATOR_SYSTEM_PROMPT = """你是理事会主席 (Council Chairman)，负责统筹协调所有专家智能体。
@@ -96,11 +97,62 @@ class Orchestrator(BaseAgent):
         ],
     }
 
-    def __init__(self, model: str = "gemini-2.0-flash"):
+    DECISION_KEYWORDS = {
+        DecisionType.ARCHITECTURE_CHANGE: [
+            "architecture",
+            "re-architect",
+            "redesign",
+            "migration",
+            "migrate",
+            "架构",
+            "重构",
+            "重写",
+        ],
+        DecisionType.DEPLOY_STRATEGY: [
+            "deploy",
+            "release",
+            "rollout",
+            "canary",
+            "blue-green",
+            "上线",
+            "发布",
+        ],
+        DecisionType.SECURITY_EXCEPTION: [
+            "exception",
+            "bypass",
+            "skip security",
+            "disable auth",
+            "临时放开",
+            "忽略安全",
+        ],
+        DecisionType.DATA_RETENTION: [
+            "retention",
+            "archive",
+            "purge",
+            "data retention",
+            "保留策略",
+            "删除数据",
+        ],
+        DecisionType.MODEL_SELECTION: [
+            "model selection",
+            "routing",
+            "router",
+            "model",
+            "模型选择",
+            "模型",
+        ],
+    }
+
+    def __init__(
+        self,
+        model: str = "gemini-2.0-flash",
+        governance_gateway: Optional[GovernanceGateway] = None,
+    ):
         super().__init__(
             name="Orchestrator",
             system_prompt=ORCHESTRATOR_SYSTEM_PROMPT,
             model=model,
+            governance_gateway=governance_gateway,
         )
         self.active_subtasks: List[SubTask] = []
         self.ledger: Optional[DualLedger] = None
@@ -201,6 +253,34 @@ class Orchestrator(BaseAgent):
         elif agent == "SecurityAuditor":
             return f"安全审计: {goal}"
         return goal
+
+    def _infer_decision_types(self, goal: str) -> List[DecisionType]:
+        """从任务描述中识别关键决策类型"""
+        goal_lower = goal.lower()
+        decisions: List[DecisionType] = []
+        for decision_type, keywords in self.DECISION_KEYWORDS.items():
+            if any(keyword in goal_lower for keyword in keywords):
+                decisions.append(decision_type)
+        return decisions
+
+    def _request_decision_approvals(self, goal: str) -> Optional[ExecuteResult]:
+        """对关键决策进行审批请求"""
+        decisions = self._infer_decision_types(goal)
+        for decision_type in decisions:
+            description = f"关键决策: {decision_type.value}"
+            approved = self.request_decision_approval(
+                decision_type=decision_type,
+                description=description,
+                affected_resources=["orchestrator"],
+                rationale="触发关键决策关键词，需要人工确认",
+            )
+            if not approved:
+                return ExecuteResult(
+                    success=False,
+                    output=f"决策需要人工审批: {decision_type.value}",
+                    errors=[f"Approval required for decision: {decision_type.value}"],
+                )
+        return None
 
     def dispatch(self, subtask: SubTask, agent: BaseAgent) -> ExecuteResult:
         """
@@ -312,6 +392,10 @@ class Orchestrator(BaseAgent):
         self, task: str, plan: Optional[Dict[str, Any]] = None
     ) -> ExecuteResult:
         """执行编排任务"""
+        decision_result = self._request_decision_approvals(task)
+        if decision_result:
+            return decision_result
+
         decomposition = self.decompose(task)
 
         self.add_to_history(

@@ -134,7 +134,7 @@ class KnowledgeGraph:
         self._entity_by_type: Dict[EntityType, Set[str]] = {}
         self._relations_from: Dict[str, List[Relation]] = {}
         self._relations_to: Dict[str, List[Relation]] = {}
-        
+
         # Hybrid Search: Initialize Vector Store BEFORE auto_load
         try:
             from council.memory.vector_store import VectorStore
@@ -224,7 +224,7 @@ class KnowledgeGraph:
         if entity_type not in self._entity_by_type:
             self._entity_by_type[entity_type] = set()
         self._entity_by_type[entity_type].add(entity_id)
-        
+
         # Sync to Vector Store
         self._sync_to_vector_store(entity)
 

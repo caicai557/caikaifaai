@@ -116,7 +116,7 @@ COPY pyproject.toml ./
 
 # Install all dependencies including dev
 RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -e ".[dev]" || pip install --no-cache-dir -e .
+    pip install --no-cache-dir -e ".[dev,distributed]" || pip install --no-cache-dir -e .
 
 # Copy application code
 COPY . .

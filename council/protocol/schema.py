@@ -15,14 +15,14 @@ from pydantic import BaseModel, Field, field_validator
 class VoteEnum(IntEnum):
     """
     投票决策枚举 (整数编码节省 Token)
-    
+
     0=REJECT, 1=APPROVE, 2=APPROVE_WITH_CHANGES, 3=HOLD
     """
     REJECT = 0
     APPROVE = 1
     APPROVE_WITH_CHANGES = 2
     HOLD = 3
-    
+
     def to_legacy(self) -> str:
         """转换为旧版字符串格式 (向后兼容)"""
         mapping = {
@@ -37,7 +37,7 @@ class VoteEnum(IntEnum):
 class RiskCategory(str, Enum):
     """
     风险类别枚举
-    
+
     使用缩写字符串，便于 LLM 输出。
     """
     SECURITY = "sec"        # 安全风险 (注入、泄露、认证)
@@ -51,9 +51,9 @@ class RiskCategory(str, Enum):
 class MinimalVote(BaseModel):
     """
     极简投票结构 (Zero-Waste Protocol)
-    
+
     Agent 输出此 JSON 而非冗长文本。
-    
+
     Example:
         {"vote": 1, "confidence": 0.9, "risks": ["sec"], "blocking_reason": null}
     """
@@ -61,17 +61,17 @@ class MinimalVote(BaseModel):
     confidence: float = Field(ge=0.0, le=1.0, description="置信度 0.0-1.0")
     risks: List[RiskCategory] = Field(default_factory=list, description="风险类别列表")
     blocking_reason: Optional[str] = Field(
-        None, 
-        max_length=100, 
+        None,
+        max_length=100,
         description="拒绝/暂缓原因 (最多100字符)"
     )
-    
+
     @field_validator("confidence")
     @classmethod
     def round_confidence(cls, v: float) -> float:
         """保留两位小数"""
         return round(v, 2)
-    
+
     def to_legacy_dict(self) -> dict:
         """转换为旧版 Vote 兼容格式"""
         return {
@@ -84,9 +84,9 @@ class MinimalVote(BaseModel):
 class MinimalThinkResult(BaseModel):
     """
     极简思考结果 (Zero-Waste Protocol)
-    
+
     限制字段长度，强制 Agent 精炼输出。
-    
+
     Example:
         {
             "summary": "设计合理，但缓存策略需要优化",
@@ -97,7 +97,7 @@ class MinimalThinkResult(BaseModel):
     """
     summary: str = Field(max_length=200, description="摘要 (最多200字符)")
     concerns: List[str] = Field(
-        default_factory=list, 
+        default_factory=list,
         max_length=5,
         description="担忧列表 (每项最多50字符)"
     )
@@ -108,7 +108,7 @@ class MinimalThinkResult(BaseModel):
     )
     confidence: float = Field(ge=0.0, le=1.0, description="置信度 0.0-1.0")
     perspective: Optional[str] = Field(None, max_length=20, description="视角标签")
-    
+
     @field_validator("concerns", "suggestions", mode="before")
     @classmethod
     def truncate_lists(cls, v):
@@ -116,7 +116,7 @@ class MinimalThinkResult(BaseModel):
         if isinstance(v, list):
             return [str(item)[:50] for item in v[:5]]
         return v
-    
+
     def to_legacy_dict(self) -> dict:
         """转换为旧版 ThinkResult 兼容格式"""
         return {
@@ -131,7 +131,7 @@ class MinimalThinkResult(BaseModel):
 class DebateMessage(BaseModel):
     """
     辩论消息 (用于 Agent 间通信)
-    
+
     比自然语言对话节省 ~80% Token。
     """
     agent: str = Field(max_length=30, description="发言 Agent 名称")

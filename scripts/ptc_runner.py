@@ -1,101 +1,32 @@
 #!/usr/bin/env python3
 import argparse
-import subprocess
 import sys
-import tempfile
 import os
 import json
-from typing import Dict, Any
+from typing import Dict, Any, Optional
+
+from council.sandbox import get_sandbox_runner
 
 # Docker configuration
 USE_DOCKER = os.environ.get("PTC_USE_DOCKER", "0") == "1"
 DOCKER_IMAGE = os.environ.get("PTC_DOCKER_IMAGE", "cesi-ptc:latest")
 PTC_OUTPUT_DIR = ".ptc_output"
+SANDBOX_PROVIDER = os.environ.get("PTC_SANDBOX_PROVIDER")
 
 
-def run_in_docker(script_content: str, timeout: int = 60) -> Dict[str, Any]:
-    """
-    Executes a Python script inside a Docker container for security isolation.
+def _resolve_provider() -> str:
+    if SANDBOX_PROVIDER:
+        return SANDBOX_PROVIDER
+    return "docker" if USE_DOCKER else "local"
 
-    Features:
-    - Network isolation (--network none)
-    - Read-only filesystem where possible
-    - Limited resources
-    """
-    # Ensure output directory exists
-    os.makedirs(PTC_OUTPUT_DIR, exist_ok=True)
 
-    # Create script file in shared volume
-    script_name = f"ptc_script_{os.getpid()}.py"
-    script_path = os.path.join(PTC_OUTPUT_DIR, script_name)
-
-    with open(script_path, "w") as f:
-        f.write(script_content)
-
-    try:
-        abs_output_dir = os.path.abspath(PTC_OUTPUT_DIR)
-        cmd = [
-            "docker",
-            "run",
-            "--rm",
-            "-v",
-            f"{abs_output_dir}:/app:rw",
-            "-w",
-            "/app",
-            "--network",
-            "none",  # Network isolation
-            "--memory",
-            "256m",  # Memory limit
-            "--cpus",
-            "0.5",  # CPU limit
-            DOCKER_IMAGE,
-            "python",
-            script_name,
-        ]
-
-        result = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            timeout=timeout,
-        )
-
-        return {
-            "status": "success" if result.returncode == 0 else "failure",
-            "stdout": result.stdout,
-            "stderr": result.stderr,
-            "returncode": result.returncode,
-            "execution_mode": "docker",
-        }
-
-    except subprocess.TimeoutExpired:
-        return {
-            "status": "timeout",
-            "stdout": "",
-            "stderr": f"Docker execution timed out after {timeout} seconds.",
-            "returncode": -1,
-            "execution_mode": "docker",
-        }
-    except FileNotFoundError:
-        return {
-            "status": "error",
-            "stdout": "",
-            "stderr": "Docker not found. Install Docker or set PTC_USE_DOCKER=0.",
-            "returncode": -1,
-            "execution_mode": "docker",
-        }
-    except Exception as e:
-        return {
-            "status": "error",
-            "stdout": "",
-            "stderr": str(e),
-            "returncode": -1,
-            "execution_mode": "docker",
-        }
-    finally:
-        # Cleanup
-        if os.path.exists(script_path):
-            os.remove(script_path)
+def _build_local_env(output_dir: str) -> Dict[str, str]:
+    env = os.environ.copy()
+    scripts_dir = os.path.join(os.getcwd(), "scripts")
+    env["PYTHONPATH"] = f"{scripts_dir}:{env.get('PYTHONPATH', '')}"
+    env["PTC_OUTPUT_DIR"] = os.path.join(os.getcwd(), output_dir)
+    os.makedirs(env["PTC_OUTPUT_DIR"], exist_ok=True)
+    return env
 
 
 def run_ptc_script(script_content: str, timeout: int = 60) -> Dict[str, Any]:
@@ -109,56 +40,22 @@ def run_ptc_script(script_content: str, timeout: int = 60) -> Dict[str, Any]:
     Returns:
         Dict containing 'stdout', 'stderr', 'returncode', and 'status'.
     """
-    # Use Docker if enabled
-    if USE_DOCKER:
-        return run_in_docker(script_content, timeout)
+    provider = _resolve_provider()
+    env: Optional[Dict[str, str]] = None
+    if provider == "local":
+        env = _build_local_env(PTC_OUTPUT_DIR)
 
-    # Create a temporary file for the script
-    with tempfile.NamedTemporaryFile(
-        mode="w", suffix=".py", delete=False
-    ) as temp_script:
-        temp_script.write(script_content)
-        temp_script_path = temp_script.name
-
-    try:
-        # Execute the script in a subprocess
-        result = subprocess.run(
-            [sys.executable, temp_script_path],
-            capture_output=True,
-            text=True,
-            timeout=timeout,
-            cwd=os.getcwd(),  # Run in current working directory to access files
-            env={},  # Start with empty env for isolation (except what's needed)
-        )
-
-        return {
-            "status": "success" if result.returncode == 0 else "failure",
-            "stdout": result.stdout,
-            "stderr": result.stderr,
-            "returncode": result.returncode,
-            "execution_mode": "subprocess",
-        }
-
-    except subprocess.TimeoutExpired:
-        return {
-            "status": "timeout",
-            "stdout": "",
-            "stderr": f"Execution timed out after {timeout} seconds.",
-            "returncode": -1,
-            "execution_mode": "subprocess",
-        }
-    except Exception as e:
-        return {
-            "status": "error",
-            "stdout": "",
-            "stderr": str(e),
-            "returncode": -1,
-            "execution_mode": "subprocess",
-        }
-    finally:
-        # Cleanup
-        if os.path.exists(temp_script_path):
-            os.remove(temp_script_path)
+    runner = get_sandbox_runner(
+        provider,
+        docker_image=DOCKER_IMAGE,
+        output_dir=PTC_OUTPUT_DIR,
+        env=env,
+        working_dir=os.getcwd(),
+        e2b_api_key=os.environ.get("E2B_API_KEY"),
+        e2b_template=os.environ.get("E2B_TEMPLATE", "python"),
+    )
+    result = runner.run(script_content, timeout=timeout)
+    return result.to_dict()
 
 
 def main():

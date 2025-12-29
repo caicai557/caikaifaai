@@ -5,6 +5,9 @@ set shell := ["bash", "-lc"]
 codemap:
   @bash scripts/codemap.sh
 
+check:
+  @python3 scripts/check_deps.py
+
 # === 理事会命令 ===
 
 plan TASK:

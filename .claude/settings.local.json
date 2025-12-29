@@ -25,6 +25,8 @@
     "filesystem",
     "github",
     "codex",
-    "fetch"
-  ]
+    "fetch",
+    "council"
+  ],
+  "enableAllProjectMcpServers": true
 }

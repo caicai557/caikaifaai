@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 from typing import Dict, Any, Optional
 from enum import Enum
 import logging
+from datetime import datetime
 
 from council.orchestration.hub import Hub
 from council.orchestration.events import Event, EventType
@@ -29,6 +30,38 @@ class ApprovalResult:
     approved: bool
     reason: Optional[str] = None
     action: Optional[Dict[str, Any]] = None
+    approval_id: Optional[str] = None
+
+
+class InterruptStatus(Enum):
+    """中断状态"""
+
+    PENDING = "PENDING"
+    APPROVED = "APPROVED"
+    REJECTED = "REJECTED"
+
+
+@dataclass
+class InterruptRecord:
+    """中断记录"""
+
+    approval_id: str
+    action: Dict[str, Any]
+    status: InterruptStatus
+    state: Optional[Dict[str, Any]] = None
+    created_at: datetime = field(default_factory=datetime.now)
+    resolved_at: Optional[datetime] = None
+    approver: Optional[str] = None
+    reason: Optional[str] = None
+    resume_payload: Optional[Dict[str, Any]] = None
+
+
+class HumanInterrupt(Exception):
+    """Raised when execution is interrupted for human approval."""
+
+    def __init__(self, record: InterruptRecord):
+        self.record = record
+        super().__init__(f"HITL interrupt pending: {record.approval_id}")
 
 
 @dataclass
@@ -45,6 +78,7 @@ class HITLGate:
     hub: Hub
     auto_approve_low_risk: bool = False
     pending_approvals: Dict[str, Dict[str, Any]] = field(default_factory=dict)
+    interrupts: Dict[str, InterruptRecord] = field(default_factory=dict)
 
     def __post_init__(self):
         self.logger = logging.getLogger("HITL")
@@ -105,7 +139,86 @@ class HITLGate:
             approved=False,
             reason=f"Pending human approval (ID: {approval_id})",
             action=action,
+            approval_id=approval_id,
         )
+
+    def interrupt(
+        self,
+        action: Dict[str, Any],
+        state: Optional[Dict[str, Any]] = None,
+    ) -> ApprovalResult:
+        """
+        请求审批并在需要人工处理时中断执行。
+
+        Returns:
+            ApprovalResult if auto-approved, otherwise raises HumanInterrupt.
+        """
+        result = self.request_approval(action)
+        if result.status != ApprovalStatus.PENDING.value:
+            return result
+
+        if not result.approval_id:
+            raise ValueError("Missing approval_id for pending approval.")
+
+        record = InterruptRecord(
+            approval_id=result.approval_id,
+            action=action,
+            status=InterruptStatus.PENDING,
+            state=state,
+        )
+        self.interrupts[result.approval_id] = record
+
+        interrupt_event = Event(
+            type=EventType.INTERRUPT_RAISED,
+            source="HITL",
+            payload={
+                "approval_id": result.approval_id,
+                "action": action,
+            },
+        )
+        self.hub.publish(interrupt_event)
+
+        raise HumanInterrupt(record)
+
+    def resume(
+        self,
+        approval_id: str,
+        approved: bool = True,
+        approver: str = "human",
+        reason: Optional[str] = None,
+        resume_payload: Optional[Dict[str, Any]] = None,
+    ) -> InterruptRecord:
+        """
+        恢复中断并记录处理结果。
+        """
+        record = self.interrupts.get(approval_id)
+        if not record:
+            raise ValueError(f"Interrupt not found for approval_id: {approval_id}")
+
+        if approved:
+            self.approve(approval_id)
+            record.status = InterruptStatus.APPROVED
+        else:
+            self.reject(approval_id, reason=reason or "Rejected by human")
+            record.status = InterruptStatus.REJECTED
+
+        record.resolved_at = datetime.now()
+        record.approver = approver
+        record.reason = reason
+        record.resume_payload = resume_payload
+
+        resume_event = Event(
+            type=EventType.INTERRUPT_RESUMED,
+            source="HITL",
+            payload={
+                "approval_id": approval_id,
+                "approved": approved,
+                "approver": approver,
+            },
+        )
+        self.hub.publish(resume_event)
+
+        return record
 
     def approve(self, approval_id: str) -> ApprovalResult:
         """
@@ -132,6 +245,7 @@ class HITLGate:
             approved=True,
             reason="Human approved",
             action=action,
+            approval_id=approval_id,
         )
 
     def reject(
@@ -162,7 +276,15 @@ class HITLGate:
             approved=False,
             reason=reason,
             action=action,
+            approval_id=approval_id,
         )
 
 
-__all__ = ["HITLGate", "ApprovalResult", "ApprovalStatus"]
+__all__ = [
+    "HITLGate",
+    "ApprovalResult",
+    "ApprovalStatus",
+    "HumanInterrupt",
+    "InterruptRecord",
+    "InterruptStatus",
+]

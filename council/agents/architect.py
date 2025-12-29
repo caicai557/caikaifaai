@@ -270,22 +270,22 @@ Changes: [建议修改1, 建议修改2] (可选)
     # 2025 Best Practice: Structured Protocol Methods
     # These methods save ~70% tokens compared to NL versions
     # ============================================================
-    
+
     def vote_structured(self, proposal: str, context: Optional[Dict[str, Any]] = None):
         """
         [2025 Best Practice] 对提案进行架构评审投票 (结构化输出)
-        
+
         使用 MinimalVote schema，节省 ~70% Token。
-        
+
         Args:
             proposal: 提案内容
             context: 可选上下文
-            
+
         Returns:
             MinimalVote: 极简投票结果
         """
         from council.protocol.schema import MinimalVote
-        
+
         prompt = f"""
 作为架构师，评估以下提案:
 提案: {proposal}
@@ -294,30 +294,30 @@ Changes: [建议修改1, 建议修改2] (可选)
 请投票并识别风险类别 (sec=安全, perf=性能, maint=维护, arch=架构)。
 """
         result = self._call_llm_structured(prompt, MinimalVote)
-        
+
         self.add_to_history({
             "action": "vote_structured",
             "proposal": proposal[:100],
             "vote": result.vote.to_legacy(),
         })
-        
+
         return result
-    
+
     def think_structured(self, task: str, context: Optional[Dict[str, Any]] = None):
         """
         [2025 Best Practice] 从架构角度分析任务 (结构化输出)
-        
+
         使用 MinimalThinkResult schema，限制输出长度。
-        
+
         Args:
             task: 任务描述
             context: 可选上下文
-            
+
         Returns:
             MinimalThinkResult: 极简思考结果
         """
         from council.protocol.schema import MinimalThinkResult
-        
+
         prompt = f"""
 作为架构师，分析以下任务:
 任务: {task}
@@ -327,13 +327,13 @@ Changes: [建议修改1, 建议修改2] (可选)
 """
         result = self._call_llm_structured(prompt, MinimalThinkResult)
         result.perspective = "architecture"
-        
+
         self.add_to_history({
             "action": "think_structured",
             "task": task[:100],
             "confidence": result.confidence,
         })
-        
+
         return result
 
 

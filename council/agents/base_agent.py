@@ -68,6 +68,10 @@ class BaseAgent(ABC):
         name: str,
         system_prompt: str,
         model: str = "gemini-2.0-flash",
+        allow_delegation: bool = False,
+        allowed_agents: Optional[List[str]] = None,
+        max_delegation_depth: int = 3,
+        governance_gateway: Optional["GovernanceGateway"] = None,
     ):
         """
         初始化智能体
@@ -76,11 +80,20 @@ class BaseAgent(ABC):
             name: 智能体名称
             system_prompt: 系统提示词（定义角色人格）
             model: 使用的 LLM 模型
+            allow_delegation: 是否允许委托任务给其他 Agent
+            allowed_agents: 允许委托的 Agent 名称列表 (None = 允许所有)
+            max_delegation_depth: 最大委托链深度
+            governance_gateway: 可选的治理网关 (关键决策审批)
         """
         self.name = name
         self.system_prompt = system_prompt
         self.model = model
+        self.allow_delegation = allow_delegation
+        self.allowed_agents = allowed_agents or []
+        self.max_delegation_depth = max_delegation_depth
         self.history: List[Dict[str, Any]] = []
+        self._current_delegation_depth = 0
+        self.governance_gateway = governance_gateway
 
         # API key detection
         import os
@@ -143,26 +156,72 @@ class BaseAgent(ABC):
         """检查是否有可用的 LLM API"""
         return self._has_gemini or self._has_openai
 
+    def request_decision_approval(
+        self,
+        decision_type: "DecisionType",
+        description: str,
+        affected_resources: List[str],
+        rationale: str,
+        council_decision: Optional[Dict[str, Any]] = None,
+        requestor: Optional[str] = None,
+        timeout_seconds: int = 300,
+    ) -> bool:
+        """
+        请求关键决策审批
+        """
+        from council.governance.gateway import GovernanceGateway, DecisionType
+
+        if not isinstance(decision_type, DecisionType):
+            raise ValueError("decision_type must be a DecisionType")
+
+        if self.governance_gateway is None:
+            self.governance_gateway = GovernanceGateway()
+
+        if not self.governance_gateway.requires_decision_approval(decision_type):
+            return True
+
+        request = self.governance_gateway.create_decision_request(
+            decision_type=decision_type,
+            description=description,
+            affected_resources=affected_resources,
+            rationale=rationale,
+            council_decision=council_decision,
+            requestor=requestor or self.name,
+        )
+        approved = self.governance_gateway.wait_for_approval(
+            request,
+            timeout_seconds=timeout_seconds,
+        )
+        self.add_to_history(
+            {
+                "action": "decision_approval",
+                "decision_type": decision_type.value,
+                "approved": approved,
+                "request_id": request.request_id,
+            }
+        )
+        return approved
+
     def _call_llm_structured(
-        self, 
-        prompt: str, 
+        self,
+        prompt: str,
         schema_class: type,
         system_override: Optional[str] = None,
     ) -> Any:
         """
         [2025 Best Practice] 调用 LLM 并期望结构化 JSON 输出
-        
+
         Args:
             prompt: 用户提示词
             schema_class: Pydantic 模型类 (用于验证)
             system_override: 可选的系统提示词覆盖
-            
+
         Returns:
             已验证的 Pydantic 模型实例
         """
         import json
         from pydantic import ValidationError
-        
+
         # 生成 JSON Schema 指令
         schema_example = schema_class.model_json_schema()
         json_instruction = f"""
@@ -173,10 +232,10 @@ Example format:
 {json.dumps(self._generate_example(schema_class), ensure_ascii=False)}
 """
         enhanced_prompt = f"{prompt}\n\n{json_instruction}"
-        
+
         # 调用 LLM
         response = self._call_llm(enhanced_prompt, system_override)
-        
+
         # 尝试解析 JSON
         try:
             # 清理响应 (移除可能的 markdown 包装)
@@ -185,17 +244,20 @@ Example format:
             return schema_class(**data)
         except (json.JSONDecodeError, ValidationError) as e:
             # 回退: 返回默认实例并记录错误
-            self.add_to_history({
-                "action": "structured_call_fallback",
-                "error": str(e),
-                "raw_response": response[:200],
-            })
+            self.add_to_history(
+                {
+                    "action": "structured_call_fallback",
+                    "error": str(e),
+                    "raw_response": response[:200],
+                }
+            )
             # 返回带默认值的实例
             return self._create_default_instance(schema_class)
-    
+
     def _clean_json_response(self, response: str) -> str:
         """清理 LLM 响应中的非 JSON 内容"""
         import re
+
         # 移除 markdown 代码块
         if "```json" in response:
             match = re.search(r"```json\s*(.*?)\s*```", response, re.DOTALL)
@@ -210,26 +272,37 @@ Example format:
         if match:
             return match.group(0)
         return response
-    
+
     def _generate_example(self, schema_class: type) -> dict:
         """生成 schema 的示例 JSON"""
-        from council.protocol.schema import VoteEnum, RiskCategory
-        
+
         # 简单的示例生成
         if schema_class.__name__ == "MinimalVote":
-            return {"vote": 1, "confidence": 0.8, "risks": ["sec"], "blocking_reason": None}
+            return {
+                "vote": 1,
+                "confidence": 0.8,
+                "risks": ["sec"],
+                "blocking_reason": None,
+            }
         elif schema_class.__name__ == "MinimalThinkResult":
-            return {"summary": "Analysis summary", "concerns": ["Issue 1"], "suggestions": ["Fix 1"], "confidence": 0.7}
+            return {
+                "summary": "Analysis summary",
+                "concerns": ["Issue 1"],
+                "suggestions": ["Fix 1"],
+                "confidence": 0.7,
+            }
         else:
             return {}
-    
+
     def _create_default_instance(self, schema_class: type) -> Any:
         """创建带默认值的 schema 实例"""
         if schema_class.__name__ == "MinimalVote":
             from council.protocol.schema import MinimalVote, VoteEnum
+
             return MinimalVote(vote=VoteEnum.HOLD, confidence=0.5)
         elif schema_class.__name__ == "MinimalThinkResult":
             from council.protocol.schema import MinimalThinkResult
+
             return MinimalThinkResult(summary="Parse failed", confidence=0.3)
         else:
             return schema_class()

@@ -33,16 +33,35 @@ class ActionType(Enum):
     FINANCIAL = "financial"
 
 
+class DecisionType(Enum):
+    """Decision types requiring human approval"""
+
+    MODEL_SELECTION = "model_selection"
+    ARCHITECTURE_CHANGE = "architecture_change"
+    DEPLOY_STRATEGY = "deploy_strategy"
+    DATA_RETENTION = "data_retention"
+    SECURITY_EXCEPTION = "security_exception"
+
+
+class ApprovalKind(Enum):
+    """Approval request kind"""
+
+    ACTION = "action"
+    DECISION = "decision"
+
+
 @dataclass
 class ApprovalRequest:
     """审批请求"""
 
     request_id: str
-    action_type: ActionType
     risk_level: RiskLevel
     description: str
     affected_resources: List[str]
     rationale: str
+    action_type: Optional[ActionType] = None
+    decision_type: Optional[DecisionType] = None
+    request_kind: ApprovalKind = ApprovalKind.ACTION
     council_decision: Optional[Dict[str, Any]] = None
     requestor: str = "system"
     created_at: datetime = field(default_factory=datetime.now)
@@ -54,7 +73,9 @@ class ApprovalRequest:
         """转换为字典"""
         return {
             "request_id": self.request_id,
-            "action_type": self.action_type.value,
+            "request_kind": self.request_kind.value,
+            "action_type": self.action_type.value if self.action_type else None,
+            "decision_type": self.decision_type.value if self.decision_type else None,
             "risk_level": self.risk_level.value,
             "description": self.description,
             "affected_resources": self.affected_resources,
@@ -79,6 +100,16 @@ HIGH_RISK_ACTIONS = {
     ActionType.EXTERNAL_API: RiskLevel.MEDIUM,
     ActionType.FILE_MODIFY: RiskLevel.LOW,
 }
+
+# 高风险决策定义
+HIGH_RISK_DECISIONS = {
+    DecisionType.ARCHITECTURE_CHANGE: RiskLevel.HIGH,
+    DecisionType.DEPLOY_STRATEGY: RiskLevel.HIGH,
+    DecisionType.SECURITY_EXCEPTION: RiskLevel.CRITICAL,
+    DecisionType.DATA_RETENTION: RiskLevel.MEDIUM,
+    DecisionType.MODEL_SELECTION: RiskLevel.LOW,
+}
+
 
 # 危险内容模式 (Regex)
 DANGEROUS_PATTERNS = [
@@ -212,6 +243,16 @@ class GovernanceGateway:
 
         return False
 
+    def requires_decision_approval(
+        self,
+        decision_type: DecisionType,
+    ) -> bool:
+        """
+        检查关键决策是否需要人工审批
+        """
+        risk = HIGH_RISK_DECISIONS.get(decision_type, RiskLevel.LOW)
+        return risk in [RiskLevel.HIGH, RiskLevel.CRITICAL]
+
     def auto_approve_with_council(
         self, request: ApprovalRequest, consensus_result: Dict[str, Any]
     ) -> bool:
@@ -284,6 +325,43 @@ class GovernanceGateway:
         request = ApprovalRequest(
             request_id=request_id,
             action_type=action_type,
+            decision_type=None,
+            request_kind=ApprovalKind.ACTION,
+            risk_level=risk_level,
+            description=description,
+            affected_resources=affected_resources,
+            rationale=rationale,
+            council_decision=council_decision,
+            requestor=requestor,
+        )
+
+        self.pending_requests[request_id] = request
+        return request
+
+    def create_decision_request(
+        self,
+        decision_type: DecisionType,
+        description: str,
+        affected_resources: List[str],
+        rationale: str,
+        council_decision: Optional[Dict[str, Any]] = None,
+        requestor: str = "system",
+    ) -> ApprovalRequest:
+        """
+        创建关键决策审批请求
+        """
+        self._request_counter += 1
+        request_id = (
+            f"REQ-{datetime.now().strftime('%Y%m%d')}-{self._request_counter:04d}"
+        )
+
+        risk_level = HIGH_RISK_DECISIONS.get(decision_type, RiskLevel.LOW)
+
+        request = ApprovalRequest(
+            request_id=request_id,
+            action_type=None,
+            decision_type=decision_type,
+            request_kind=ApprovalKind.DECISION,
             risk_level=risk_level,
             description=description,
             affected_resources=affected_resources,
@@ -365,15 +443,27 @@ class GovernanceGateway:
         print(f"\n{'=' * 60}")
         print(f"⚠️  审批请求: {request.request_id}")
         print(f"{'=' * 60}")
-        print(f"类型: {request.action_type.value}")
+        if request.request_kind == ApprovalKind.DECISION:
+            if request.decision_type:
+                type_label = f"decision:{request.decision_type.value}"
+            else:
+                type_label = "decision:unknown"
+        else:
+            type_label = (
+                request.action_type.value if request.action_type else "action:unknown"
+            )
+        print(f"类型: {type_label}")
         print(f"风险: {request.risk_level.value}")
         print(f"描述: {request.description}")
         print(f"资源: {', '.join(request.affected_resources)}")
         print(f"理由: {request.rationale}")
         if request.council_decision:
-            print(
-                f"理事会决策: {json.dumps(request.council_decision, ensure_ascii=False, indent=2)}"
+            council_payload = json.dumps(
+                request.council_decision,
+                ensure_ascii=False,
+                indent=2,
             )
+            print(f"理事会决策: {council_payload}")
         print(f"{'=' * 60}")
         print("请使用 gateway.approve() 或 gateway.reject() 处理此请求")
 
@@ -393,7 +483,10 @@ __all__ = [
     "GovernanceGateway",
     "ApprovalRequest",
     "ActionType",
+    "DecisionType",
+    "ApprovalKind",
     "RiskLevel",
     "HIGH_RISK_ACTIONS",
+    "HIGH_RISK_DECISIONS",
     "PROTECTED_PATHS",
 ]

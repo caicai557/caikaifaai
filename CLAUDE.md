@@ -7,11 +7,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**Name**: cesi-telegram-multi
-**Type**: Python backend application (telegram-web client with translation)
-**Main Purpose**: Multi-instance Telegram Web A runner with bidirectional translation support
+**Name**: cesi-council
+**Type**: Python backend application (Multi-Agent Council Framework)
+**Main Purpose**: Multi-agent orchestration system for AGI development workflows
 **Language**: Python 3.12+
-**Architecture**: Async/await with message interception and translation pipeline
+**Architecture**: Hierarchical Supervision with Wald Consensus + PTC (Programmatic Tool Calling)
 
 ## Common Commands
 
@@ -19,8 +19,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```bash
 # Install dependencies
-pip install -e ".[telegram]"        # Telegram features
 pip install -e ".[dev]"              # Development tools (pytest, ruff)
+pip install -e ".[council]"          # Council features (LLM integrations)
 
 # Testing
 just test                            # Run pytest on tests/ directory
@@ -53,74 +53,70 @@ just impl                            # Implementation mode (minimal patch + veri
 
 ### Core Modules
 
-```
+```text
 src/
-├── telegram_multi/           # Main Telegram multi-instance runner
-│   ├── message_interceptor.py   # Message interception & translation injection
-│   ├── translator.py            # Translation factory with provider pattern
-│   ├── instance_manager.py      # Multi-instance lifecycle management
-│   ├── browser_context.py       # Browser context setup (Playwright)
-│   ├── config.py                # Configuration models (Pydantic)
-│   └── translators/             # Translation provider implementations
-│       └── google.py            # Google Translate provider
-├── seabox/                   # API server module (FastAPI-based)
 ├── config.py                 # Global feature flags
 └── calculator.py             # Utility module
+
+council/
+├── agents/                   # Agent implementations
+│   ├── base_agent.py         # Abstract base class + _call_llm_structured()
+│   ├── architect.py          # Architect + vote_structured()
+│   ├── coder.py              # Engineer + vote_structured()
+│   └── security_auditor.py   # Security audit + vote_structured()
+├── facilitator/              # Consensus mechanisms
+│   ├── facilitator.py        # Debate management + RollingContext
+│   ├── wald_consensus.py     # SPRT algorithm
+│   └── shadow_facilitator.py # Shadow cabinet (speculative consensus)
+├── orchestration/            # Orchestration layer
+│   ├── adaptive_router.py    # Adaptive routing + BlastRadius
+│   ├── ledger.py             # Dual ledger (Task/Progress)
+│   └── blast_radius.py       # Code impact analyzer
+├── governance/               # Governance layer
+│   ├── constitution.py       # FSM rule interceptor
+│   └── gateway.py            # Output filter gateway
+├── protocol/                 # Communication protocol
+│   └── schema.py             # Pydantic structured protocol
+├── context/                  # Context management
+│   └── rolling_context.py    # Sliding window context
+├── memory/                   # Long-term memory
+│   ├── knowledge_graph.py    # Semantic relationship graph
+│   └── session.py            # Cross-session context
+└── self_healing/             # Self-healing loop
+    └── patch_generator.py    # LLM-driven patch generation
 ```
 
 ### Key Classes & Patterns
 
-**MessageInterceptor** (`message_interceptor.py`):
+**BaseAgent** (`council/agents/base_agent.py`):
 
-- Injects JavaScript to intercept Telegram messages
-- Translates messages bidirectionally based on config
-- Supports callbacks for message interception events
-- Uses `get_injection_script()` to return browser-side code
+- Abstract base class for all council agents
+- Provides `_call_llm_structured()` for structured LLM calls
+- Implements `vote_structured()` for consensus voting
 
-**Translator** (`translator.py`):
+**WaldConsensus** (`council/facilitator/wald_consensus.py`):
 
-- Factory pattern for creating translator instances
-- Plugin system: `register_provider(name, provider_class)`
-- Built-in Google Translate provider, extensible for DeepL/Argos
-- Caches translations to avoid duplicate API calls
+- Sequential Probability Ratio Test (SPRT) implementation
+- Dynamic decision: COMMIT / CONTINUE / STOP
 
-**InstanceManager** (`instance_manager.py`):
+**AdaptiveRouter** (`council/orchestration/adaptive_router.py`):
 
-- Manages lifecycle of multiple Telegram Web A instances
-- Coordinates browser context creation and cleanup
-- Handles async startup/shutdown of instances
-
-**TelegramConfig** (`config.py`):
-
-- Pydantic models for instance, translation, and browser configuration
-- Centralized configuration loading
-
-### Entry Points
-
-- `run_telegram.py`: CLI for launching multi-instance Telegram with translation
-- `run_dashboard.py`: Dashboard server for monitoring instances
-- Tests: `tests/test_*.py` files for each module
+- Risk-based routing to appropriate agents
+- BlastRadius analysis for change impact
 
 ## Testing Strategy
 
 - **Framework**: Pytest with coverage tracking
-- **Test Structure**: One test file per source module (e.g., `test_message_interceptor.py`)
-- **Mocking**: Use `unittest.mock` for translator and browser context mocks
+- **Test Structure**: One test file per source module
+- **Mocking**: Use `unittest.mock` for LLM and external service mocks
 - **Run**: `just test` or `pytest tests/` for all tests
-
-Example: Running a single test
-
-```bash
-pytest tests/test_translator.py -v
-pytest tests/test_translator.py::TestTranslator::test_translate -v
-```
 
 ## Development Standards
 
 - **Type Hints**: Required for all function signatures
-- **Async/Await**: Used for Playwright browser operations and Translator batching
+- **Async/Await**: Used for LLM calls and I/O operations
 - **Config**: Use Pydantic models for configuration
-- **Providers**: Use factory pattern for pluggable translators
+- **Providers**: Use factory pattern for pluggable LLM providers
 
 ## Batch Operations Protocol
 
@@ -195,7 +191,7 @@ All three must pass before shipping.
 - [NOTES.md](./NOTES.md): Session notes and decisions
 - [pyproject.toml](./pyproject.toml): Project metadata and dependencies
 
-# 理事会层级监督指令集 (2025.12.26)
+## 理事会层级监督指令集 (2025.12.26)
 
 ## 编排协议 (Orchestration)
 
@@ -211,6 +207,3 @@ All three must pass before shipping.
 
 - 会话接近上限时，自动调用 `/compact` 总结架构决策并归档至 `NOTES.md`。
 - 任务结束前，必须提供一段包含逻辑差异与风险提示的最终总结。
-
---------------------------------------------------------------------------------
-比喻理解： 这种层级化监督模式就像是顶级医疗专家组进行手术：Codex 5.2 是主刀医生（主席），手握手术方案（Task Ledger）进行全局调度；Gemini 3 Pro 是翻阅过病人几十年所有病历档案的资深顾问（Advisor）；Claude Code 则是拿着精密手术刀的执行医生。他们在 AGENTS.md 规定的无菌手术室（Docker 沙盒）内通过 MCP 统一接口 协作。而你作为董事长（人类用户），平时只需通过仪表板监控手术进展，仅在“主刀医生”请求时介入。

@@ -109,13 +109,13 @@ class AdaptiveRouter:
             re.compile(p, re.IGNORECASE) for p in MEDIUM_RISK_KEYWORDS
         ]
         self._low_patterns = [re.compile(p, re.IGNORECASE) for p in LOW_RISK_KEYWORDS]
-        
+
         # 2025 Best Practice: Impact-Aware Routing
         self._blast_analyzer = BlastRadiusAnalyzer(project_root)
 
     def assess_risk(
-        self, 
-        task: str, 
+        self,
+        task: str,
         context: Optional[str] = None,
         affected_files: Optional[List[str]] = None,
     ) -> RiskLevel:
@@ -131,10 +131,10 @@ class AdaptiveRouter:
             RiskLevel
         """
         text = f"{task} {context or ''}"
-        
+
         # Step 1: 基于关键词的风险评估
         keyword_risk = RiskLevel.MEDIUM
-        
+
         for pattern in self._high_patterns:
             if pattern.search(text):
                 keyword_risk = RiskLevel.HIGH
@@ -149,11 +149,11 @@ class AdaptiveRouter:
                     if pattern.search(text):
                         keyword_risk = RiskLevel.LOW
                         break
-        
+
         # Step 2: Blast Radius 分析 (如果提供了文件列表)
         if affected_files:
             blast_result = self._blast_analyzer.analyze_multiple(affected_files)
-            
+
             # 影响级别映射到风险级别
             impact_risk_map = {
                 ImpactLevel.LEAF: RiskLevel.LOW,
@@ -163,14 +163,14 @@ class AdaptiveRouter:
                 ImpactLevel.CORE: RiskLevel.CRITICAL,
             }
             blast_risk = impact_risk_map.get(blast_result.impact_level, RiskLevel.MEDIUM)
-            
+
             # 取两者中更高的风险级别
             risk_order = [RiskLevel.LOW, RiskLevel.MEDIUM, RiskLevel.HIGH, RiskLevel.CRITICAL]
             keyword_idx = risk_order.index(keyword_risk) if keyword_risk in risk_order else 1
             blast_idx = risk_order.index(blast_risk) if blast_risk in risk_order else 1
-            
+
             return risk_order[max(keyword_idx, blast_idx)]
-        
+
         return keyword_risk
 
     def route(self, task: str, context: Optional[str] = None) -> RoutingDecision:

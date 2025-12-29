@@ -44,6 +44,18 @@ class TestPtcSdk:
         assert "save_result" in VIRTUAL_SDK_DOCS
 
 
+import pytest
+
+# Check if typer is available
+try:
+    import typer
+
+    HAS_TYPER = True
+except ImportError:
+    HAS_TYPER = False
+
+
+@pytest.mark.skipif(not HAS_TYPER, reason="typer not installed")
 class TestPtcV2Autofix:
     """Tests for ptc_v2_autofix module."""
 
@@ -105,6 +117,7 @@ NameError: name 'price' is not defined"""
         assert 'd["price"]' in response or "FIXED" in response
 
 
+@pytest.mark.skipif(not HAS_TYPER, reason="typer not installed")
 class TestIntegration:
     """Integration tests for the full loop."""
 

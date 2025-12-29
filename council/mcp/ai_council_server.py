@@ -254,7 +254,7 @@ class AICouncilServer:
     async def query(self, prompt: str) -> ConsensusResponse:
         """
         Query all models and return synthesized consensus
-        
+
         Args:
             prompt: The question or task to send to all models
 
@@ -365,69 +365,69 @@ class AICouncilServer:
     def _calculate_agreement(self, responses: List[ModelResponse]) -> float:
         """
         Calculate agreement score between model responses
-        
+
         Uses response length similarity as a proxy for semantic agreement.
-        
+
         Args:
             responses: List of model responses
-            
+
         Returns:
             Agreement score between 0.0 and 1.0
         """
         successful = [r for r in responses if r.success and r.content]
-        
+
         if len(successful) <= 1:
             return 1.0  # Perfect agreement with 0 or 1 response
-            
+
         # Calculate length-based agreement
         lengths = [len(r.content) for r in successful]
         avg_length = sum(lengths) / len(lengths)
-        
+
         if avg_length == 0:
             return 1.0
-            
+
         # Calculate variance ratio
         variance = sum((l - avg_length) ** 2 for l in lengths) / len(lengths)
         std_dev = variance ** 0.5
-        
+
         # Normalize: lower variance = higher agreement
         coefficient_of_variation = std_dev / avg_length
         agreement = max(0.0, 1.0 - coefficient_of_variation)
-        
+
         return round(agreement, 2)
 
     def _synthesize_responses(self, prompt: str, responses: List[ModelResponse]) -> str:
         """
         Synthesize multiple model responses into a single coherent response
-        
+
         Args:
             prompt: Original user prompt
             responses: List of model responses
-            
+
         Returns:
             Synthesized response string
         """
         successful = [r for r in responses if r.success and r.content]
-        
+
         if not successful:
             return "No models returned successful responses. Please check model availability."
-            
+
         if len(successful) == 1:
             return f"[Synthesized from 1 model: {successful[0].model_name}]\n\n{successful[0].content}"
-            
+
         # Multiple successful responses - combine them
         model_names = [r.model_name for r in successful]
-        
+
         # For now, use the first response as primary (weighted synthesis can be added later)
         primary = successful[0]
-        
+
         synthesis = f"[Synthesized from {len(successful)} models: {', '.join(model_names)}]\n\n"
         synthesis += primary.content
-        
+
         # Add a brief note if other models had significantly different responses
         if len(successful) > 1:
             synthesis += f"\n\n---\n_Note: {len(successful)} models contributed to this response._"
-            
+
         return synthesis
 
     def get_status(self) -> Dict[str, Any]:

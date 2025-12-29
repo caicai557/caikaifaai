@@ -245,15 +245,15 @@ Rationale: [理由]
     # 2025 Best Practice: Structured Protocol Methods
     # These methods save ~70% tokens compared to NL versions
     # ============================================================
-    
+
     def vote_structured(self, proposal: str, context: Optional[Dict[str, Any]] = None):
         """
         [2025 Best Practice] 对提案进行实现可行性投票 (结构化输出)
-        
+
         使用 MinimalVote schema，节省 ~70% Token。
         """
         from council.protocol.schema import MinimalVote
-        
+
         prompt = f"""
 作为工程师，评估以下提案的实现可行性:
 提案: {proposal}
@@ -262,23 +262,23 @@ Rationale: [理由]
 请投票并识别风险类别 (sec=安全, perf=性能, maint=维护, arch=架构)。
 """
         result = self._call_llm_structured(prompt, MinimalVote)
-        
+
         self.add_to_history({
             "action": "vote_structured",
             "proposal": proposal[:100],
             "vote": result.vote.to_legacy(),
         })
-        
+
         return result
-    
+
     def think_structured(self, task: str, context: Optional[Dict[str, Any]] = None):
         """
         [2025 Best Practice] 从实现角度分析任务 (结构化输出)
-        
+
         使用 MinimalThinkResult schema，限制输出长度。
         """
         from council.protocol.schema import MinimalThinkResult
-        
+
         prompt = f"""
 作为工程师，分析以下任务的实现方案:
 任务: {task}
@@ -288,13 +288,13 @@ Rationale: [理由]
 """
         result = self._call_llm_structured(prompt, MinimalThinkResult)
         result.perspective = "implementation"
-        
+
         self.add_to_history({
             "action": "think_structured",
             "task": task[:100],
             "confidence": result.confidence,
         })
-        
+
         return result
 
 

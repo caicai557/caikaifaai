@@ -1,0 +1,107 @@
+# 模型配置文件 - December 2025
+# 基于官方验证数据的最优分工
+
+# =============================================================
+# 可用模型定义
+# =============================================================
+models:
+  claude-4.5-opus:
+    provider: anthropic
+    display_name: "Claude 4.5 Opus"
+    swe_bench: 80.9
+    context_window: 200000
+    relative_cost: 4.0
+    latency: high
+    best_for:
+      - complex_refactoring
+      - production_code
+      - multi_file_changes
+
+  claude-4.5-sonnet:
+    provider: anthropic
+    display_name: "Claude 4.5 Sonnet"
+    swe_bench: 77.2
+    context_window: 200000
+    relative_cost: 1.0
+    latency: low
+    best_for:
+      - daily_coding
+      - debugging
+      - documentation
+
+  gpt-5.2-codex:
+    provider: openai
+    display_name: "GPT 5.2 Codex"
+    swe_bench: 78.0
+    context_window: 200000
+    relative_cost: 2.0
+    latency: medium
+    best_for:
+      - planning
+      - architecture
+      - security_audit
+
+  gemini-3-pro:
+    provider: google
+    display_name: "Gemini 3 Pro"
+    swe_bench: 75.0
+    context_window: 1000000  # 1M tokens!
+    relative_cost: 4.0
+    latency: medium
+    best_for:
+      - codebase_review
+      - deep_analysis
+      - multimodal
+
+  gemini-3-flash:
+    provider: google
+    display_name: "Gemini 3 Flash"
+    swe_bench: 78.0
+    context_window: 1000000  # 1M tokens!
+    relative_cost: 1.0
+    latency: low  # 3x faster than Pro
+    best_for:
+      - testing
+      - high_frequency
+      - cost_sensitive
+
+# =============================================================
+# 任务类型路由
+# =============================================================
+routing:
+  planning: gpt-5.2-codex
+  coding: claude-4.5-sonnet
+  review: gemini-3-pro
+  debugging: claude-4.5-sonnet
+  documentation: claude-4.5-sonnet
+  refactoring: claude-4.5-opus
+  testing: gemini-3-flash
+  security: gpt-5.2-codex
+  general: claude-4.5-sonnet
+
+# 备选路由 (主模型不可用时)
+fallback:
+  planning: claude-4.5-opus
+  coding: gemini-3-flash
+  review: claude-4.5-opus
+  debugging: gemini-3-flash
+  documentation: gemini-3-flash
+  refactoring: gpt-5.2-codex
+  testing: claude-4.5-sonnet
+  security: claude-4.5-opus
+  general: gemini-3-flash
+
+# =============================================================
+# 成本优化策略
+# =============================================================
+cost_optimization:
+  enabled: false  # 开启后优先使用便宜模型
+  max_cost_multiplier: 2.0  # 最多接受 2x 基准成本
+
+# =============================================================
+# 默认配置
+# =============================================================
+defaults:
+  fast_model: gemini-3-flash
+  complex_model: claude-4.5-opus
+  default_model: claude-4.5-sonnet

@@ -1,325 +1,136 @@
 # 代码地图 (Code Map)
 
 > 本文档提供项目的整体结构视图，帮助 AI 智能体快速理解项目上下文。
+> **最后更新**: 2025-12-29
 
 ## 项目概览
 
 | 字段 | 值 |
 |------|-----|
-| **项目名称** | cesi-telegram-multi |
+| **项目名称** | cesi-council |
 | **项目类型** | Python 后端应用 |
-| **主要用途** | Telegram Web A 多开 + 双向自动翻译 |
+| **主要用途** | 多智能体理事会框架 (AGI 开发工作流) |
 | **Python 版本** | 3.12+ |
-| **架构模式** | Async/await + 消息拦截 + 翻译管道 |
+| **架构模式** | 层级监督 + Wald 共识 + PTC 程序化调用 |
+| **代码行数** | ~12,200 行 |
 
 ## 目录结构
 
 ```
-cesi-telegram-multi/
-├── src/
-│   ├── telegram_multi/           # 核心模块
-│   │   ├── config.py             # Pydantic 配置模型
-│   │   ├── browser_context.py    # 浏览器上下文包装器
-│   │   ├── instance_manager.py   # 多实例生命周期管理
-│   │   ├── translator.py         # 翻译抽象层 + 工厂
-│   │   ├── message_interceptor.py # 消息拦截 + JS 注入
-│   │   └── translators/
-│   │       ├── __init__.py
-│   │       └── google.py         # Google 翻译实现
-│   ├── seabox/                   # API 服务器模块 (FastAPI)
+cesi-council/
+├── src/                          # 应用源码
 │   ├── config.py                 # 全局特性开关
-│   └── calculator.py             # 工具模块
-├── tests/
-│   ├── test_telegram_config.py   # 配置系统测试 (23)
-│   ├── test_browser_context.py   # 浏览器上下文测试 (9)
-│   ├── test_instance_manager.py  # 实例管理器测试 (11)
-│   ├── test_translator.py        # 翻译抽象层测试 (13)
-│   ├── test_translators_google.py # Google 翻译测试 (10)
-│   ├── test_message_interceptor.py # 消息拦截测试
-│   └── ...
+│   ├── calculator.py             # 工具模块
+│   └── seabox/                   # API 服务器模块
+├── council/                      # 核心理事会模块 (68 files)
+│   ├── agents/           (13)    # 智能体实现
+│   ├── facilitator/      (4)     # 共识机制
+│   ├── orchestration/    (10)    # 编排层 ⬆️
+│   ├── governance/       (4)     # 治理层
+│   ├── protocol/         (2)     # 通信协议
+│   ├── context/          (4)     # 上下文管理 ⬆️
+│   ├── memory/           (4)     # 长期记忆
+│   ├── mcp/              (5)     # MCP 服务器
+│   ├── self_healing/     (3)     # 自愈循环
+│   ├── tdd/              (2)     # TDD 工具
+│   ├── auth/             (2)     # 认证模块
+│   ├── prompts/          (1)     # 提示词模板
+│   └── tests/            (13)    # 模块测试
+├── tests/                        # 主测试套件 (25 files)
+├── scripts/                      # 工具脚本 (35 files)
+├── config/                       # 配置文件
 ├── .council/                     # 多模型理事会配置
 ├── .claude/                      # Claude Code 配置
-├── justfile                      # 构建命令
+├── Justfile                      # 构建命令
 └── pyproject.toml                # 项目元数据
 ```
 
-## 核心模块详解
+## Council 核心模块
 
-### 1. config.py (Phase 1) ✅
+### 1. agents/ - 智能体层
 
-```python
-# 配置模型层级
-TranslationConfig   # 翻译配置 (provider, source_lang, target_lang)
-BrowserConfig       # 浏览器配置 (headless, executable_path)
-InstanceConfig      # 单实例配置 (id, profile_path, translation)
-TelegramConfig      # 全局配置 + YAML 加载
-```
+| 类名 | 文件 | 职责 |
+|------|------|------|
+| `BaseAgent` | base_agent.py | 抽象基类，`_call_llm_structured()` |
+| `Orchestrator` | orchestrator.py | 理事会主席，任务拆解 |
+| `ArchitectAgent` | architect.py | 架构师智能体 |
+| `CoderAgent` | coder.py | 工程师智能体 |
+| `SecurityAuditor` | security_auditor.py | 安全审计 (一票否决) |
 
-**契约**:
-- `TranslationConfig.provider` ∈ {google, deepl, local}
-- `TelegramConfig.load_from_yaml()` 支持多实例配置
+### 2. orchestration/ - 编排层
 
-### 2. browser_context.py (Phase 2) ✅
+| 类名 | 文件 | 职责 |
+|------|------|------|
+| `TaskClassifier` | task_classifier.py | **多模型智能路由** |
+| `AgentRegistry` | agent_registry.py | **动态 Agent 发现** |
+| `DelegationManager` | delegation.py | **委托链管理** |
+| `AdaptiveRouter` | adaptive_router.py | 风险分级路由 |
+| `BlastRadiusAnalyzer` | blast_radius.py | 代码影响分析 |
+| `Hub` | hub.py | Pub/Sub 消息总线 |
+| `DualLedger` | ledger.py | 双账本 (Task/Progress) |
+| `StateGraph` | graph.py | 状态机图 |
 
-```python
-class BrowserContext(BaseModel):
-    instance_id: str        # 实例唯一标识
-    profile_path: str       # 用户数据目录 (隔离)
-    browser_config: BrowserConfig
-    target_url: str = "https://web.telegram.org/a/"
-    port: int               # 调试端口
-```
+### 3. context/ - 上下文管理
 
-**契约**:
-- 每实例独立 `user_data_dir`
-- 默认目标 URL: Telegram Web A
+| 类名 | 文件 | 职责 |
+|------|------|------|
+| `RollingContext` | rolling_context.py | 滑动窗口上下文 |
+| `GeminiCacheManager` | gemini_cache.py | **Gemini 服务端缓存** |
+| `AutoCompactTrigger` | auto_compact.py | **自动压缩触发器** |
 
-### 3. instance_manager.py (Phase 2) ✅
+### 4. governance/ - 治理层
 
-```python
-class InstanceManager:
-    def add_instance(config: InstanceConfig) -> BrowserContext
-    def get_instance(instance_id: str) -> Optional[BrowserContext]
-    def remove_instance(instance_id: str) -> bool
-    def list_instances() -> List[str]
+| 类名 | 文件 | 职责 |
+|------|------|------|
+| `Constitution` | constitution.py | FSM 规则拦截器 |
+| `Gateway` | gateway.py | 输出过滤网关 |
+| `PTCEnforcer` | ptc_enforcer.py | **PTC 脚本强制** |
 
-    @classmethod
-    def from_config(config: TelegramConfig) -> InstanceManager
-```
+### 5. facilitator/ - 共识机制
 
-**契约**:
-- 端口自动分配 (9222 起始，递增)
-- `from_config()` 批量加载实例
+| 类名 | 文件 | 职责 |
+|------|------|------|
+| `WaldConsensus` | wald_consensus.py | SPRT 共识算法 |
+| `ShadowFacilitator` | shadow_facilitator.py | Flash→Pro 投机共识 |
+| `Facilitator` | facilitator.py | 辩论管理 |
 
-### 4. translator.py (Phase 3) ✅
+### 6. mcp/ - MCP 服务器
 
-```python
-class Translator(ABC):
-    @abstractmethod
-    async def translate(text: str, source: str, target: str) -> str
-    async def batch_translate(texts: List[str], ...) -> List[str]
-    def clear_cache() -> None
+| 类名 | 文件 | 职责 |
+|------|------|------|
+| `ToolSearchTool` | tool_search.py | **动态工具发现** |
+| `AICouncilServer` | ai_council_server.py | MCP 服务实现 |
 
-class TranslatorFactory:
-    @staticmethod
-    def create(config: TranslationConfig) -> Translator
-    @staticmethod
-    def register_provider(name: str, cls: Type[Translator])
-```
+## Token 效率实现
 
-**契约**:
-- 翻译失败时返回原文本 (优雅降级)
-- 支持动态注册提供商
+| Pattern | 实现位置 | Token 节省 |
+|---------|----------|:----------:|
+| Rolling Context | `context/rolling_context.py` | O(N)→O(1) |
+| Gemini Cache | `context/gemini_cache.py` | ~90% |
+| Auto-Compact | `context/auto_compact.py` | 阈值触发 |
+| Tool Search | `mcp/tool_search.py` | 动态加载 |
+| Protocol Buffers | `protocol/schema.py` | ~70% |
+| Shadow Cabinet | `facilitator/shadow_facilitator.py` | ~90% |
 
-### 5. translators/google.py (Phase 3) ✅
+## 2025年12月 模型分工
 
-```python
-class GoogleTranslator(Translator):
-    def __init__(max_retries=3, backoff_factor=0.5)
-    async def translate(text, source, target, enabled=True) -> str
-```
-
-**契约**:
-- 缓存键使用 MD5 哈希 (避免碰撞)
-- 指数退避重试 (max_retries=3)
-- `enabled=False` 时直接返回原文本
-
-### 6. message_interceptor.py (Phase 4) ✅
-
-```python
-class MessageType(Enum):
-    INCOMING = "incoming"
-    OUTGOING = "outgoing"
-
-class Message(BaseModel):
-    message_type: MessageType
-    content: str
-    sender: Optional[str]
-    timestamp: Optional[str]
-    translated_content: Optional[str]
-
-class MessageInterceptor:
-    def __init__(config: TranslationConfig, translator=None)
-    async def intercept(message: Message) -> Message
-    def get_injection_script() -> str  # 返回浏览器端 JS
-    def register_callback(callback: Callable)
-```
-
-**契约**:
-- 双向翻译 (incoming: target→source, outgoing: source→target)
-- `get_injection_script()` 返回 DOM 监听 JS 代码
-
-## 开发进度
-
-| Phase | 模块 | 状态 | 测试数 |
-|:-----:|------|:----:|:------:|
-| 1 | config.py | ✅ | 23 |
-| 2 | browser_context.py | ✅ | 9 |
-| 2 | instance_manager.py | ✅ | 11 |
-| 3 | translator.py | ✅ | 13 |
-| 3 | translators/google.py | ✅ | 10 |
-| 4 | message_interceptor.py | ✅ | ~20 |
-| 5 | CLI 工具 | ⏳ | - |
-| 6 | Dashboard | ⏳ | - |
-
-**总测试数**: 107 tests
-
-## 待开发 (Phase 5-6)
-
-### Phase 5: CLI 工具
-
-```
-src/telegram_multi/
-├── cli/
-│   ├── __init__.py
-│   ├── launch_instance.py    # 单实例启动
-│   └── launch_multi.py       # 多实例启动
-
-# 入口点
-run_telegram.py               # CLI 主入口
-```
-
-**预期功能**:
-```bash
-# 单实例
-python run_telegram.py --config telegram.yaml --instance acc1
-
-# 多实例
-python run_telegram.py --config telegram.yaml --all
-```
-
-### Phase 6: Dashboard
-
-```
-src/telegram_multi/
-├── dashboard/
-│   ├── __init__.py
-│   ├── server.py             # FastAPI 服务器
-│   └── templates/            # HTML 模板
-
-run_dashboard.py              # Dashboard 入口
-```
-
-**预期功能**:
-- 实例状态监控
-- 翻译统计
-- 日志查看
-
-## 依赖关系
-
-```
-telegram_multi/
-├── config.py                 # 无依赖
-├── browser_context.py        # → config.py
-├── instance_manager.py       # → config.py, browser_context.py
-├── translator.py             # → config.py
-├── translators/google.py     # → translator.py
-└── message_interceptor.py    # → config.py, translator.py
-```
+| 任务类型 | 推荐模型 | SWE-bench |
+|---------|---------|:---------:|
+| 规划/架构 | GPT 5.2 Codex | 78% |
+| 日常编码 | Claude 4.5 Sonnet | 77.2% |
+| 复杂重构 | Claude 4.5 Opus | **80.9%** |
+| 全库审计 | Gemini 3 Pro | 1M ctx |
+| 快速任务 | Gemini 3 Flash | 3x 速度 |
 
 ## 常用命令
 
 ```bash
-# 安装
-pip install -e ".[telegram]"      # 基础功能
-pip install -e ".[telegram-full]" # 含 DeepL + Argos
-pip install -e ".[dev]"           # 开发工具
-
 # 测试
 just test                         # 运行所有测试
 just verify                       # compile + lint + test
 
 # 开发
+just dev "任务描述"               # 6步自愈工作流
 just tdd                          # TDD 模式
 just impl                         # 实现模式
 ```
-
-## 配置示例
-
-```yaml
-# telegram.yaml
-browser:
-  headless: false
-  executable_path: null
-
-instances:
-  - id: account1
-    profile_path: ./profiles/acc1
-    translation:
-      enabled: true
-      provider: google
-      source_lang: zh
-      target_lang: en
-
-  - id: account2
-    profile_path: ./profiles/acc2
-    translation:
-      enabled: true
-      provider: google
-      source_lang: en
-      target_lang: zh
-```
-
-## 下一步开发建议
-
-1. **Phase 5 CLI**: 创建 `launch_instance.py` 和 `launch_multi.py`
-2. **Playwright 集成**: 实现实际的浏览器启动逻辑
-3. **JS 注入测试**: 在真实 Telegram Web A 中测试拦截脚本
-4. **DeepL 提供商**: 实现 `translators/deepl.py`
-
----
-
-## Council 模块 (2025 Multi-Agent Architecture)
-
-### 目录结构
-
-```
-council/
-├── agents/           # 智能体实现 (13 files)
-│   ├── base_agent.py   # 抽象基类 + _call_llm_structured()
-│   ├── architect.py    # 架构师 + vote_structured()
-│   ├── coder.py        # 工程师 + vote_structured()
-│   └── security_auditor.py  # 安全审计 + vote_structured()
-├── facilitator/      # 共识机制 (4 files)
-│   ├── facilitator.py      # 辩论管理 + RollingContext
-│   ├── wald_consensus.py   # SPRT 算法
-│   └── shadow_facilitator.py  # 影子内阁 (投机共识)
-├── orchestration/    # 编排层 (6 files)
-│   ├── adaptive_router.py  # 自适应路由 + BlastRadius
-│   ├── ledger.py           # 双账本 (Task/Progress)
-│   └── blast_radius.py     # 代码影响分析器
-├── governance/       # 治理层 (3 files)
-│   ├── constitution.py     # FSM 规则拦截器
-│   └── gateway.py          # 输出过滤网关
-├── protocol/         # 通信协议 (2 files)
-│   └── schema.py           # Pydantic 结构化协议
-├── context/          # 上下文管理 (2 files)
-│   └── rolling_context.py  # 滑动窗口上下文
-├── memory/           # 长期记忆 (4 files)
-│   ├── knowledge_graph.py  # 语义关系图谱
-│   └── session.py          # 跨会话上下文
-└── self_healing/     # 自愈循环 (3 files)
-    └── patch_generator.py  # LLM 驱动的补丁生成
-```
-
-### 核心类
-
-| 类名 | 文件 | 职责 |
-|------|------|------|
-| `BaseAgent` | agents/base_agent.py | 抽象基类，提供 `_call_llm_structured()` |
-| `WaldConsensus` | facilitator/wald_consensus.py | SPRT 共识算法 |
-| `ShadowFacilitator` | facilitator/shadow_facilitator.py | Flash→Pro 投机共识 |
-| `AdaptiveRouter` | orchestration/adaptive_router.py | 风险分级路由 |
-| `BlastRadiusAnalyzer` | orchestration/blast_radius.py | 代码影响分析 |
-| `RollingContext` | context/rolling_context.py | Token 高效上下文 |
-| `MinimalVote` | protocol/schema.py | 结构化投票协议 |
-
-### 2025 Token Efficiency 实现
-
-| Pattern | 实现位置 | Token 节省 |
-|---------|----------|------------|
-| Rolling Context | `context/rolling_context.py` | O(N)→O(1) |
-| Protocol Buffers | `protocol/schema.py` | ~70% |
-| Shadow Cabinet | `facilitator/shadow_facilitator.py` | ~90% |
-| Blast Radius | `orchestration/blast_radius.py` | 智能路由 |
-

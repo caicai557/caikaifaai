@@ -33,6 +33,10 @@ class EventType(Enum):
     HEARTBEAT = "system.heartbeat"
     ERROR = "system.error"
 
+    # HITL interrupts
+    INTERRUPT_RAISED = "hitl.interrupt_raised"
+    INTERRUPT_RESUMED = "hitl.interrupt_resumed"
+
 
 @dataclass
 class Event:

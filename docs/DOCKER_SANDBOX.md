@@ -40,6 +40,30 @@ docker-compose exec python-sandbox python tools/batch_executor.py config.yaml
 docker-compose exec python-sandbox pip install -r requirements.txt
 ```
 
+#### PTC Runner 沙箱选择
+```bash
+# 使用 Docker 沙箱
+PTC_SANDBOX_PROVIDER=docker python scripts/ptc_runner.py --code 'print("hello")'
+
+# 使用 E2B 沙箱 (需要 E2B_API_KEY)
+E2B_API_KEY=your_key PTC_SANDBOX_PROVIDER=e2b \
+  python scripts/ptc_runner.py --code 'print("hello")'
+
+# 使用本地沙箱
+PTC_SANDBOX_PROVIDER=local python scripts/ptc_runner.py --code 'print("hello")'
+```
+
+#### 分布式队列（Redis + RabbitMQ + Celery）
+```bash
+# 启动队列服务与 Worker
+docker-compose up -d redis rabbitmq celery-worker
+
+# 查看 Worker 日志
+docker-compose logs -f celery-worker
+```
+
+RabbitMQ 管理面板: http://localhost:15672 (guest/guest)
+
 #### 测试运行器（只读模式）
 ```bash
 # 运行测试（安全的只读模式）

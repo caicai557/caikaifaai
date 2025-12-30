@@ -35,6 +35,12 @@ from council.self_healing.loop import (
     HealingReport,
     HealingStatus,
 )
+# 2025 改进: 专业化 Agent 集成
+from council.agents.orchestrator import Orchestrator, SubTask as OrchestratorSubTask
+from council.agents.architect import Architect
+from council.agents.coder import Coder
+from council.agents.security_auditor import SecurityAuditor
+
 
 
 class DevStatus(Enum):
@@ -57,6 +63,7 @@ class SubTask:
     id: str
     description: str
     model: RecommendedModel
+    assigned_agent: str = "Coder"  # 2025: 分配的专业 Agent
     status: str = "pending"
     result: Optional[str] = None
     error: Optional[str] = None
@@ -134,6 +141,14 @@ class DevOrchestrator:
             working_dir=working_dir,
         )
 
+        # 2025 改进: 专业化 Agent 实例
+        self.orchestrator_agent = Orchestrator()
+        self.agents = {
+            "Architect": Architect(),
+            "Coder": Coder(),
+            "SecurityAuditor": SecurityAuditor(),
+        }
+
         # 状态跟踪
         self._current_status = DevStatus.ANALYZING
         self._start_time: Optional[datetime] = None
@@ -192,7 +207,12 @@ class DevOrchestrator:
             # 6. 决策
             if consensus_result.decision == ConsensusDecision.AUTO_COMMIT:
                 self._update_status(DevStatus.COMPLETED)
-                message = f"✅ 完成! π={consensus_result.pi_approve:.3f}"
+                # 2025 P1: Git 自动提交
+                commit_result = self._git_commit(task)
+                if commit_result:
+                    message = f"✅ 完成并已提交! π={consensus_result.pi_approve:.3f}"
+                else:
+                    message = f"✅ 完成! π={consensus_result.pi_approve:.3f} (Git 提交跳过)"
             elif consensus_result.decision == ConsensusDecision.REJECT:
                 self._update_status(DevStatus.FAILED)
                 message = f"❌ 失败. {consensus_result.reason}"
@@ -223,62 +243,51 @@ class DevOrchestrator:
     async def _plan_subtasks(
         self, task: str, classification: ClassificationResult
     ) -> List[SubTask]:
-        """规划子任务"""
-        # 使用 LLM 拆解任务
-        prompt = f"""请将以下开发任务拆解为3-5个可独立执行的子任务。
-每个子任务应该是一个具体的代码变更。
-
-任务: {task}
-任务类型: {classification.task_type.value}
-
-返回格式 (每行一个子任务):
-1. 子任务描述
-2. 子任务描述
-3. 子任务描述
-"""
-        response = await self.llm_fn(prompt, classification.recommended_model.value)
-
-        # 解析响应
-        lines = [l.strip() for l in response.strip().split("\n") if l.strip()]
+        """规划子任务 - 使用 Orchestrator 结构化拆解"""
+        # 2025 改进: 使用 Orchestrator Agent 进行智能拆解
+        decomposition = self.orchestrator_agent.decompose(task)
+        
         subtasks = []
-        for i, line in enumerate(lines[:5]):
-            clean = line.lstrip("0123456789.-) ").strip()
-            if clean:
-                subtasks.append(
-                    SubTask(
-                        id=f"subtask_{i + 1}",
-                        description=clean,
-                        model=classification.recommended_model,
-                    )
-                )
-
-        # 至少有一个任务
-        if not subtasks:
-            subtasks = [
+        for orch_subtask in decomposition.subtasks:
+            subtasks.append(
                 SubTask(
-                    id="subtask_1",
-                    description=task,
+                    id=orch_subtask.id,
+                    description=orch_subtask.description,
                     model=classification.recommended_model,
+                    # 新增: 记录分配的 Agent
+                    assigned_agent=getattr(orch_subtask, 'assigned_agent', 'Coder'),
                 )
-            ]
-
+            )
+        
+        self._log(f"📋 Orchestrator 拆解为 {len(subtasks)} 个子任务")
+        for st in subtasks:
+            self._log(f"   → {st.assigned_agent}: {st.description[:40]}...")
+        
         return subtasks
 
     async def _execute_subtask(self, subtask: SubTask) -> Optional[str]:
-        """执行单个子任务"""
-        prompt = f"""请执行以下开发任务并生成代码:
-
-任务: {subtask.description}
-
-请直接输出代码变更，包括:
-1. 需要修改的文件路径
-2. 完整的代码内容
-"""
+        """执行单个子任务 - 2025: 使用专业化 Agent"""
+        agent_name = getattr(subtask, 'assigned_agent', 'Coder')
+        agent = self.agents.get(agent_name)
+        
+        if agent is None:
+            self._log(f"⚠️ 未知 Agent: {agent_name}, 降级到 Coder")
+            agent = self.agents["Coder"]
+        
+        self._log(f"🤖 {agent_name} 执行: {subtask.description[:40]}...")
+        
         try:
-            result = await self.llm_fn(prompt, subtask.model.value)
-            return result
+            # 调用 Agent 的 execute 方法
+            exec_result = agent.execute(subtask.description)
+            
+            if exec_result.success:
+                return exec_result.output
+            else:
+                subtask.error = "; ".join(exec_result.errors) if exec_result.errors else "执行失败"
+                return exec_result.output  # 仍返回输出以便调试
         except Exception as e:
             subtask.error = str(e)
+            self._log(f"❌ {agent_name} 执行失败: {e}")
             return None
 
     def _collect_votes(
@@ -343,6 +352,28 @@ class DevOrchestrator:
                 }
             )
 
+        # 2025 改进: 收集 SecurityAuditor 独立审核投票
+        security_agent = self.agents.get("SecurityAuditor")
+        if security_agent:
+            try:
+                # 使用 SecurityAuditor 的 vote 方法审核整体变更
+                completed_tasks = [s for s in subtasks if s.status == "done"]
+                if completed_tasks:
+                    changes_summary = "\n".join([s.description for s in completed_tasks[:3]])
+                    security_vote = security_agent.vote(
+                        f"审核以下代码变更的安全性:\n{changes_summary}"
+                    )
+                    votes.append(
+                        {
+                            "agent": "SecurityAuditor",
+                            "decision": security_vote.decision.value,
+                            "confidence": security_vote.confidence,
+                            "rationale": security_vote.rationale[:100],
+                        }
+                    )
+            except Exception:
+                pass  # 静默失败，不阻塞主流程
+
         return votes
 
     async def _default_llm(self, prompt: str, model: str) -> str:
@@ -370,6 +401,34 @@ class DevOrchestrator:
         if self.verbose:
             ts = datetime.now().strftime("%H:%M:%S")
             print(f"[{ts}] DevOrchestrator: {msg}")
+
+    def _git_commit(self, task: str) -> bool:
+        """2025 P1: Git 自动提交"""
+        import subprocess
+        try:
+            # Stage all changes
+            subprocess.run(
+                ["git", "add", "-A"],
+                cwd=self.working_dir,
+                capture_output=True,
+                check=True,
+            )
+            # Commit with task description
+            commit_msg = f"[council] {task[:50]}"
+            result = subprocess.run(
+                ["git", "commit", "-m", commit_msg],
+                cwd=self.working_dir,
+                capture_output=True,
+            )
+            if result.returncode == 0:
+                self._log(f"📝 Git commit: {commit_msg}")
+                return True
+            else:
+                self._log("⚠️ Git commit 跳过 (无变更或失败)")
+                return False
+        except Exception as e:
+            self._log(f"⚠️ Git 不可用: {e}")
+            return False
 
 
 # 导出

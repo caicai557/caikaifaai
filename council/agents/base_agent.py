@@ -14,8 +14,8 @@ from pydantic import BaseModel
 from council.core.llm_client import LLMClient, default_client
 
 # 默认模型 - 2025 December 配置
-# LiteLLM 格式: gemini/模型名
-DEFAULT_MODEL = "gemini/gemini-2.0-flash"  # Gemini 首选
+# vertex_ai/ 使用 Google Cloud ADC 凭证登录
+DEFAULT_MODEL = "vertex_ai/gemini-2.0-flash"
 
 
 class VoteDecision(Enum):

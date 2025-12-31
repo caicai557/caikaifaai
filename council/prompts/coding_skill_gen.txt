@@ -1,0 +1,7 @@
+任务: {task}
+目标文件: {target_file}
+
+上下文:
+{context_str}
+
+请生成完整的代码文件内容。

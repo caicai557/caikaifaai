@@ -1,0 +1,6 @@
+Topic: {topic}
+
+Sources:
+{sources_str}
+
+Summarize:

@@ -20,6 +20,7 @@ import shlex
 from .base_skill import BaseSkill
 from council.tools.file_system import FileTools
 from council.observability.tracer import AgentTracer
+from council.prompts import load_prompt
 
 logger = logging.getLogger(__name__)
 
@@ -226,15 +227,14 @@ class CodingSkill(BaseSkill):
         """生成代码 (模拟或 LLM)"""
         if self.llm_client:
             # 实际 LLM 调用
-            prompt = f"""
-任务: {task}
-目标文件: {target_file}
+            prompt_template = load_prompt("coding_skill_gen")
+            context_str = chr(10).join(
+                f"--- {f} ---{chr(10)}{c[:4000]}" for f, c in context.items()
+            )
+            prompt = prompt_template.format(
+                task=task, target_file=target_file, context_str=context_str
+            )
 
-上下文:
-{chr(10).join(f"--- {f} ---{chr(10)}{c[:4000]}" for f, c in context.items())}
-
-请生成完整的代码文件内容。
-"""
             complete = getattr(self.llm_client, "complete", None)
             if not callable(complete):
                 raise NotImplementedError("llm_client must provide complete()")
@@ -303,16 +303,12 @@ if __name__ == "__main__":
 
         if self.llm_client:
             # 实际 LLM 修复
-            prompt = f"""
-原始任务: {original_task}
-当前代码:
-{current_code[:4000]}
-
-错误信息:
-{error[:4000]}
-
-请修复代码并返回完整的修复后代码。
-"""
+            prompt_template = load_prompt("coding_skill_fix")
+            prompt = prompt_template.format(
+                original_task=original_task,
+                current_code=current_code[:4000],
+                error=error[:4000],
+            )
             complete = getattr(self.llm_client, "complete", None)
             if not callable(complete):
                 raise NotImplementedError("llm_client must provide complete()")

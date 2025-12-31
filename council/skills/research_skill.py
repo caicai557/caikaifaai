@@ -4,6 +4,7 @@ import asyncio
 import logging
 from .base_skill import BaseSkill
 from council.observability.tracer import AgentTracer
+from council.prompts import load_prompt
 
 logger = logging.getLogger(__name__)
 
@@ -179,10 +180,9 @@ class ResearchSkill(BaseSkill):
                 truncated_contents.append(truncated)
                 total_chars += len(truncated)
 
-            prompt = (
-                f"Topic: {topic}\n\nSources:\n"
-                + "\n".join(truncated_contents)
-                + "\n\nSummarize:"
+            prompt_template = load_prompt("research_skill")
+            prompt = prompt_template.format(
+                topic=topic, sources_str="\n".join(truncated_contents)
             )
             complete = getattr(self.llm_client, "complete", None)
             if not callable(complete):

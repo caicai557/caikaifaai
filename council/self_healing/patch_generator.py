@@ -24,7 +24,7 @@ class PatchGenerator:
         patch = generator.generate_patch(diagnosis)
     """
 
-    def __init__(self, model: str = "gemini/gemini-2.0-flash"):
+    def __init__(self, model: str = "vertex_ai/gemini-2.0-flash"):
         """
         Initialize the patch generator
 

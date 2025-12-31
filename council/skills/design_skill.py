@@ -15,6 +15,7 @@ import os
 from .base_skill import BaseSkill
 from council.tools.file_system import FileTools
 from council.observability.tracer import AgentTracer
+from council.prompts import load_prompt
 
 logger = logging.getLogger(__name__)
 
@@ -149,17 +150,11 @@ class DesignSkill(BaseSkill):
         """生成文档内容"""
         if self.llm_client:
             # 实际 LLM 调用
-            prompt = f"""
-需求: {requirement}
-图表类型: {", ".join(diagram_types)}
-
-请生成一份完整的 Markdown 架构设计文档，包含以下章节：
-1. 背景与目标
-2. 架构概览 (包含 Mermaid 图)
-3. 核心流程 (包含 Mermaid 图)
-4. 数据模型
-5. API 接口
-"""
+            # 实际 LLM 调用
+            prompt_template = load_prompt("design_skill")
+            prompt = prompt_template.format(
+                requirement=requirement, diagram_types=", ".join(diagram_types)
+            )
             complete = getattr(self.llm_client, "complete", None)
             if not callable(complete):
                 raise NotImplementedError("llm_client must provide complete()")

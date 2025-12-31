@@ -13,10 +13,13 @@ from pydantic import BaseModel, Field
 import asyncio
 import logging
 import os
+import sys
+import subprocess
 from .base_skill import BaseSkill
 from council.tools.file_system import FileTools
 from council.tools.programmatic_tools import ProgrammaticToolExecutor
 from council.observability.tracer import AgentTracer
+from council.prompts import load_prompt
 
 logger = logging.getLogger(__name__)
 
@@ -116,24 +119,55 @@ class DataAnalysisSkill(BaseSkill):
                         input_data.data_file, input_data.goal, input_data.output_dir
                     )
 
-                # 3. 执行代码 (PTC)
+                # 3. 执行代码 (Script-First)
+                script_path = os.path.join(input_data.output_dir, "analysis_script.py")
+                abs_script_path = os.path.join(self.working_dir, script_path)
+
+                self.file_tools.write_file(script_path, code)
+                logger.info(f"📜 [DataAnalysisSkill] 脚本已写入: {script_path}")
+
                 logger.info("🚀 [DataAnalysisSkill] 执行分析脚本...")
                 with self.tracer.trace_tool_call(
-                    "code_executor", {"code_length": len(code)}
+                    "script_executor", {"script": script_path}
                 ):
-                    # 注意: 实际执行需要安装 pandas/matplotlib，这里假设环境已有或使用 mock
-                    # await self.executor.execute_batch(code)
-                    await self._mock_execution(input_data.output_dir)
+                    # 使用当前 Python 环境执行
+                    cmd = [sys.executable, abs_script_path]
+                    result = await asyncio.get_event_loop().run_in_executor(
+                        None,
+                        lambda: subprocess.run(
+                            cmd,
+                            cwd=self.working_dir,
+                            capture_output=True,
+                            text=True,
+                            timeout=60,
+                        ),
+                    )
 
-                # 4. 生成报告
+                    if result.returncode != 0:
+                        raise RuntimeError(
+                            f"Script execution failed:\nSTDOUT: {result.stdout}\nSTDERR: {result.stderr}"
+                        )
+
+                    logger.info(
+                        f"✅ [DataAnalysisSkill] 脚本执行成功\nOutput: {result.stdout[:200]}..."
+                    )
+
+                # 4. 验证结果
                 report_path = os.path.join(input_data.output_dir, "report.md")
-                report_content = f"# 数据分析报告\n\n目标: {input_data.goal}\n\n## 结果\n\n![Chart](chart.png)\n"
-                self.file_tools.write_file(report_path, report_content)
+                chart_path = os.path.join(input_data.output_dir, "chart.png")
+
+                generated_files = []
+                if os.path.exists(os.path.join(self.working_dir, report_path)):
+                    generated_files.append(report_path)
+                if os.path.exists(os.path.join(self.working_dir, chart_path)):
+                    generated_files.append(chart_path)
 
                 output = AnalysisOutput(
-                    report_path=report_path,
-                    charts=["chart.png"],
-                    summary=f"分析完成，报告已生成至 {report_path}",
+                    report_path=report_path
+                    if report_path in generated_files
+                    else "N/A",
+                    charts=[f for f in generated_files if f.endswith(".png")],
+                    summary=f"分析完成，生成了 {len(generated_files)} 个文件。\n脚本输出:\n{result.stdout[:500]}",
                 )
 
                 return output.model_dump()
@@ -149,42 +183,46 @@ class DataAnalysisSkill(BaseSkill):
         """生成分析代码"""
         if self.llm_client:
             # 实际 LLM 调用
-            prompt = f"""
-Data file: {data_file}
-Goal: {goal}
-Output dir: {output_dir}
-
-Generate a Python analysis script that reads the data, computes key stats,
-and saves at least one chart to the output dir.
-"""
+            # 实际 LLM 调用
+            prompt_template = load_prompt("data_analysis_skill")
+            prompt = prompt_template.format(
+                data_file=data_file, goal=goal, output_dir=output_dir
+            )
             complete = getattr(self.llm_client, "complete", None)
             if not callable(complete):
                 raise NotImplementedError("llm_client must provide complete()")
             result = complete(prompt)
             if asyncio.iscoroutine(result):
                 result = await result
+
+            # 清理 Markdown 代码块标记
+            if result.startswith("```python"):
+                result = result.split("\n", 1)[1]
+            if result.endswith("```"):
+                result = result.rsplit("\n", 1)[0]
+
             return result
 
+        # 模拟生成 (用于测试，不依赖 LLM)
         return f"""
-import pandas as pd
-import matplotlib.pyplot as plt
+import os
+import sys
 
-# Load data
-df = pd.read_csv('{data_file}')
+def main():
+    print("Starting analysis...")
+    output_dir = "{output_dir}"
+    os.makedirs(output_dir, exist_ok=True)
+    
+    # Mock Analysis
+    with open(f"{{output_dir}}/report.md", "w") as f:
+        f.write("# Analysis Report\\n\\nGoal: {goal}\\n\\nResult: Success")
+        
+    # Mock Chart (empty file for demo)
+    with open(f"{{output_dir}}/chart.png", "w") as f:
+        f.write("PNG_DATA")
+        
+    print("Analysis complete. Generated report.md and chart.png")
 
-# Analyze
-print(df.describe())
-
-# Plot
-plt.figure()
-df.plot()
-plt.savefig('{output_dir}/chart.png')
+if __name__ == "__main__":
+    main()
 """
-
-    async def _mock_execution(self, output_dir: str):
-        """模拟执行"""
-        await asyncio.sleep(1)
-        # 模拟生成文件
-        chart_path = os.path.join(self.working_dir, output_dir, "chart.png")
-        with open(chart_path, "w") as f:
-            f.write("Mock PNG Content")

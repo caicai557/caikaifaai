@@ -1,3 +1,1 @@
-# Tests Module
-
-__all__ = []
+"""Test suite for CESI Demo."""

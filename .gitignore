@@ -1,14 +1,40 @@
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Python cache
 __pycache__/
 *.py[cod]
 *$py.class
-.env
-.venv
-env/
-venv/
-.council/
-.serena/
-.claude/
+*.so
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+
+# Testing
 .pytest_cache/
-*.db
-*.log
+.coverage
+htmlcov/
+.pre-commit-cache/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
 .DS_Store
+Thumbs.db
+
+# Local configs
+.env
+*.local
+
+# Misc
+save
+swarm/
+.venv_test/

@@ -27,11 +27,11 @@ class LLMClient:
     Unified LLM Client for the Council Framework.
 
     Attributes:
-        default_model (str): The default model to use (e.g., "gemini-2.0-flash").
+        default_model (str): The default model to use.
         budget_limit (float): Optional daily budget limit in USD.
     """
 
-    def __init__(self, default_model: str = "gemini-2.0-flash", debug: bool = False):
+    def __init__(self, default_model: str = "claude-sonnet-4-20250514", debug: bool = False):
         self.default_model = default_model
         self.debug = debug
 
@@ -145,13 +145,39 @@ default_client = LLMClient()
 class CachedLLMClient(LLMClient):
     """
     LLM Client with Automatic Context Caching (Gemini)
+
+    Note: Gemini caching requires Google Cloud credentials.
+    If not configured, falls back to standard completion.
     """
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        from council.context.gemini_cache import GeminiCacheManager
+        self.cache_mgr = None
+        self._gemini_available = self._check_gemini_credentials()
 
-        self.cache_mgr = GeminiCacheManager()
+        if self._gemini_available:
+            from council.context.gemini_cache import GeminiCacheManager
+            self.cache_mgr = GeminiCacheManager()
+
+    def _check_gemini_credentials(self) -> bool:
+        """Check if Gemini/Google Cloud credentials are available"""
+        import os
+
+        # Check for API key
+        if os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY"):
+            return True
+
+        # Check for Application Default Credentials
+        if os.environ.get("GOOGLE_APPLICATION_CREDENTIALS"):
+            return True
+
+        # Try to detect ADC
+        try:
+            from google.auth import default
+            default()
+            return True
+        except Exception:
+            return False
 
     def completion(
         self,
@@ -166,8 +192,8 @@ class CachedLLMClient(LLMClient):
         """
         target_model = model or self.default_model
 
-        # Determine if we should attempt caching (Gemini only)
-        if "gemini" in target_model.lower():
+        # Determine if we should attempt caching (Gemini only, requires credentials)
+        if "gemini" in target_model.lower() and self._gemini_available and self.cache_mgr:
             # Extract system prompt as potential cacheable content
             system_msg = next((m for m in messages if m["role"] == "system"), None)
 
@@ -195,4 +221,4 @@ class CachedLLMClient(LLMClient):
 
 
 # Replace default client if auto-caching is improved
-# default_client = CachedLLMClient()
+default_client = CachedLLMClient()

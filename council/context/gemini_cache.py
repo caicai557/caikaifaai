@@ -110,7 +110,6 @@ class GeminiCacheManager:
         except Exception as e:
             print(f"⚠️ 保存缓存注册表失败: {e}")
 
-
     def _clean_expired(self):
         """清理过期缓存"""
         now = datetime.now()
@@ -130,6 +129,10 @@ class GeminiCacheManager:
 
                 if self._api_key:
                     genai.configure(api_key=self._api_key)
+                elif os.environ.get("GOOGLE_API_KEY"):
+                    genai.configure(api_key=os.environ["GOOGLE_API_KEY"])
+                elif os.environ.get("GEMINI_API_KEY"):
+                    genai.configure(api_key=os.environ["GEMINI_API_KEY"])
                 self._client = genai
             except ImportError:
                 raise ImportError(

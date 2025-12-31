@@ -92,9 +92,15 @@ class DataAnalysisSkill(BaseSkill):
             raise ValueError(f"Invalid input: {e}")
 
         with self.tracer.trace_agent_step("DataAnalysisSkill", "execute") as span:
-            span.set_attribute("goal", input_data.goal)
+            # 限制输入长度
+            truncated_goal = input_data.goal[:2000]
+            if len(input_data.goal) > 2000:
+                logger.warning("Analysis goal truncated to 2000 chars")
+                truncated_goal += "...(truncated)"
 
-            logger.info(f"📊 [DataAnalysisSkill] 开始分析: {input_data.goal}")
+            span.set_attribute("goal", truncated_goal)
+
+            logger.info(f"📊 [DataAnalysisSkill] 开始分析: {truncated_goal}")
 
             try:
                 # 1. 准备环境

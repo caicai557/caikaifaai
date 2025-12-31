@@ -231,7 +231,7 @@ class CodingSkill(BaseSkill):
 目标文件: {target_file}
 
 上下文:
-{chr(10).join(f"--- {f} ---{chr(10)}{c[:500]}" for f, c in context.items())}
+{chr(10).join(f"--- {f} ---{chr(10)}{c[:4000]}" for f, c in context.items())}
 
 请生成完整的代码文件内容。
 """
@@ -306,10 +306,10 @@ if __name__ == "__main__":
             prompt = f"""
 原始任务: {original_task}
 当前代码:
-{current_code[:1000]}
+{current_code[:4000]}
 
 错误信息:
-{error[:500]}
+{error[:4000]}
 
 请修复代码并返回完整的修复后代码。
 """

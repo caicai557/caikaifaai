@@ -100,9 +100,15 @@ class DesignSkill(BaseSkill):
             raise ValueError(f"Invalid input: {e}")
 
         with self.tracer.trace_agent_step("DesignSkill", "execute") as span:
-            span.set_attribute("requirement", input_data.requirement[:100])
+            # 限制输入长度，防止 Token 爆炸
+            truncated_requirement = input_data.requirement[:10000]
+            if len(input_data.requirement) > 10000:
+                logger.warning("Design requirement truncated to 10000 chars")
+                truncated_requirement += "...(truncated)"
 
-            logger.info(f"🎨 [DesignSkill] 开始设计: {input_data.requirement[:50]}...")
+            span.set_attribute("requirement", truncated_requirement[:100])
+
+            logger.info(f"🎨 [DesignSkill] 开始设计: {truncated_requirement[:50]}...")
 
             try:
                 # 1. 生成文档内容

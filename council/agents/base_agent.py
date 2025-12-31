@@ -14,9 +14,8 @@ from pydantic import BaseModel
 from council.core.llm_client import LLMClient, default_client
 
 # 默认模型 - 2025 December 配置
-# LiteLLM 格式: provider/model 或直接模型名
-# 可用: anthropic/claude-3-5-sonnet, openai/gpt-4o, gemini/gemini-1.5-pro
-DEFAULT_MODEL = "anthropic/claude-3-5-sonnet-latest"  # 日常开发首选
+# LiteLLM 格式: gemini/模型名
+DEFAULT_MODEL = "gemini/gemini-2.0-flash"  # Gemini 首选
 
 
 class VoteDecision(Enum):

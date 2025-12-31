@@ -31,7 +31,7 @@ class LLMClient:
         budget_limit (float): Optional daily budget limit in USD.
     """
 
-    def __init__(self, default_model: str = "claude-sonnet-4-20250514", debug: bool = False):
+    def __init__(self, default_model: str = "claude-4.5-sonnet", debug: bool = False):
         self.default_model = default_model
         self.debug = debug
 

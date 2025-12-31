@@ -13,22 +13,9 @@ from pydantic import BaseModel
 
 from council.core.llm_client import LLMClient, default_client
 
-# 默认模型优先级：Claude > OpenAI > Gemini
-import os
-
-def _get_default_model() -> str:
-    """根据可用的 API Key 选择默认模型"""
-    if os.environ.get("ANTHROPIC_API_KEY"):
-        return "claude-sonnet-4-20250514"
-    elif os.environ.get("OPENAI_API_KEY"):
-        return "gpt-4o"
-    elif os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY"):
-        return "gemini-2.0-flash"
-    else:
-        # 默认使用 Claude，LiteLLM 会尝试从环境变量读取
-        return "claude-sonnet-4-20250514"
-
-DEFAULT_MODEL = _get_default_model()
+# 默认模型 - 2025 December 配置
+# 可用模型: claude-4.5-sonnet, claude-4.5-opus, gpt-5.2-codex, gemini-3-pro, gemini-3-flash
+DEFAULT_MODEL = "claude-4.5-sonnet"  # 日常开发首选 (77.2% SWE-bench, 低延迟)
 
 
 class VoteDecision(Enum):

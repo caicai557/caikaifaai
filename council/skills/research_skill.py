@@ -162,9 +162,26 @@ class ResearchSkill(BaseSkill):
 
         if self.llm_client:
             # 实际 LLM 调用逻辑
+            # 限制每个来源的长度，防止 Token 爆炸
+            truncated_contents = []
+            total_chars = 0
+            MAX_CHARS_PER_SOURCE = 2000
+            MAX_TOTAL_CHARS = 10000
+
+            for c in contents:
+                if total_chars >= MAX_TOTAL_CHARS:
+                    break
+
+                truncated = c[:MAX_CHARS_PER_SOURCE]
+                if len(c) > MAX_CHARS_PER_SOURCE:
+                    truncated += "...(truncated)"
+
+                truncated_contents.append(truncated)
+                total_chars += len(truncated)
+
             prompt = (
                 f"Topic: {topic}\n\nSources:\n"
-                + "\n".join(contents[:5])
+                + "\n".join(truncated_contents)
                 + "\n\nSummarize:"
             )
             complete = getattr(self.llm_client, "complete", None)

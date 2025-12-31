@@ -24,28 +24,17 @@ class PatchGenerator:
         patch = generator.generate_patch(diagnosis)
     """
 
-    def __init__(self, model: str = None):
+    def __init__(self, model: str = "claude-4.5-sonnet"):
         """
         Initialize the patch generator
 
         Args:
-            model: LLM model to use for analysis (auto-detected if None)
+            model: LLM model to use for analysis
         """
-        self._has_gemini = bool(os.environ.get("GEMINI_API_KEY"))
+        self.model = model
+        self._has_gemini = bool(os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY"))
         self._has_openai = bool(os.environ.get("OPENAI_API_KEY"))
         self._has_anthropic = bool(os.environ.get("ANTHROPIC_API_KEY"))
-
-        # Auto-detect model based on available API keys
-        if model:
-            self.model = model
-        elif self._has_anthropic:
-            self.model = "claude-sonnet-4-20250514"
-        elif self._has_openai:
-            self.model = "gpt-4o"
-        elif self._has_gemini:
-            self.model = "gemini-2.0-flash"
-        else:
-            self.model = "claude-sonnet-4-20250514"  # Default
 
     def diagnose(self, error_output: str) -> Diagnosis:
         """

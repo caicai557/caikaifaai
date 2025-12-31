@@ -30,6 +30,7 @@ council = [
     "openai>=1.0.0",
     "anthropic>=0.18.0",
     "litellm>=1.0.0",
+    "PyYAML>=6.0",
 ]
 
 enhancements = [

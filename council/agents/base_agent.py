@@ -14,8 +14,9 @@ from pydantic import BaseModel
 from council.core.llm_client import LLMClient, default_client
 
 # 默认模型 - 2025 December 配置
-# 可用模型: claude-4.5-sonnet, claude-4.5-opus, gpt-5.2-codex, gemini-3-pro, gemini-3-flash
-DEFAULT_MODEL = "claude-4.5-sonnet"  # 日常开发首选 (77.2% SWE-bench, 低延迟)
+# LiteLLM 格式: provider/model 或直接模型名
+# 可用: anthropic/claude-3-5-sonnet, openai/gpt-4o, gemini/gemini-1.5-pro
+DEFAULT_MODEL = "anthropic/claude-3-5-sonnet-latest"  # 日常开发首选
 
 
 class VoteDecision(Enum):

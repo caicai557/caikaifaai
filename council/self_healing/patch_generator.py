@@ -24,7 +24,7 @@ class PatchGenerator:
         patch = generator.generate_patch(diagnosis)
     """
 
-    def __init__(self, model: str = "claude-4.5-sonnet"):
+    def __init__(self, model: str = "anthropic/claude-3-5-sonnet-latest"):
         """
         Initialize the patch generator
 

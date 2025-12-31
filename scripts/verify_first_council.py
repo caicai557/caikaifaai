@@ -41,7 +41,7 @@ class SimulatedLLMClient(LLMClient):
         """Simulate structured output based on the target schema and prompt context"""
 
         system_msg = next((m["content"] for m in messages if m["role"] == "system"), "")
-        prompt = messages[-1]["content"]
+        messages[-1]["content"]
 
         logger.info(
             f"⚡ [LLM Call] Schema: {response_model.__name__} | Persona: {system_msg[:20]}..."

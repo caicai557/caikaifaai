@@ -96,7 +96,7 @@ __all__ = ["RedisStateStore", "RedisDistributedLock"]
 class RedisDistributedLock:
     """
     Redis 分布式锁实现 (基于 Redlock 算法)
-    
+
     支持：获取/释放/续期/Context Manager
     """
 

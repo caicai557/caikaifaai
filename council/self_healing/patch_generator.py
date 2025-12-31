@@ -213,7 +213,7 @@ class PatchGenerator:
 
             # Try to get running loop, create new if needed
             try:
-                loop = asyncio.get_running_loop()
+                asyncio.get_running_loop()
                 # If we're already in an async context, create a task
                 import concurrent.futures
 

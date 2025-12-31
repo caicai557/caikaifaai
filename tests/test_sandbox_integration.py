@@ -213,7 +213,7 @@ class TestSandboxIntegration:
         # Create a temp project
         with tempfile.TemporaryDirectory() as tmpdir:
             # Write a simple script via sandbox
-            runner = LocalSandboxRunner(working_dir=tmpdir)
+            LocalSandboxRunner(working_dir=tmpdir)
 
             # Verify analyzer can analyze the temp directory
             analyzer = BlastRadiusAnalyzer(tmpdir)

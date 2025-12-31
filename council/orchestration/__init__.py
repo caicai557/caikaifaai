@@ -82,4 +82,8 @@ __all__ = [
     "HandoffManager",
     "HandoffPriority",
     "HandoffStatus",
+    # Model Router
+    "ModelRouter",
+    "ModelConfig",
+    "RoutingResult",
 ]

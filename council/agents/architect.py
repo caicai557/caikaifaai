@@ -193,7 +193,7 @@ Changes: [建议修改1, 建议修改2] (可选)
         if conf_match:
             try:
                 confidence = float(conf_match.group(1))
-            except:
+            except ValueError:
                 pass
 
         rationale_match = re.search(

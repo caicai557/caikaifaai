@@ -44,15 +44,11 @@ class TestPtcSdk:
         assert "save_result" in VIRTUAL_SDK_DOCS
 
 
-import pytest
+import pytest  # noqa: E402
+import importlib.util  # noqa: E402
 
 # Check if typer is available
-try:
-    import typer
-
-    HAS_TYPER = True
-except ImportError:
-    HAS_TYPER = False
+HAS_TYPER = importlib.util.find_spec("typer") is not None
 
 
 @pytest.mark.skipif(not HAS_TYPER, reason="typer not installed")

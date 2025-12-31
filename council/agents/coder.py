@@ -116,7 +116,7 @@ class Coder(BaseAgent):
             elif current_section == "confidence":
                 try:
                     confidence = float(line)
-                except:
+                except ValueError:
                     pass
 
         self.add_to_history({"action": "think", "task": task, "context": context})
@@ -173,7 +173,7 @@ Rationale: [理由]
         if conf_match:
             try:
                 confidence = float(conf_match.group(1))
-            except:
+            except ValueError:
                 pass
 
         rationale_match = re.search(

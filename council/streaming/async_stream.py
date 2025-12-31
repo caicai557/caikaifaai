@@ -35,7 +35,9 @@ class StreamingLLM:
     def _detect_provider(self, model: str) -> str:
         """检测模型提供商"""
         model_lower = model.lower()
-        if "claude" in model_lower:
+        if "mock" in model_lower:
+            return "mock"
+        elif "claude" in model_lower:
             return "anthropic"
         elif "gemini" in model_lower:
             return "google"

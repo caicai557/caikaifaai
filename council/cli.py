@@ -15,7 +15,6 @@ from typing import Optional
 
 try:
     from rich.console import Console
-    from rich.status import Status
     from rich.markdown import Markdown
 
     HAS_RICH = True

@@ -31,7 +31,7 @@ class RedisStateStore(StateStore):
 
     async def initialize(self) -> None:
         if not self.client:
-            self.client = redis.asyncio.Redis.from_url(self.url, decode_responses=True)
+            self.client = redis.Redis.from_url(self.url, decode_responses=True)
 
     async def save(self, checkpoint: Checkpoint) -> None:
         await self.initialize()
@@ -106,6 +106,7 @@ class RedisDistributedLock:
 
     async def acquire(self, key: str, ttl: int = 30) -> bool:
         import uuid
+
         token = str(uuid.uuid4())
         lock_key = f"council:lock:{key}"
         result = await self.client.set(lock_key, token, nx=True, ex=ttl)
@@ -156,4 +157,3 @@ class _LockContext:
         if self.acquired:
             await self.lock.release(self.key)
         return False
-

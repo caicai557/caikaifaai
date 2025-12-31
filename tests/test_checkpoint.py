@@ -69,12 +69,9 @@ class TestCheckpoint:
 
 
 # Check if aiosqlite is available
-try:
-    import aiosqlite
+import importlib.util
 
-    HAS_AIOSQLITE = True
-except ImportError:
-    HAS_AIOSQLITE = False
+HAS_AIOSQLITE = importlib.util.find_spec("aiosqlite") is not None
 
 
 @pytest.mark.skipif(not HAS_AIOSQLITE, reason="aiosqlite not installed")

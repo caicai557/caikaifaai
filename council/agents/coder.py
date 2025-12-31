@@ -10,6 +10,7 @@ from council.agents.base_agent import (
     VoteDecision,
     ThinkResult,
     ExecuteResult,
+    DEFAULT_MODEL,
 )
 from council.tools.file_system import FileTools
 import os
@@ -49,7 +50,7 @@ class Coder(BaseAgent):
     """
 
     def __init__(
-        self, model: str = "gemini-2.0-flash", llm_client: Optional["LLMClient"] = None
+        self, model: str = DEFAULT_MODEL, llm_client: Optional["LLMClient"] = None
     ):
         super().__init__(
             name="Coder",

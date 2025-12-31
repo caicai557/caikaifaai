@@ -16,6 +16,7 @@ from council.agents.base_agent import (
     VoteDecision,
     ThinkResult,
     ExecuteResult,
+    DEFAULT_MODEL,
 )
 from council.orchestration.ledger import DualLedger
 from council.governance.gateway import DecisionType, GovernanceGateway
@@ -145,7 +146,7 @@ class Orchestrator(BaseAgent):
 
     def __init__(
         self,
-        model: str = "gemini-2.0-flash",
+        model: str = DEFAULT_MODEL,
         governance_gateway: Optional[GovernanceGateway] = None,
         llm_client: Optional["LLMClient"] = None,
     ):

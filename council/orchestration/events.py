@@ -37,6 +37,10 @@ class EventType(Enum):
     INTERRUPT_RAISED = "hitl.interrupt_raised"
     INTERRUPT_RESUMED = "hitl.interrupt_resumed"
 
+    # Agent Handoffs (2025 Swarm Pattern)
+    HANDOFF_INITIATED = "handoff.initiated"
+    HANDOFF_COMPLETED = "handoff.completed"
+
 
 @dataclass
 class Event:

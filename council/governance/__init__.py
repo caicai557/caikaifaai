@@ -7,6 +7,11 @@ from council.governance.gateway import (
     ApprovalKind,
     RiskLevel,
 )
+from council.governance.impact_analyzer import (
+    BlastRadiusAnalyzer,
+    ImpactAnalysis,
+    ImpactLevel,
+)
 
 __all__ = [
     "GovernanceGateway",
@@ -15,4 +20,7 @@ __all__ = [
     "DecisionType",
     "ApprovalKind",
     "RiskLevel",
+    "BlastRadiusAnalyzer",
+    "ImpactAnalysis",
+    "ImpactLevel",
 ]

@@ -113,15 +113,23 @@ HIGH_RISK_DECISIONS = {
 
 # 危险内容模式 (Regex)
 DANGEROUS_PATTERNS = [
-    (r"rm\s+-[rf]{1,2}", RiskLevel.CRITICAL),  # rm -rf
+    (r"rm\s+-[rRfF]+", RiskLevel.CRITICAL),  # rm -rf, rm -r, rm -f, etc.
+    (r"rm\s+.*\s+-[rRfF]+", RiskLevel.CRITICAL),  # rm path -rf
     (r"mkfs", RiskLevel.CRITICAL),  # 格式化
     (r"dd\s+if=", RiskLevel.CRITICAL),  # dd 命令
     (r"os\.system\(['\"]rm", RiskLevel.CRITICAL),  # os.system('rm...')
-    (r"subprocess\.call\(['\"]rm", RiskLevel.CRITICAL),  # subprocess rm
+    (r"subprocess\.(call|run|Popen)\(['\"]rm", RiskLevel.CRITICAL),  # subprocess rm
+    (r"shutil\.rmtree", RiskLevel.HIGH),  # shutil.rmtree
+    (r"DROP\s+(TABLE|DATABASE)", RiskLevel.CRITICAL),  # SQL DROP
+    (r"DELETE\s+FROM\s+\w+\s*;", RiskLevel.CRITICAL),  # DELETE without WHERE
+    (r"TRUNCATE\s+TABLE", RiskLevel.CRITICAL),  # SQL TRUNCATE
     (r"eval\(", RiskLevel.HIGH),  # eval() - 高危但不一定致命
     (r"exec\(", RiskLevel.HIGH),  # exec()
     (r"__import__", RiskLevel.HIGH),  # 动态导入
+    (r"os\.remove", RiskLevel.MEDIUM),  # os.remove
+    (r"os\.unlink", RiskLevel.MEDIUM),  # os.unlink
 ]
+
 
 # 需要强制人工审批的路径模式
 PROTECTED_PATHS = [
@@ -168,6 +176,99 @@ class GovernanceGateway:
         self.approval_log: List[ApprovalRequest] = []
         self._request_counter = 0
         self._approval_callback: Optional[Callable[[ApprovalRequest], bool]] = None
+        # Circuit Breaker state (2025 Best Practice)
+        self._agent_failures: Dict[str, int] = {}
+        self._circuit_breaker_threshold = 3
+
+    def check_safety(
+        self,
+        action: str,
+        content: Optional[str] = None,
+        paths: Optional[List[str]] = None,
+    ) -> Dict[str, Any]:
+        """
+        [2025 Best Practice] Quick safety check for any action
+
+        Returns a structured result with risk assessment and recommendations.
+
+        Args:
+            action: The action string (e.g., "rm -rf /tmp", "DELETE FROM users")
+            content: Optional code content to scan
+            paths: Optional paths being affected
+
+        Returns:
+            Dict with 'safe', 'risk_level', 'reason', 'requires_hitl'
+        """
+        # Risk level ordering for comparison
+        risk_order = {
+            RiskLevel.LOW: 0,
+            RiskLevel.MEDIUM: 1,
+            RiskLevel.HIGH: 2,
+            RiskLevel.CRITICAL: 3,
+        }
+
+        # Combine action and content for scanning
+        full_content = f"{action} {content or ''}"
+        content_risk = self._scan_content(full_content)
+
+        # Check paths
+        path_risk = RiskLevel.LOW
+        if paths:
+            import fnmatch
+
+            for path in paths:
+                for pattern in PROTECTED_PATHS:
+                    if fnmatch.fnmatch(path, pattern):
+                        path_risk = RiskLevel.HIGH
+                        break
+
+        # Take the higher risk (using ordering dict)
+        final_risk = (
+            content_risk
+            if risk_order[content_risk] > risk_order[path_risk]
+            else path_risk
+        )
+
+        is_safe = final_risk in [RiskLevel.LOW, RiskLevel.MEDIUM]
+        requires_hitl = final_risk in [RiskLevel.HIGH, RiskLevel.CRITICAL]
+
+        return {
+            "safe": is_safe,
+            "risk_level": final_risk.value,
+            "requires_hitl": requires_hitl,
+            "reason": self._get_risk_reason(final_risk, action),
+        }
+
+    def _get_risk_reason(self, risk: RiskLevel, action: str) -> str:
+        """Get human-readable reason for risk level"""
+        if risk == RiskLevel.CRITICAL:
+            return f"CRITICAL: Action '{action[:50]}...' matches dangerous patterns"
+        elif risk == RiskLevel.HIGH:
+            return "HIGH: Action requires human approval before execution"
+        elif risk == RiskLevel.MEDIUM:
+            return "MEDIUM: Action should be logged and monitored"
+        return "LOW: Action appears safe"
+
+    def record_agent_failure(self, agent_name: str) -> bool:
+        """
+        [2025 Best Practice] Record agent failure for Circuit Breaker
+
+        Returns True if circuit is now open (agent should be disabled).
+        """
+        self._agent_failures[agent_name] = self._agent_failures.get(agent_name, 0) + 1
+        if self._agent_failures[agent_name] >= self._circuit_breaker_threshold:
+            return True  # Circuit open
+        return False
+
+    def is_circuit_open(self, agent_name: str) -> bool:
+        """Check if agent's circuit breaker is open"""
+        return (
+            self._agent_failures.get(agent_name, 0) >= self._circuit_breaker_threshold
+        )
+
+    def reset_circuit(self, agent_name: str) -> None:
+        """Reset agent's circuit breaker"""
+        self._agent_failures[agent_name] = 0
 
     def set_approval_callback(
         self, callback: Callable[[ApprovalRequest], bool]

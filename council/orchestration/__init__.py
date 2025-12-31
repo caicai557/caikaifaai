@@ -36,6 +36,13 @@ from council.orchestration.model_router import (
     ModelConfig,
     RoutingResult,
 )
+from council.orchestration.handoff import (
+    AgentHandoff,
+    ContextSnapshot,
+    HandoffManager,
+    HandoffPriority,
+    HandoffStatus,
+)
 
 
 __all__ = [
@@ -69,4 +76,10 @@ __all__ = [
     "TaskClassifier",
     "RecommendedModel",
     "TaskType",
+    # Handoff (2025 Swarm Pattern)
+    "AgentHandoff",
+    "ContextSnapshot",
+    "HandoffManager",
+    "HandoffPriority",
+    "HandoffStatus",
 ]

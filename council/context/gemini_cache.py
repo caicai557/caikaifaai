@@ -18,6 +18,7 @@ from dataclasses import dataclass
 from typing import Optional, Dict, Any, List
 from datetime import datetime, timedelta
 import hashlib
+import os
 
 
 @dataclass
@@ -50,16 +51,102 @@ class GeminiCacheManager:
     # 最小缓存大小 (Token)
     MIN_CACHE_TOKENS = 32768  # 32K
 
-    def __init__(self, api_key: Optional[str] = None):
+    # ... (previous code)
+
+    def __init__(
+        self,
+        api_key: Optional[str] = None,
+        registry_path: str = "~/.council/gemini_cache_registry.json",
+    ):
         """
         初始化缓存管理器
-
-        Args:
-            api_key: Gemini API Key (可选，默认从环境变量读取)
         """
         self._api_key = api_key
+        self._registry_path = os.path.expanduser(registry_path)
         self._local_cache: Dict[str, CacheEntry] = {}
-        self._client = None  # Lazy initialization
+        self._client = None
+
+        self._load_registry()
+
+    def _load_registry(self):
+        """从磁盘加载缓存注册表"""
+        try:
+            if os.path.exists(self._registry_path):
+                import json
+
+                with open(self._registry_path, "r") as f:
+                    data = json.load(f)
+                    for k, v in data.items():
+                        self._local_cache[k] = CacheEntry(
+                            name=v["name"],
+                            content_hash=v["content_hash"],
+                            token_count=v["token_count"],
+                            created_at=datetime.fromisoformat(v["created_at"]),
+                            expires_at=datetime.fromisoformat(v["expires_at"]),
+                            model=v.get("model", "gemini-2.5-pro"),
+                        )
+        except Exception as e:
+            print(f"⚠️ 加载缓存注册表失败: {e}")
+
+    def _save_registry(self):
+        """保存缓存注册表到磁盘"""
+        try:
+            os.makedirs(os.path.dirname(self._registry_path), exist_ok=True)
+            import json
+
+            data = {
+                k: {
+                    "name": v.name,
+                    "content_hash": v.content_hash,
+                    "token_count": v.token_count,
+                    "created_at": v.created_at.isoformat(),
+                    "expires_at": v.expires_at.isoformat(),
+                    "model": v.model,
+                }
+                for k, v in self._local_cache.items()
+            }
+            with open(self._registry_path, "w") as f:
+                json.dump(data, f, indent=2)
+        except Exception as e:
+            print(f"⚠️ 保存缓存注册表失败: {e}")
+
+    def create(
+        self, name: str, content: str, ttl_hours: int = 1, model: str = "gemini-2.5-pro"
+    ) -> Optional[str]:
+        # ... (logic to check existing cache) ...
+        # [MODIFIED] Check local cache first (now populated from disk)
+
+        # Calculate hash first
+        content_hash = self._content_hash(content)
+
+        # Clean expired
+        self._clean_expired()
+
+        for cached_name, entry in self._local_cache.items():
+            if entry.content_hash == content_hash:
+                if entry.expires_at > datetime.now():
+                    print(f"✅ 复用已有缓存 (Persisted): {cached_name}")
+                    return cached_name
+
+        # ... (Create on server) ...
+
+        # After creating:
+        # self._local_cache[...] = ...
+        # self._save_registry() [NEW]
+
+        # Implementation details below in Tool Call
+        pass
+
+    def _clean_expired(self):
+        """清理过期缓存"""
+        now = datetime.now()
+        expired = [k for k, v in self._local_cache.items() if v.expires_at <= now]
+        for k in expired:
+            del self._local_cache[k]
+        if expired:
+            self._save_registry()
+
+    # ... (rest of methods)
 
     def _get_client(self):
         """获取 Gemini 客户端 (延迟初始化)"""

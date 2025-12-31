@@ -147,12 +147,14 @@ class Orchestrator(BaseAgent):
         self,
         model: str = "gemini-2.0-flash",
         governance_gateway: Optional[GovernanceGateway] = None,
+        llm_client: Optional["LLMClient"] = None,
     ):
         super().__init__(
             name="Orchestrator",
             system_prompt=ORCHESTRATOR_SYSTEM_PROMPT,
             model=model,
             governance_gateway=governance_gateway,
+            llm_client=llm_client,
         )
         self.active_subtasks: List[SubTask] = []
         self.ledger: Optional[DualLedger] = None

@@ -4,7 +4,6 @@
 import asyncio
 import ast
 from typing import Dict, Any, List, Callable, Optional
-from dataclasses import dataclass
 
 
 class ToolExecutionError(Exception):

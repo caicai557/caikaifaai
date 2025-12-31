@@ -13,7 +13,7 @@ Council 1.0.0 核心入口类，整合所有能力：
 """
 
 from dataclasses import dataclass, field
-from typing import List, Optional, Callable, Any, Dict
+from typing import List, Optional, Any, Dict
 from datetime import datetime
 from enum import Enum
 import asyncio
@@ -35,12 +35,14 @@ from council.self_healing.loop import (
     HealingReport,
     HealingStatus,
 )
+
 # 2025 改进: 专业化 Agent 集成
-from council.agents.orchestrator import Orchestrator, SubTask as OrchestratorSubTask
+from council.agents.orchestrator import Orchestrator
 from council.agents.architect import Architect
 from council.agents.coder import Coder
 from council.agents.security_auditor import SecurityAuditor
-
+from council.agents.web_surfer import WebSurfer
+from council.core.llm_client import LLMClient, default_client
 
 
 class DevStatus(Enum):
@@ -106,7 +108,7 @@ class DevOrchestrator:
         test_command: str = "python -m pytest tests/ -v",
         max_healing_iterations: int = 5,
         cost_sensitive: bool = True,
-        llm_fn: Optional[Callable[[str, str], str]] = None,
+        llm_client: Optional[LLMClient] = None,
         verbose: bool = True,
     ):
         """
@@ -124,7 +126,8 @@ class DevOrchestrator:
         self.test_command = test_command
         self.max_healing_iterations = max_healing_iterations
         self.verbose = verbose
-        self.llm_fn = llm_fn or self._default_llm
+        # 2025 Core Upgrade: 使用真实的 LLMClient
+        self.llm_client = llm_client or default_client
 
         # 初始化子模块
         self.classifier = TaskClassifier(cost_sensitive=cost_sensitive)
@@ -142,11 +145,13 @@ class DevOrchestrator:
         )
 
         # 2025 改进: 专业化 Agent 实例
-        self.orchestrator_agent = Orchestrator()
+        # 注入 LLMClient 到 Agents
+        self.orchestrator_agent = Orchestrator(llm_client=self.llm_client)
         self.agents = {
-            "Architect": Architect(),
-            "Coder": Coder(),
-            "SecurityAuditor": SecurityAuditor(),
+            "Architect": Architect(llm_client=self.llm_client),
+            "Coder": Coder(llm_client=self.llm_client),
+            "SecurityAuditor": SecurityAuditor(llm_client=self.llm_client),
+            "WebSurfer": WebSurfer(llm_client=self.llm_client),
         }
 
         # 状态跟踪
@@ -212,7 +217,9 @@ class DevOrchestrator:
                 if commit_result:
                     message = f"✅ 完成并已提交! π={consensus_result.pi_approve:.3f}"
                 else:
-                    message = f"✅ 完成! π={consensus_result.pi_approve:.3f} (Git 提交跳过)"
+                    message = (
+                        f"✅ 完成! π={consensus_result.pi_approve:.3f} (Git 提交跳过)"
+                    )
             elif consensus_result.decision == ConsensusDecision.REJECT:
                 self._update_status(DevStatus.FAILED)
                 message = f"❌ 失败. {consensus_result.reason}"
@@ -246,7 +253,7 @@ class DevOrchestrator:
         """规划子任务 - 使用 Orchestrator 结构化拆解"""
         # 2025 改进: 使用 Orchestrator Agent 进行智能拆解
         decomposition = self.orchestrator_agent.decompose(task)
-        
+
         subtasks = []
         for orch_subtask in decomposition.subtasks:
             subtasks.append(
@@ -255,35 +262,37 @@ class DevOrchestrator:
                     description=orch_subtask.description,
                     model=classification.recommended_model,
                     # 新增: 记录分配的 Agent
-                    assigned_agent=getattr(orch_subtask, 'assigned_agent', 'Coder'),
+                    assigned_agent=getattr(orch_subtask, "assigned_agent", "Coder"),
                 )
             )
-        
+
         self._log(f"📋 Orchestrator 拆解为 {len(subtasks)} 个子任务")
         for st in subtasks:
             self._log(f"   → {st.assigned_agent}: {st.description[:40]}...")
-        
+
         return subtasks
 
     async def _execute_subtask(self, subtask: SubTask) -> Optional[str]:
         """执行单个子任务 - 2025: 使用专业化 Agent"""
-        agent_name = getattr(subtask, 'assigned_agent', 'Coder')
+        agent_name = getattr(subtask, "assigned_agent", "Coder")
         agent = self.agents.get(agent_name)
-        
+
         if agent is None:
             self._log(f"⚠️ 未知 Agent: {agent_name}, 降级到 Coder")
             agent = self.agents["Coder"]
-        
+
         self._log(f"🤖 {agent_name} 执行: {subtask.description[:40]}...")
-        
+
         try:
             # 调用 Agent 的 execute 方法
             exec_result = agent.execute(subtask.description)
-            
+
             if exec_result.success:
                 return exec_result.output
             else:
-                subtask.error = "; ".join(exec_result.errors) if exec_result.errors else "执行失败"
+                subtask.error = (
+                    "; ".join(exec_result.errors) if exec_result.errors else "执行失败"
+                )
                 return exec_result.output  # 仍返回输出以便调试
         except Exception as e:
             subtask.error = str(e)
@@ -359,7 +368,9 @@ class DevOrchestrator:
                 # 使用 SecurityAuditor 的 vote 方法审核整体变更
                 completed_tasks = [s for s in subtasks if s.status == "done"]
                 if completed_tasks:
-                    changes_summary = "\n".join([s.description for s in completed_tasks[:3]])
+                    changes_summary = "\n".join(
+                        [s.description for s in completed_tasks[:3]]
+                    )
                     security_vote = security_agent.vote(
                         f"审核以下代码变更的安全性:\n{changes_summary}"
                     )
@@ -405,6 +416,7 @@ class DevOrchestrator:
     def _git_commit(self, task: str) -> bool:
         """2025 P1: Git 自动提交"""
         import subprocess
+
         try:
             # Stage all changes
             subprocess.run(

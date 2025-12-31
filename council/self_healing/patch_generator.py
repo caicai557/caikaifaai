@@ -178,11 +178,13 @@ class PatchGenerator:
         """
         Generate a patch to fix the diagnosed issue
 
+        [2025 Best Practice] Now uses real LLM to generate patches.
+
         Args:
             diagnosis: The diagnosis from analyze step
 
         Returns:
-            Patch with suggested fix
+            Patch with LLM-generated fix
         """
         if not diagnosis.suspected_file:
             return Patch(
@@ -193,15 +195,45 @@ class PatchGenerator:
                 confidence=0.0,
             )
 
-        # In production, this would call an LLM to generate the patch
-        # For now, return a placeholder
-        return Patch(
-            file_path=diagnosis.suspected_file,
-            original_content="",
-            patched_content="",
-            diagnosis=diagnosis,
-            confidence=0.3,  # Low confidence without LLM
-        )
+        # Check if file exists
+        import os
+
+        if not os.path.exists(diagnosis.suspected_file):
+            return Patch(
+                file_path=diagnosis.suspected_file,
+                original_content="",
+                patched_content="",
+                diagnosis=diagnosis,
+                confidence=0.0,
+            )
+
+        # [2025 Activation] Use async LLM call via sync wrapper
+        try:
+            import asyncio
+
+            # Try to get running loop, create new if needed
+            try:
+                asyncio.get_running_loop()
+                # If we're already in an async context, create a task
+                import concurrent.futures
+
+                with concurrent.futures.ThreadPoolExecutor() as executor:
+                    future = executor.submit(
+                        asyncio.run, self.generate_patch_with_llm(diagnosis)
+                    )
+                    return future.result(timeout=30)
+            except RuntimeError:
+                # No running loop, safe to use asyncio.run
+                return asyncio.run(self.generate_patch_with_llm(diagnosis))
+        except Exception:
+            # Fallback on any error
+            return Patch(
+                file_path=diagnosis.suspected_file,
+                original_content="",
+                patched_content="",
+                diagnosis=diagnosis,
+                confidence=0.1,
+            )
 
     async def _call_llm(self, prompt: str) -> str:
         """

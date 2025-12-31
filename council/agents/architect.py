@@ -47,11 +47,14 @@ class Architect(BaseAgent):
     专注于系统顶层设计和架构评审
     """
 
-    def __init__(self, model: str = "gemini-2.0-flash"):
+    def __init__(
+        self, model: str = "gemini-2.0-flash", llm_client: Optional["LLMClient"] = None
+    ):
         super().__init__(
             name="Architect",
             system_prompt=ARCHITECT_SYSTEM_PROMPT,
             model=model,
+            llm_client=llm_client,
         )
 
     def think(self, task: str, context: Optional[Dict[str, Any]] = None) -> ThinkResult:
@@ -295,11 +298,13 @@ Changes: [建议修改1, 建议修改2] (可选)
 """
         result = self._call_llm_structured(prompt, MinimalVote)
 
-        self.add_to_history({
-            "action": "vote_structured",
-            "proposal": proposal[:100],
-            "vote": result.vote.to_legacy(),
-        })
+        self.add_to_history(
+            {
+                "action": "vote_structured",
+                "proposal": proposal[:100],
+                "vote": result.vote.to_legacy(),
+            }
+        )
 
         return result
 
@@ -328,11 +333,13 @@ Changes: [建议修改1, 建议修改2] (可选)
         result = self._call_llm_structured(prompt, MinimalThinkResult)
         result.perspective = "architecture"
 
-        self.add_to_history({
-            "action": "think_structured",
-            "task": task[:100],
-            "confidence": result.confidence,
-        })
+        self.add_to_history(
+            {
+                "action": "think_structured",
+                "task": task[:100],
+                "confidence": result.confidence,
+            }
+        )
 
         return result
 

@@ -61,11 +61,14 @@ class SecurityAuditor(BaseAgent):
     保持"怀疑论者"立场，强制触发深度辩论
     """
 
-    def __init__(self, model: str = "gemini-2.0-flash"):
+    def __init__(
+        self, model: str = "gemini-2.0-flash", llm_client: Optional["LLMClient"] = None
+    ):
         super().__init__(
             name="SecurityAuditor",
             system_prompt=SECURITY_AUDITOR_SYSTEM_PROMPT,
             model=model,
+            llm_client=llm_client,
         )
         self.vulnerability_db: List[Dict[str, Any]] = []
 
@@ -332,11 +335,13 @@ sec=安全, perf=性能, maint=维护, arch=架构, data=数据
 """
         result = self._call_llm_structured(prompt, MinimalVote)
 
-        self.add_to_history({
-            "action": "vote_structured",
-            "proposal": proposal[:100],
-            "vote": result.vote.to_legacy(),
-        })
+        self.add_to_history(
+            {
+                "action": "vote_structured",
+                "proposal": proposal[:100],
+                "vote": result.vote.to_legacy(),
+            }
+        )
 
         return result
 
@@ -358,11 +363,13 @@ sec=安全, perf=性能, maint=维护, arch=架构, data=数据
         result = self._call_llm_structured(prompt, MinimalThinkResult)
         result.perspective = "security"
 
-        self.add_to_history({
-            "action": "think_structured",
-            "task": task[:100],
-            "confidence": result.confidence,
-        })
+        self.add_to_history(
+            {
+                "action": "think_structured",
+                "task": task[:100],
+                "confidence": result.confidence,
+            }
+        )
 
         return result
 

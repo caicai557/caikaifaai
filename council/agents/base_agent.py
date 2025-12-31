@@ -5,9 +5,13 @@ BaseAgent - 智能体基类
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Type
 from enum import Enum
 from datetime import datetime
+
+from pydantic import BaseModel
+
+from council.core.llm_client import LLMClient, default_client
 
 
 class VoteDecision(Enum):
@@ -72,6 +76,7 @@ class BaseAgent(ABC):
         allowed_agents: Optional[List[str]] = None,
         max_delegation_depth: int = 3,
         governance_gateway: Optional["GovernanceGateway"] = None,
+        llm_client: Optional[LLMClient] = None,
     ):
         """
         初始化智能体
@@ -95,15 +100,12 @@ class BaseAgent(ABC):
         self._current_delegation_depth = 0
         self.governance_gateway = governance_gateway
 
-        # API key detection
-        import os
-
-        self._has_gemini = bool(os.environ.get("GEMINI_API_KEY"))
-        self._has_openai = bool(os.environ.get("OPENAI_API_KEY"))
+        # 2025 Core Upgrade: 使用统一的 LLMClient
+        self.llm_client = llm_client or default_client
 
     def _call_llm(self, prompt: str, system_override: Optional[str] = None) -> str:
         """
-        调用 LLM API
+        调用 LLM API (通过统一客户端)
 
         Args:
             prompt: 用户提示词
@@ -112,45 +114,15 @@ class BaseAgent(ABC):
         Returns:
             LLM 响应文本
         """
-        import os
+        messages = []
+        if system_override or self.system_prompt:
+            messages.append(
+                {"role": "system", "content": system_override or self.system_prompt}
+            )
 
-        system = system_override or self.system_prompt
+        messages.append({"role": "user", "content": prompt})
 
-        # Try Gemini first
-        if self._has_gemini:
-            try:
-                import google.generativeai as genai
-
-                genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
-                model = genai.GenerativeModel(
-                    self.model,
-                    system_instruction=system,
-                )
-                response = model.generate_content(prompt)
-                return response.text
-            except Exception:
-                # Fall through to OpenAI
-                pass
-
-        # Fallback to OpenAI
-        if self._has_openai:
-            try:
-                from openai import OpenAI
-
-                client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
-                response = client.chat.completions.create(
-                    model="gpt-4o-mini",
-                    messages=[
-                        {"role": "system", "content": system},
-                        {"role": "user", "content": prompt},
-                    ],
-                )
-                return response.choices[0].message.content
-            except Exception:
-                pass
-
-        # No API available - return stub response
-        return f"[STUB] Agent {self.name} received: {prompt[:100]}..."
+        return self.llm_client.completion(messages=messages, model=self.model)
 
     def _has_llm(self) -> bool:
         """检查是否有可用的 LLM API"""
@@ -205,7 +177,7 @@ class BaseAgent(ABC):
     def _call_llm_structured(
         self,
         prompt: str,
-        schema_class: type,
+        schema_class: Type[BaseModel],
         system_override: Optional[str] = None,
     ) -> Any:
         """
@@ -219,39 +191,26 @@ class BaseAgent(ABC):
         Returns:
             已验证的 Pydantic 模型实例
         """
-        import json
-        from pydantic import ValidationError
+        messages = []
+        if system_override or self.system_prompt:
+            messages.append(
+                {"role": "system", "content": system_override or self.system_prompt}
+            )
 
-        # 生成 JSON Schema 指令
-        schema_example = schema_class.model_json_schema()
-        json_instruction = f"""
-Respond ONLY with valid JSON matching this schema (no markdown, no explanation):
-{json.dumps(schema_example, indent=2, ensure_ascii=False)}
+        messages.append({"role": "user", "content": prompt})
 
-Example format:
-{json.dumps(self._generate_example(schema_class), ensure_ascii=False)}
-"""
-        enhanced_prompt = f"{prompt}\n\n{json_instruction}"
-
-        # 调用 LLM
-        response = self._call_llm(enhanced_prompt, system_override)
-
-        # 尝试解析 JSON
         try:
-            # 清理响应 (移除可能的 markdown 包装)
-            cleaned = self._clean_json_response(response)
-            data = json.loads(cleaned)
-            return schema_class(**data)
-        except (json.JSONDecodeError, ValidationError) as e:
+            return self.llm_client.structured_completion(
+                messages=messages, response_model=schema_class, model=self.model
+            )
+        except Exception as e:
             # 回退: 返回默认实例并记录错误
             self.add_to_history(
                 {
                     "action": "structured_call_fallback",
                     "error": str(e),
-                    "raw_response": response[:200],
                 }
             )
-            # 返回带默认值的实例
             return self._create_default_instance(schema_class)
 
     def _clean_json_response(self, response: str) -> str:

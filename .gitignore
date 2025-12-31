@@ -38,3 +38,6 @@ Thumbs.db
 save
 swarm/
 .venv_test/
+
+# WSL/Windows artifacts
+*Zone.Identifier

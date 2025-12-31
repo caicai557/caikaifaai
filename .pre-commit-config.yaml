@@ -18,6 +18,13 @@ repos:
       - id: check-merge-conflict
       - id: detect-private-key
 
+  # Conventional Commits validation
+  - repo: https://github.com/commitizen-tools/commitizen
+    rev: v4.1.1
+    hooks:
+      - id: commitizen
+        stages: [commit-msg]
+
   # Local hooks for project-specific validation
   - repo: local
     hooks:

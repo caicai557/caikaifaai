@@ -77,10 +77,11 @@ class TripartiteOrchestrator:
     - 精准修改 → Claude (限制上下文)
     """
     
-    # 强制模型分工
-    ORCHESTRATOR_MODEL = ModelConfig.CODEX
-    ORACLE_MODEL = ModelConfig.GEMINI_PRO
-    EXECUTOR_MODEL = ModelConfig.CLAUDE_SONNET
+    # 强制模型分工 (2026最佳实践)
+    ORCHESTRATOR_MODEL = ModelConfig.CODEX       # 逻辑拆解
+    ORACLE_MODEL = ModelConfig.GEMINI_PRO        # 全量审计 (200万Tokens)
+    EXECUTOR_MODEL = ModelConfig.CLAUDE_SONNET   # 精准执行
+    FAST_CODER_MODEL = ModelConfig.GEMINI_FLASH  # 快速大量代码 + 简单任务
     
     def __init__(
         self,

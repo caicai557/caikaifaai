@@ -9,6 +9,7 @@ import logging
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List
+import shlex
 
 from council.hooks.base import (
     BaseHook,
@@ -220,7 +221,9 @@ class PostToolUseHook(BaseHook):
     async def _run_format(self, files: List[str]) -> QualityGateResult:
         """运行代码格式化"""
         try:
-            cmd = f"{self.format_command} {' '.join(files)}"
+            # 安全修复: 转义文件名以防止 Shell 注入
+            quoted_files = [shlex.quote(f) for f in files]
+            cmd = f"{self.format_command} {' '.join(quoted_files)}"
             result = await self._run_command(cmd)
 
             return QualityGateResult(
@@ -243,7 +246,9 @@ class PostToolUseHook(BaseHook):
     async def _run_lint(self, files: List[str]) -> QualityGateResult:
         """运行静态检查"""
         try:
-            cmd = f"{self.lint_command} {' '.join(files)}"
+            # 安全修复: 转义文件名以防止 Shell 注入
+            quoted_files = [shlex.quote(f) for f in files]
+            cmd = f"{self.lint_command} {' '.join(quoted_files)}"
             result = await self._run_command(cmd)
 
             return QualityGateResult(

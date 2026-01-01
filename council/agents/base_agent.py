@@ -26,6 +26,9 @@ class ModelConfig:
 
     # Claude 4.5 Opus - 高级推理模型 (规划、架构)
     CLAUDE_OPUS = "claude-4.5-opus"
+    
+    # Claude 4.5 Sonnet - 平衡模型 (可选替代)
+    CLAUDE_SONNET = "claude-4.5-sonnet"
 
     # Codex 5.2 - 代码审计模型
     CODEX = "codex-5.2"

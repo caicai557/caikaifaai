@@ -41,6 +41,8 @@ class ConsensusResult:
     votes_summary: List[Dict[str, Any]]
     reason: str
     iteration: int = 1
+    early_stopped: bool = False  # P2: 是否提前终止
+    tokens_saved: int = 0  # P2: 节省的Token估算
 
 
 class WaldConsensus:
@@ -197,6 +199,73 @@ class WaldConsensus:
             return False
 
         return True
+
+    def evaluate_realtime(
+        self,
+        vote: Dict[str, Any],
+        current_state: Optional[ConsensusResult] = None,
+        total_expected_votes: int = 5,
+    ) -> ConsensusResult:
+        """
+        P2: 实时评估单个投票 - 每票后检查是否可提前终止
+        
+        核心优化：不等待所有投票，π达标立即返回
+        
+        Args:
+            vote: 单个投票
+            current_state: 当前累积状态
+            total_expected_votes: 预期总投票数
+            
+        Returns:
+            更新后的ConsensusResult（可能标记early_stopped）
+        """
+        # 初始化或累积投票
+        if current_state is None:
+            all_votes = [vote]
+        else:
+            all_votes = [v for v in current_state.votes_summary]
+            all_votes.append(vote)
+        
+        # 评估当前状态
+        result = self.evaluate(all_votes)
+        
+        # 检查是否可以提前终止
+        votes_processed = len(all_votes)
+        remaining_votes = total_expected_votes - votes_processed
+        
+        if result.decision == ConsensusDecision.AUTO_COMMIT:
+            # π ≥ α，提前终止
+            result.early_stopped = True
+            result.tokens_saved = self._estimate_tokens_saved(remaining_votes)
+            result.reason = (
+                f"早停! π={result.pi_approve:.3f} ≥ {self.config.upper_limit}, "
+                f"节省 {remaining_votes} 轮投票 (~{result.tokens_saved} tokens)"
+            )
+        elif result.decision == ConsensusDecision.REJECT:
+            # π ≤ β，提前终止
+            result.early_stopped = True
+            result.tokens_saved = self._estimate_tokens_saved(remaining_votes)
+            result.reason = (
+                f"早停! π={result.pi_approve:.3f} ≤ {self.config.lower_limit}, "
+                f"节省 {remaining_votes} 轮投票 (~{result.tokens_saved} tokens)"
+            )
+        
+        result.iteration = votes_processed
+        return result
+    
+    def _estimate_tokens_saved(self, remaining_votes: int) -> int:
+        """
+        估算节省的Token数量
+        
+        Args:
+            remaining_votes: 剩余未处理的投票数
+            
+        Returns:
+            估算节省的Token数
+        """
+        # 假设每轮投票消耗约2000 tokens
+        TOKENS_PER_VOTE = 2000
+        return remaining_votes * TOKENS_PER_VOTE
 
     def get_semantic_entropy(self, votes: List[Dict[str, Any]]) -> float:
         """

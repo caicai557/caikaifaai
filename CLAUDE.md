@@ -99,16 +99,43 @@ council tripartite    # 三权分立执行
 
 ---
 
-## 🔄 六步自愈循环
+## 🚀 三阶段开发流程 (2026 SOP)
 
-```
-1. Plan    → Codex 需求代码化
-2. Audit   → Gemini Pro 全库审计 (200万Token)
-3. TDD     → Claude Sonnet 测试生成
-4. Impl    → Gemini Flash 代码实现
-5. Verify  → pytest/ruff 验证
-6. Review  → Wald 共识裁决 (π ≥ 0.95 自动提交)
-```
+ ### 第一阶段：交互式需求析构 (PM Phase)
+ > **目标**: 将模糊指令转化为可验证的 PRD
+
+ 1. **需求澄清**: Orchestrator 启动 /dev 工作流，主动列举模糊点。
+ 2. **结构化 PRD**: 生成包含产品目标、用户故事和需求池 (Requirement Pool) 的文档。
+ 3. **宪法对齐**: 强制读取 `CLAUDE.md` 和 `AGENTS.md`，确保不违反架构规范。
+
+ ### 第二阶段：多智能体理事会审议 (Architecture Phase)
+ > **目标**: 通过群体智能减少语义熵
+
+ 4. **动态代码地图**: 调用 `council codemap` (repo-prompt) 扫描上下文，生成依赖图谱。
+ 5. **理事会评审**: Facilitator 启动对抗性辩论：
+    - **Security**: 注入风险检查
+    - **Architect**: 复杂度与冲突分析
+ 6. **Wald 共识决策**: 实时评估共识概率 π。
+    - π ≥ α (置信上限): 自动通过
+    - π ≤ β (分歧过大): 抛出 `ApprovalRequest` 挂起
+
+ ### 第三阶段：TDD 前置物理约束 (QA Phase)
+ > **目标**: 代码即法律
+
+ 7. **TDD 强制阻断**: 必须优先编写 `tests.json` 或单元测试用例。
+ 8. **覆盖率门禁**: 覆盖率 < 90% 严禁进入执行阶段。
+ 9. **Plan Mode 预演**: `claude --permission-mode plan` 预演变更，获取人类确认。
+ 10. **自愈重试**: 若测试失败，触发 Self-Healing Loop 自动分析堆栈并生成补丁 (最多 3 次)。
+
+ ---
+
+ ## ✅ 最强实践核对清单 (SOP Checklist)
+
+ - [ ] **指令特定化**: 是否使用了 "think harder" 分配推理 Token？
+ - [ ] **工具发现**: 是否通过 `Tool Search` 动态加载 MCP 工具？
+ - [ ] **逻辑回溯**: 是否使用 `/rewind` 建立设计前快照？
+ - [ ] **审计追踪**: 是否将决策记录到 `NOTES.md`？
+ - [ ] **TDD 执行**: 是否先写了测试用例？
 
 ---
 

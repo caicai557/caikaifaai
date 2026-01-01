@@ -49,6 +49,16 @@ from council.agents.security_auditor import SecurityAuditor
 from council.agents.web_surfer import WebSurfer
 from council.core.llm_client import LLMClient, default_client
 
+# 2026 改进: Hooks 机制集成
+from council.hooks import (
+    HookManager,
+    HookContext,
+    HookType,
+    SessionStartHook,
+    PreToolUseHook,
+    PostToolUseHook,
+)
+
 
 class DevStatus(Enum):
     """开发状态"""
@@ -115,6 +125,7 @@ class DevOrchestrator:
         cost_sensitive: bool = True,
         llm_client: Optional[LLMClient] = None,
         verbose: bool = True,
+        enable_hooks: bool = True,
     ):
         """
         初始化编排器
@@ -126,6 +137,7 @@ class DevOrchestrator:
             cost_sensitive: 是否成本敏感（优先用便宜模型）
             llm_fn: LLM 调用函数 (prompt, model) -> response
             verbose: 输出详细日志
+            enable_hooks: 是否启用钩子机制
         """
         self.working_dir = working_dir
         self.test_command = test_command
@@ -179,6 +191,39 @@ class DevOrchestrator:
         self._current_status = DevStatus.ANALYZING
         self._start_time: Optional[datetime] = None
 
+        # 2026 改进: Hooks 机制
+        self.enable_hooks = enable_hooks
+        self.hook_manager = HookManager()
+        if enable_hooks:
+            self._setup_hooks()
+
+    def _setup_hooks(self) -> None:
+        """设置默认钩子"""
+        # SessionStart: 环境初始化
+        self.hook_manager.register(
+            SessionStartHook(
+                working_dir=self.working_dir,
+                priority=10,
+            )
+        )
+        # PreToolUse: 安全拦截
+        self.hook_manager.register(
+            PreToolUseHook(
+                priority=50,
+            )
+        )
+        # PostToolUse: 质量门禁
+        self.hook_manager.register(
+            PostToolUseHook(
+                working_dir=self.working_dir,
+                enable_format=True,
+                enable_lint=True,
+                enable_test=False,  # 默认关闭，由自愈循环处理
+                priority=100,
+            )
+        )
+        self._log("🔗 Hooks 机制已启用")
+
     async def dev(self, task: str) -> DevResult:
         """
         执行开发任务
@@ -200,6 +245,18 @@ class DevOrchestrator:
         self._log(f"🎯 开始任务: {task}")
 
         try:
+            # 0. 触发 SessionStart 钩子 (2026 Hooks)
+            if self.enable_hooks:
+                session_ctx = HookContext(
+                    hook_type=HookType.SESSION_START,
+                    session_id=f"dev-{datetime.now().strftime('%Y%m%d%H%M%S')}",
+                    agent_name="DevOrchestrator",
+                    working_dir=self.working_dir,
+                )
+                hook_result = await self.hook_manager.trigger_session_start(session_ctx)
+                if not hook_result.is_success:
+                    self._log(f"⚠️ SessionStart 钩子警告: {hook_result.message}")
+
             # 1. 分析任务
             self._update_status(DevStatus.ANALYZING)
             classification = self.classifier.classify(task)
@@ -224,7 +281,7 @@ class DevOrchestrator:
             # 5. 共识评估 (2026: Wald 实时早停)
             self._update_status(DevStatus.REVIEWING)
             votes = self._collect_votes(subtasks, healing_report)
-            
+
             # 使用实时早停评估 - 每票后检查π是否达标
             consensus_result = None
             for i, vote in enumerate(votes):
@@ -234,15 +291,19 @@ class DevOrchestrator:
                     )
                 else:
                     consensus_result = self.consensus.evaluate_realtime(
-                        vote, current_state=consensus_result, total_expected_votes=len(votes)
+                        vote,
+                        current_state=consensus_result,
+                        total_expected_votes=len(votes),
                     )
-                
+
                 # 早停检查 - π达标立即返回
                 if consensus_result.early_stopped:
                     self._log(f"⚡ 早停! {consensus_result.reason}")
                     break
-            
-            self._log(f"📊 共识概率 π={consensus_result.pi_approve:.3f} (Token节省: {consensus_result.tokens_saved})")
+
+            self._log(
+                f"📊 共识概率 π={consensus_result.pi_approve:.3f} (Token节省: {consensus_result.tokens_saved})"
+            )
 
             # 6. 决策
             if consensus_result.decision == ConsensusDecision.AUTO_COMMIT:

@@ -1,5 +1,4 @@
 import pytest
-import asyncio
 import os
 from council.skills.research_skill import ResearchSkill
 from council.skills.coding_skill import CodingSkill

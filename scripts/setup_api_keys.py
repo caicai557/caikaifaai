@@ -6,7 +6,6 @@ Council API Keys 配置向导
 """
 
 import os
-import sys
 from pathlib import Path
 
 

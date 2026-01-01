@@ -1,5 +1,4 @@
 import pytest
-import asyncio
 import os
 import shutil
 from unittest.mock import MagicMock

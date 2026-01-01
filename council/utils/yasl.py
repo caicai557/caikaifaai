@@ -5,7 +5,7 @@ Provides serialization and deserialization for agent context handover using YAML
 """
 
 import yaml
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 import logging
 
 logger = logging.getLogger(__name__)

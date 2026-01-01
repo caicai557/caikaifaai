@@ -20,7 +20,7 @@ Usage:
 """
 
 from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, List, Optional, Set, Awaitable, Union
+from typing import Any, Callable, Dict, List, Optional, Awaitable
 from datetime import datetime
 from pathlib import Path
 from enum import Enum

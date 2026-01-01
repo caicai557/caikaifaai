@@ -13,16 +13,12 @@ import asyncio
 import functools
 import logging
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import (
     Any,
     Callable,
-    Dict,
-    List,
     Optional,
-    Type,
     TypeVar,
-    Union,
 )
 
 logger = logging.getLogger(__name__)

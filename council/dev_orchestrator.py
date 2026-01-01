@@ -27,7 +27,6 @@ from council.orchestration.task_classifier import (
 from council.orchestration.multi_model_executor import (
     MultiModelExecutor,
     ModelTask,
-    ModelResult,
     ModelRole,
 )
 from council.facilitator.wald_consensus import (

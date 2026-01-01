@@ -1,5 +1,4 @@
 import pytest
-import asyncio
 from council.skills.security_audit_skill import SecurityAuditSkill
 
 

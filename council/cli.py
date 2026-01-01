@@ -258,6 +258,15 @@ def main(args: Optional[list] = None) -> int:
     # clear 命令
     clear_parser = subparsers.add_parser("clear", help="会话清理")
     clear_parser.add_argument("--keep", "-k", type=int, default=5, help="保留快照数量")
+    
+    # codemap 命令
+    codemap_parser = subparsers.add_parser("codemap", help="生成代码地图")
+    codemap_parser.add_argument("--dir", "-d", default=".", help="目标目录")
+    codemap_parser.add_argument("--output", "-o", default="CODEMAP.md", help="输出文件")
+    
+    # tripartite 命令
+    tripartite_parser = subparsers.add_parser("tripartite", help="三权分立执行")
+    tripartite_parser.add_argument("task", help="任务描述")
 
     parsed = parser.parse_args(args)
 
@@ -303,6 +312,16 @@ def main(args: Optional[list] = None) -> int:
     elif parsed.command == "clear":
         from council.workflow.commands import clear_command
         clear_command(keep=parsed.keep)
+    elif parsed.command == "codemap":
+        from council.workflow.codemap import CodeMapGenerator
+        generator = CodeMapGenerator(root_dir=parsed.dir)
+        output_path = generator.save(parsed.output)
+        print(f"✅ 代码地图已生成: {output_path}")
+    elif parsed.command == "tripartite":
+        from council.orchestration.tripartite import TripartiteOrchestrator
+        orchestrator = TripartiteOrchestrator()
+        result = orchestrator.run(parsed.task)
+        print(f"✅ 三权分立执行完成, Token节省: {result.token_saved:.1%}")
     else:
         parser.print_help()
         return 1

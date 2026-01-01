@@ -24,17 +24,17 @@ from council.core.llm_client import LLMClient, default_client
 class ModelConfig:
     """Agent 专用模型配置"""
 
-    # 高级推理模型 (规划、架构)
-    CLAUDE_OPUS = "anthropic/claude-sonnet-4-20250514"  # Claude 4.5 Opus 替代
+    # Claude 4.5 Opus - 高级推理模型 (规划、架构)
+    CLAUDE_OPUS = "anthropic/claude-sonnet-4-20250514"
 
     # 代码审计模型
     CODEX = "openai/gpt-4o"  # Codex 5.2 替代 (使用 GPT-4o)
 
-    # 高频迭代模型 (成本敏感)
+    # Gemini 3 Flash - 高频迭代模型 (成本敏感, 80%调用)
     GEMINI_FLASH = "vertex_ai/gemini-2.0-flash"
 
-    # 网络研究模型 (长上下文)
-    GEMINI_PRO = "vertex_ai/gemini-2.0-flash"  # Pro 版本待配置
+    # Gemini 3 Pro - 网络研究模型 (长上下文)
+    GEMINI_PRO = "vertex_ai/gemini-2.0-flash"  # 待升级为 gemini-3-pro
 
     # 默认模型
     DEFAULT = GEMINI_FLASH

@@ -5,6 +5,15 @@ Council CLI - 命令行工具
 - council classify <task>   分类任务并推荐模型
 - council route <task>      快速路由
 - council status            查看系统状态
+
+六步工作流命令:
+- council init              生成 CLAUDE.md
+- council plan <task>       只读计划模式
+- council audit             全库审计
+- council tdd <feature>     TDD测试生成
+- council execute <task>    沙箱执行
+- council rewind            快照备份
+- council clear             会话清理
 """
 
 import argparse
@@ -219,6 +228,37 @@ def main(args: Optional[list] = None) -> int:
     dev_parser.add_argument("task", help="开发任务描述")
     dev_parser.add_argument("--verbose", "-v", action="store_true", help="详细输出")
 
+    # === 六步工作流命令 ===
+    
+    # init 命令
+    init_parser = subparsers.add_parser("init", help="生成 CLAUDE.md")
+    init_parser.add_argument("--output", "-o", default="CLAUDE.md", help="输出文件路径")
+    
+    # plan 命令
+    plan_parser = subparsers.add_parser("plan", help="只读计划模式")
+    plan_parser.add_argument("task", help="任务描述")
+    
+    # audit 命令
+    audit_parser = subparsers.add_parser("audit", help="全库审计 (Gemini Pro)")
+    audit_parser.add_argument("--dir", "-d", default=".", help="目标目录")
+    
+    # tdd 命令
+    tdd_parser = subparsers.add_parser("tdd", help="TDD测试生成 (Claude Sonnet)")
+    tdd_parser.add_argument("feature", help="功能描述")
+    
+    # execute 命令
+    execute_parser = subparsers.add_parser("execute", help="沙箱执行")
+    execute_parser.add_argument("task", help="任务描述")
+    execute_parser.add_argument("--sandbox", "-s", default="docker", help="沙箱类型")
+    
+    # rewind 命令
+    rewind_parser = subparsers.add_parser("rewind", help="快照备份")
+    rewind_parser.add_argument("--id", help="快照ID (默认自动生成)")
+    
+    # clear 命令
+    clear_parser = subparsers.add_parser("clear", help="会话清理")
+    clear_parser.add_argument("--keep", "-k", type=int, default=5, help="保留快照数量")
+
     parsed = parser.parse_args(args)
 
     if parsed.command == "classify":
@@ -241,6 +281,28 @@ def main(args: Optional[list] = None) -> int:
         except Exception as e:
             print(f"Error in dev: {e}")
             return 1
+    # === 六步工作流命令 ===
+    elif parsed.command == "init":
+        from council.workflow.commands import init_command
+        init_command(output_path=parsed.output)
+    elif parsed.command == "plan":
+        from council.workflow.commands import plan_command
+        plan_command(parsed.task)
+    elif parsed.command == "audit":
+        from council.workflow.commands import audit_command
+        audit_command(target_dir=parsed.dir)
+    elif parsed.command == "tdd":
+        from council.workflow.commands import tdd_command
+        tdd_command(parsed.feature)
+    elif parsed.command == "execute":
+        from council.workflow.commands import execute_command
+        execute_command(parsed.task, sandbox=parsed.sandbox)
+    elif parsed.command == "rewind":
+        from council.workflow.commands import rewind_command
+        rewind_command(snapshot_id=parsed.id)
+    elif parsed.command == "clear":
+        from council.workflow.commands import clear_command
+        clear_command(keep=parsed.keep)
     else:
         parser.print_help()
         return 1

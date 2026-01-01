@@ -221,11 +221,28 @@ class DevOrchestrator:
             healing_report = self.healing_loop.run()
             self._log(f"🔧 自愈状态: {healing_report.status.value}")
 
-            # 5. 共识评估
+            # 5. 共识评估 (2026: Wald 实时早停)
             self._update_status(DevStatus.REVIEWING)
             votes = self._collect_votes(subtasks, healing_report)
-            consensus_result = self.consensus.evaluate(votes)
-            self._log(f"📊 共识概率 π={consensus_result.pi_approve:.3f}")
+            
+            # 使用实时早停评估 - 每票后检查π是否达标
+            consensus_result = None
+            for i, vote in enumerate(votes):
+                if consensus_result is None:
+                    consensus_result = self.consensus.evaluate_realtime(
+                        vote, total_expected_votes=len(votes)
+                    )
+                else:
+                    consensus_result = self.consensus.evaluate_realtime(
+                        vote, current_state=consensus_result, total_expected_votes=len(votes)
+                    )
+                
+                # 早停检查 - π达标立即返回
+                if consensus_result.early_stopped:
+                    self._log(f"⚡ 早停! {consensus_result.reason}")
+                    break
+            
+            self._log(f"📊 共识概率 π={consensus_result.pi_approve:.3f} (Token节省: {consensus_result.tokens_saved})")
 
             # 6. 决策
             if consensus_result.decision == ConsensusDecision.AUTO_COMMIT:

@@ -1,7 +1,11 @@
 """
 Persistence Phase - 状态持久化与清理阶段
 
-会话快照、NOTES.md 归档、上下文清理。
+记忆分离架构 (2026最佳实践):
+- 长期记忆: NOTES.md - 跨会话持久化的情节记忆
+- 短期记忆: SessionCache - 当前会话的工作上下文
+
+会话快照、归档、上下文清理。
 """
 
 from dataclasses import dataclass, field
@@ -147,4 +151,70 @@ class ContextCleaner:
         }
 
 
-__all__ = ["SessionSnapshot", "NotesArchiver", "ContextCleaner"]
+class SessionCache:
+    """
+    短期会话缓存 (2026最佳实践)
+    
+    与 NOTES.md (长期记忆) 区分:
+    - SessionCache: 当前会话工作上下文，会话结束后清理
+    - NOTES.md: 跨会话持久化的情节记忆
+    """
+    
+    def __init__(self, max_entries: int = 100):
+        self.max_entries = max_entries
+        self._cache: Dict[str, Any] = {}
+        self._access_order: List[str] = []
+    
+    def set(self, key: str, value: Any):
+        """设置缓存项"""
+        if key in self._cache:
+            self._access_order.remove(key)
+        self._cache[key] = value
+        self._access_order.append(key)
+        
+        # LRU 淘汰
+        while len(self._access_order) > self.max_entries:
+            oldest = self._access_order.pop(0)
+            del self._cache[oldest]
+    
+    def get(self, key: str, default: Any = None) -> Any:
+        """获取缓存项"""
+        return self._cache.get(key, default)
+    
+    def clear(self):
+        """清空缓存"""
+        self._cache.clear()
+        self._access_order.clear()
+
+
+class TokenSanitizer:
+    """
+    Token化脱敏器 (2026最佳实践)
+    
+    沙盒输出脱敏，保护敏感信息
+    """
+    
+    SENSITIVE_PATTERNS = [
+        (r'password[=:]\s*[\'"]?[^\s\'"]+', 'password=***REDACTED***'),
+        (r'api[_-]?key[=:]\s*[\'"]?[^\s\'"]+', 'api_key=***REDACTED***'),
+        (r'secret[=:]\s*[\'"]?[^\s\'"]+', 'secret=***REDACTED***'),
+        (r'token[=:]\s*[\'"]?[^\s\'"]+', 'token=***REDACTED***'),
+        (r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}', '***EMAIL***'),
+    ]
+    
+    def sanitize(self, text: str) -> str:
+        """脱敏文本"""
+        import re
+        result = text
+        for pattern, replacement in self.SENSITIVE_PATTERNS:
+            result = re.sub(pattern, replacement, result, flags=re.IGNORECASE)
+        return result
+
+
+__all__ = [
+    "SessionSnapshot",
+    "NotesArchiver",
+    "ContextCleaner",
+    "SessionCache",
+    "TokenSanitizer",
+]

@@ -25,6 +25,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class ModelConfig:
     """模型配置"""
+
     model_name: str
     api_provider: str
     context_window: int
@@ -37,6 +38,7 @@ class ModelConfig:
 @dataclass
 class RoutingResult:
     """路由结果（带回退）"""
+
     primary: ModelConfig
     fallback: ModelConfig
     reason: str
@@ -52,11 +54,36 @@ PROVIDER_MAPPING: Dict[RecommendedModel, str] = {
 }
 
 ROUTER_MODEL_CONFIGS: Dict[str, Dict[str, Any]] = {
-    "claude-4.5-opus": {"provider": "anthropic", "context": 200_000, "cost": 4.0, "latency": "high"},
-    "claude-4.5-sonnet": {"provider": "anthropic", "context": 200_000, "cost": 1.0, "latency": "low"},
-    "gpt-5.2-codex": {"provider": "openai", "context": 200_000, "cost": 2.0, "latency": "medium"},
-    "gemini-3-pro": {"provider": "google", "context": 1_000_000, "cost": 4.0, "latency": "medium"},
-    "gemini-3-flash": {"provider": "google", "context": 1_000_000, "cost": 1.0, "latency": "low"},
+    "claude-4.5-opus": {
+        "provider": "anthropic",
+        "context": 200_000,
+        "cost": 4.0,
+        "latency": "high",
+    },
+    "claude-4.5-sonnet": {
+        "provider": "anthropic",
+        "context": 200_000,
+        "cost": 1.0,
+        "latency": "low",
+    },
+    "gpt-5.2-codex": {
+        "provider": "openai",
+        "context": 200_000,
+        "cost": 2.0,
+        "latency": "medium",
+    },
+    "gemini-3-pro": {
+        "provider": "google",
+        "context": 1_000_000,
+        "cost": 4.0,
+        "latency": "medium",
+    },
+    "gemini-3-flash": {
+        "provider": "google",
+        "context": 1_000_000,
+        "cost": 1.0,
+        "latency": "low",
+    },
 }
 
 
@@ -101,7 +128,9 @@ class ModelPerformanceStats:
             return 0.0
         return sum(self.recent_latencies) / len(self.recent_latencies)
 
-    def is_degraded(self, success_threshold: float = 0.8, latency_threshold_ms: float = 5000) -> bool:
+    def is_degraded(
+        self, success_threshold: float = 0.8, latency_threshold_ms: float = 5000
+    ) -> bool:
         """
         判断模型是否处于降级状态
 
@@ -168,7 +197,9 @@ class ModelRouter:
             "gemini-3-flash": "gpt-4o-mini",
         }
 
-    def _model_to_config(self, model: RecommendedModel, task_type: TaskType, confidence: float) -> ModelConfig:
+    def _model_to_config(
+        self, model: RecommendedModel, task_type: TaskType, confidence: float
+    ) -> ModelConfig:
         spec = MODEL_SPECS[model]
         return ModelConfig(
             model_name=model.value,
@@ -190,24 +221,43 @@ class ModelRouter:
             spec = MODEL_SPECS[result.recommended_model]
             if spec.latency == "high":
                 result.recommended_model = result.fallback_model
-        return self._model_to_config(result.recommended_model, result.task_type, result.confidence)
+        return self._model_to_config(
+            result.recommended_model, result.task_type, result.confidence
+        )
 
     async def route_with_fallback(self, task: str) -> RoutingResult:
         result = self._classifier.classify(task)
-        primary = self._model_to_config(result.recommended_model, result.task_type, result.confidence)
-        fallback = self._model_to_config(result.fallback_model, result.task_type, result.confidence * 0.8)
-        return RoutingResult(primary=primary, fallback=fallback, reason=result.reason, matched_keywords=result.matched_keywords)
+        primary = self._model_to_config(
+            result.recommended_model, result.task_type, result.confidence
+        )
+        fallback = self._model_to_config(
+            result.fallback_model, result.task_type, result.confidence * 0.8
+        )
+        return RoutingResult(
+            primary=primary,
+            fallback=fallback,
+            reason=result.reason,
+            matched_keywords=result.matched_keywords,
+        )
 
     async def route_batch(self, tasks: List[str]) -> List[ModelConfig]:
         return [await self.route(task) for task in tasks]
 
     def get_model_for_context_size(self, context_tokens: int) -> ModelConfig:
         if context_tokens > 200_000:
-            model = RecommendedModel.GEMINI_PRO if not self.cost_sensitive else RecommendedModel.GEMINI_FLASH
+            model = (
+                RecommendedModel.GEMINI_PRO
+                if not self.cost_sensitive
+                else RecommendedModel.GEMINI_FLASH
+            )
             return self._model_to_config(model, TaskType.GENERAL, 0.9)
         if context_tokens > 50_000:
-            return self._model_to_config(RecommendedModel.CLAUDE_SONNET, TaskType.GENERAL, 0.9)
-        return self._model_to_config(RecommendedModel.GEMINI_FLASH, TaskType.GENERAL, 0.9)
+            return self._model_to_config(
+                RecommendedModel.CLAUDE_SONNET, TaskType.GENERAL, 0.9
+            )
+        return self._model_to_config(
+            RecommendedModel.GEMINI_FLASH, TaskType.GENERAL, 0.9
+        )
 
     # ========== 2026 新增: 性能追踪与自适应路由 ==========
 
@@ -226,7 +276,9 @@ class ModelRouter:
             success: 是否成功
         """
         if model_name not in self._performance_stats:
-            self._performance_stats[model_name] = ModelPerformanceStats(model_name=model_name)
+            self._performance_stats[model_name] = ModelPerformanceStats(
+                model_name=model_name
+            )
 
         stats = self._performance_stats[model_name]
         stats.total_calls += 1
@@ -310,10 +362,18 @@ class ModelRouter:
                 # 构造降级配置
                 return ModelConfig(
                     model_name=fallback,
-                    api_provider=ROUTER_MODEL_CONFIGS.get(fallback, {}).get("provider", "unknown"),
-                    context_window=ROUTER_MODEL_CONFIGS.get(fallback, {}).get("context", 100000),
-                    relative_cost=ROUTER_MODEL_CONFIGS.get(fallback, {}).get("cost", 1.0),
-                    latency=ROUTER_MODEL_CONFIGS.get(fallback, {}).get("latency", "low"),
+                    api_provider=ROUTER_MODEL_CONFIGS.get(fallback, {}).get(
+                        "provider", "unknown"
+                    ),
+                    context_window=ROUTER_MODEL_CONFIGS.get(fallback, {}).get(
+                        "context", 100000
+                    ),
+                    relative_cost=ROUTER_MODEL_CONFIGS.get(fallback, {}).get(
+                        "cost", 1.0
+                    ),
+                    latency=ROUTER_MODEL_CONFIGS.get(fallback, {}).get(
+                        "latency", "low"
+                    ),
                     task_type=base_config.task_type,
                     confidence=base_config.confidence * 0.8,
                 )
@@ -349,7 +409,9 @@ class ModelRouter:
         # 混合文本取平均
         return len(text) // 3
 
-    def get_model_for_text(self, text: str, task_type: TaskType = TaskType.GENERAL) -> ModelConfig:
+    def get_model_for_text(
+        self, text: str, task_type: TaskType = TaskType.GENERAL
+    ) -> ModelConfig:
         """
         根据文本长度自动选择模型 (2026 新增)
 

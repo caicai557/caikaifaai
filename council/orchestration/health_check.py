@@ -155,9 +155,7 @@ class HealthChecker:
             initial_status: Initial health status
         """
         self._check_functions[name] = check_func
-        self._health_states[name] = ModelHealth(
-            model_name=name, status=initial_status
-        )
+        self._health_states[name] = ModelHealth(model_name=name, status=initial_status)
         logger.info(f"Registered health check for: {name}")
 
     def unregister(self, name: str) -> None:
@@ -295,7 +293,11 @@ class HealthChecker:
     def is_available(self, name: str) -> bool:
         """Check if target is available (healthy or degraded)."""
         status = self.get_status(name)
-        return status in (HealthStatus.HEALTHY, HealthStatus.DEGRADED, HealthStatus.UNKNOWN)
+        return status in (
+            HealthStatus.HEALTHY,
+            HealthStatus.DEGRADED,
+            HealthStatus.UNKNOWN,
+        )
 
     def get_healthy_models(self) -> List[str]:
         """Get list of healthy models."""
@@ -313,7 +315,9 @@ class HealthChecker:
             if health.status in (HealthStatus.HEALTHY, HealthStatus.DEGRADED)
         ]
 
-    def get_history(self, name: Optional[str] = None, limit: int = 10) -> List[HealthCheckResult]:
+    def get_history(
+        self, name: Optional[str] = None, limit: int = 10
+    ) -> List[HealthCheckResult]:
         """
         Get health check history.
 

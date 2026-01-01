@@ -26,7 +26,7 @@ async def test_security_audit_hitl_and_streaming(tmp_path):
     )
 
     # 4. 执行
-    result = await skill.execute(target_dir=".")
+    await skill.execute(target_dir=".")
 
     # 5. 验证 Streaming
     assert len(progress_updates) > 0

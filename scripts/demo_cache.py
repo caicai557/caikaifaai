@@ -5,9 +5,6 @@ def main():
     print("🚀 Running Cache Demo...")
 
     # Mock a large system prompt that would trigger caching
-    large_context = (
-        "This is a very large context " * 1000
-    )  # ~5000 tokens, might need more for 32k limit
     # Gemini requires >32k tokens for caching usually, but let's see if our manager handles it
     # The manager has MIN_CACHE_TOKENS = 32768
 

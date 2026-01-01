@@ -212,15 +212,15 @@ def main():
     print("Starting analysis...")
     output_dir = "{output_dir}"
     os.makedirs(output_dir, exist_ok=True)
-    
+
     # Mock Analysis
     with open(f"{{output_dir}}/report.md", "w") as f:
         f.write("# Analysis Report\\n\\nGoal: {goal}\\n\\nResult: Success")
-        
+
     # Mock Chart (empty file for demo)
     with open(f"{{output_dir}}/chart.png", "w") as f:
         f.write("PNG_DATA")
-        
+
     print("Analysis complete. Generated report.md and chart.png")
 
 if __name__ == "__main__":

@@ -34,6 +34,7 @@ logger = logging.getLogger(__name__)
 
 class NodeType(Enum):
     """Type of graph node."""
+
     STANDARD = "standard"
     APPROVAL = "approval"
     PARALLEL = "parallel"
@@ -53,6 +54,7 @@ class Checkpoint:
         timestamp: When checkpoint was created
         metadata: Additional metadata
     """
+
     id: str
     graph_name: str
     current_node: str
@@ -136,6 +138,7 @@ ApprovalFunc = Callable[[State], Awaitable[bool]]
 @dataclass
 class LoopConfig:
     """Configuration for loop edges."""
+
     condition: Callable[[State], bool]
     max_iterations: int = 10
     loop_counter_key: str = "loop_count"
@@ -144,6 +147,7 @@ class LoopConfig:
 @dataclass
 class ParallelConfig:
     """Configuration for parallel nodes."""
+
     nodes: List[str]
     join_node: str
     merge_strategy: str = "all"  # "all", "any", "first"
@@ -231,6 +235,7 @@ class StateGraph:
             approval_func: Async function that returns True if approved
             timeout: Maximum wait time in seconds
         """
+
         async def default_approval(state: State) -> bool:
             logger.info(f"Approval required at node: {name}")
             logger.info(f"Context: {state.context}")
@@ -356,7 +361,9 @@ class StateGraph:
         checkpoint = Checkpoint.from_dict(data)
 
         state = State.from_dict(checkpoint.state_data)
-        logger.info(f"Resumed from checkpoint: {checkpoint_id} at node {checkpoint.current_node}")
+        logger.info(
+            f"Resumed from checkpoint: {checkpoint_id} at node {checkpoint.current_node}"
+        )
 
         return state, checkpoint.current_node
 
@@ -515,7 +522,7 @@ class StateGraph:
             if node_type == NodeType.APPROVAL:
                 lines.append(f"    {name}[/{name}/]")  # Diamond shape
             elif node_type == NodeType.PARALLEL:
-                lines.append(f"    {name}[[\"{name}\"]]")  # Stadium shape
+                lines.append(f'    {name}[["{name}"]]')  # Stadium shape
             else:
                 lines.append(f"    {name}[{name}]")
 

@@ -246,7 +246,9 @@ def with_fallback(
                         time.sleep(delay)
 
             # Main function failed, try fallback
-            logger.warning(f"{func.__name__} failed after {max_attempts} attempts, using fallback")
+            logger.warning(
+                f"{func.__name__} failed after {max_attempts} attempts, using fallback"
+            )
 
             if fallback_func:
                 try:
@@ -303,7 +305,9 @@ def async_with_fallback(
                         await asyncio.sleep(delay)
 
             # Main function failed, try fallback
-            logger.warning(f"{func.__name__} failed after {max_attempts} attempts, using fallback")
+            logger.warning(
+                f"{func.__name__} failed after {max_attempts} attempts, using fallback"
+            )
 
             if fallback_func:
                 try:
@@ -352,7 +356,7 @@ class RetryManager:
         @functools.wraps(func)
         def wrapper(*args: Any, **kwargs: Any) -> T:
             last_exception = None
-            start_time = time.time()
+            time.time()
 
             for attempt in range(self.config.max_attempts):
                 self.stats.total_attempts += 1

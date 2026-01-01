@@ -303,7 +303,9 @@ class DevOrchestrator:
         model_tasks = []
         for subtask in subtasks:
             agent_name = getattr(subtask, "assigned_agent", "Coder")
-            model = self.agent_model_mapping.get(agent_name, "vertex_ai/gemini-2.0-flash")
+            model = self.agent_model_mapping.get(
+                agent_name, "vertex_ai/gemini-2.0-flash"
+            )
 
             # 确定角色
             role_mapping = {
@@ -332,7 +334,9 @@ class DevOrchestrator:
             if result.success:
                 subtask.status = "done"
                 subtask.result = result.output
-                self._log(f"✅ [{subtask.assigned_agent}] 完成 ({result.latency_ms:.0f}ms)")
+                self._log(
+                    f"✅ [{subtask.assigned_agent}] 完成 ({result.latency_ms:.0f}ms)"
+                )
             else:
                 subtask.status = "failed"
                 subtask.error = result.error or "执行失败"

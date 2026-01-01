@@ -11,11 +11,14 @@ Delegation Manager - 委托管理器
 """
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional, Any, TYPE_CHECKING
 from datetime import datetime
 from enum import Enum
 
 from council.agents.base_agent import BaseAgent, ExecuteResult
+
+if TYPE_CHECKING:
+    from council.orchestration.registry import AgentRegistry
 
 
 class DelegationStatus(Enum):

@@ -6,12 +6,15 @@ Provides structured handoff with context snapshots and explicit boundaries.
 """
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Any, Optional, Callable
+from typing import Dict, List, Any, Optional, Callable, TYPE_CHECKING
 from datetime import datetime
 from enum import Enum
 import logging
 
 logger = logging.getLogger(__name__)
+
+if TYPE_CHECKING:
+    from council.orchestration.events import Hub
 
 
 class HandoffPriority(Enum):

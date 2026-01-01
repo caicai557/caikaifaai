@@ -24,6 +24,12 @@ from council.orchestration.task_classifier import (
     ClassificationResult,
     RecommendedModel,
 )
+from council.orchestration.multi_model_executor import (
+    MultiModelExecutor,
+    ModelTask,
+    ModelResult,
+    ModelRole,
+)
 from council.facilitator.wald_consensus import (
     WaldConsensus,
     WaldConfig,
@@ -154,6 +160,22 @@ class DevOrchestrator:
             "WebSurfer": WebSurfer(llm_client=self.llm_client),
         }
 
+        # 2026 改进: 多模型并行执行器
+        self.multi_executor = MultiModelExecutor(
+            llm_client=self.llm_client,
+            max_concurrent=3,
+            default_timeout=60.0,
+            retry_count=1,
+        )
+
+        # 模型映射：Agent 名称 -> 推荐模型
+        self.agent_model_mapping = {
+            "Architect": "claude-sonnet-4-20250514",
+            "Coder": "vertex_ai/gemini-2.0-flash",
+            "SecurityAuditor": "claude-sonnet-4-20250514",
+            "WebSurfer": "gpt-4o-mini",
+        }
+
         # 状态跟踪
         self._current_status = DevStatus.ANALYZING
         self._start_time: Optional[datetime] = None
@@ -190,13 +212,10 @@ class DevOrchestrator:
             subtasks = await self._plan_subtasks(task, classification)
             self._log(f"📋 拆解为 {len(subtasks)} 个子任务")
 
-            # 3. 执行子任务
+            # 3. 执行子任务 (2026: 并行执行)
             self._update_status(DevStatus.EXECUTING)
-            for i, subtask in enumerate(subtasks):
-                self._log(f"🔄 [{i + 1}/{len(subtasks)}] {subtask.description[:50]}...")
-                result = await self._execute_subtask(subtask)
-                subtask.status = "done" if result else "failed"
-                subtask.result = result
+            self._log(f"🚀 并行执行 {len(subtasks)} 个子任务")
+            await self._execute_subtasks_parallel(subtasks)
 
             # 4. 运行测试 + 自愈
             self._update_status(DevStatus.HEALING)
@@ -272,8 +291,64 @@ class DevOrchestrator:
 
         return subtasks
 
+    async def _execute_subtasks_parallel(self, subtasks: List[SubTask]) -> None:
+        """
+        并行执行多个子任务 (2026 改进)
+
+        使用 MultiModelExecutor 实现真正的并行执行。
+        """
+        if not subtasks:
+            return
+
+        # 构建 ModelTask 列表
+        model_tasks = []
+        for subtask in subtasks:
+            agent_name = getattr(subtask, "assigned_agent", "Coder")
+            model = self.agent_model_mapping.get(agent_name, "vertex_ai/gemini-2.0-flash")
+
+            # 确定角色
+            role_mapping = {
+                "Architect": ModelRole.PLANNER,
+                "Coder": ModelRole.EXECUTOR,
+                "SecurityAuditor": ModelRole.REVIEWER,
+                "WebSurfer": ModelRole.GENERAL,
+            }
+            role = role_mapping.get(agent_name, ModelRole.EXECUTOR)
+
+            model_tasks.append(
+                ModelTask(
+                    model=model,
+                    prompt=subtask.description,
+                    role=role,
+                    timeout=60.0,
+                    metadata={"subtask_id": subtask.id, "agent": agent_name},
+                )
+            )
+
+        # 并行执行
+        results = await self.multi_executor.execute_parallel(model_tasks)
+
+        # 将结果映射回子任务
+        for subtask, result in zip(subtasks, results):
+            if result.success:
+                subtask.status = "done"
+                subtask.result = result.output
+                self._log(f"✅ [{subtask.assigned_agent}] 完成 ({result.latency_ms:.0f}ms)")
+            else:
+                subtask.status = "failed"
+                subtask.error = result.error or "执行失败"
+                self._log(f"❌ [{subtask.assigned_agent}] 失败: {result.error}")
+
+        # 记录统计信息
+        stats = self.multi_executor.get_stats()
+        self._log(
+            f"📊 并行执行统计: "
+            f"成功率={stats.success_rate:.1%}, "
+            f"平均延迟={stats.avg_latency_ms:.0f}ms"
+        )
+
     async def _execute_subtask(self, subtask: SubTask) -> Optional[str]:
-        """执行单个子任务 - 2025: 使用专业化 Agent"""
+        """执行单个子任务 - 2025: 使用专业化 Agent (保留用于单任务场景)"""
         agent_name = getattr(subtask, "assigned_agent", "Coder")
         agent = self.agents.get(agent_name)
 

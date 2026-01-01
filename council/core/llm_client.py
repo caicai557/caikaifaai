@@ -137,6 +137,136 @@ class LLMClient:
         """Helper for single-turn queries."""
         return self.completion(messages=[{"role": "user", "content": prompt}])
 
+    def completion_with_model(
+        self,
+        prompt: str,
+        model: str,
+        temperature: float = 0.7,
+        max_tokens: Optional[int] = None,
+    ) -> str:
+        """
+        Convenience method for single-prompt completion with explicit model.
+
+        Args:
+            prompt: The user prompt
+            model: Model to use (required)
+            temperature: Creativity control
+            max_tokens: Limit output length
+
+        Returns:
+            str: The model's response content
+        """
+        return self.completion(
+            messages=[{"role": "user", "content": prompt}],
+            model=model,
+            temperature=temperature,
+            max_tokens=max_tokens,
+        )
+
+    def batch_completion(
+        self,
+        prompts: List[str],
+        model: Optional[str] = None,
+        temperature: float = 0.7,
+        max_tokens: Optional[int] = None,
+    ) -> List[str]:
+        """
+        Execute multiple prompts in a single batch (sequential execution).
+
+        For true parallel execution, use MultiModelExecutor.
+
+        Args:
+            prompts: List of prompts to process
+            model: Model to use
+            temperature: Creativity control
+            max_tokens: Limit output length per prompt
+
+        Returns:
+            List[str]: List of responses
+        """
+        results = []
+        for prompt in prompts:
+            try:
+                result = self.completion(
+                    messages=[{"role": "user", "content": prompt}],
+                    model=model,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                )
+                results.append(result)
+            except Exception as e:
+                logger.error(f"Batch completion error for prompt: {e}")
+                results.append(f"Error: {str(e)}")
+        return results
+
+    def get_model_info(self, model: Optional[str] = None) -> Dict[str, any]:
+        """
+        Get information about a model.
+
+        Args:
+            model: Model identifier, defaults to default_model
+
+        Returns:
+            Dict with model information
+        """
+        target_model = model or self.default_model
+
+        # Model capabilities mapping
+        model_info = {
+            "vertex_ai/gemini-2.0-flash": {
+                "provider": "google",
+                "max_context": 1000000,
+                "supports_json_mode": True,
+                "cost_per_1k_input": 0.00015,
+                "cost_per_1k_output": 0.0006,
+                "best_for": ["fast_execution", "code_generation"],
+            },
+            "vertex_ai/gemini-2.0-pro": {
+                "provider": "google",
+                "max_context": 2000000,
+                "supports_json_mode": True,
+                "cost_per_1k_input": 0.00125,
+                "cost_per_1k_output": 0.005,
+                "best_for": ["complex_reasoning", "long_context"],
+            },
+            "claude-sonnet-4-20250514": {
+                "provider": "anthropic",
+                "max_context": 200000,
+                "supports_json_mode": True,
+                "cost_per_1k_input": 0.003,
+                "cost_per_1k_output": 0.015,
+                "best_for": ["planning", "analysis", "coding"],
+            },
+            "gpt-4o": {
+                "provider": "openai",
+                "max_context": 128000,
+                "supports_json_mode": True,
+                "cost_per_1k_input": 0.005,
+                "cost_per_1k_output": 0.015,
+                "best_for": ["general", "multimodal"],
+            },
+            "gpt-4o-mini": {
+                "provider": "openai",
+                "max_context": 128000,
+                "supports_json_mode": True,
+                "cost_per_1k_input": 0.00015,
+                "cost_per_1k_output": 0.0006,
+                "best_for": ["fast_tasks", "cost_effective"],
+            },
+        }
+
+        return model_info.get(
+            target_model,
+            {
+                "provider": "unknown",
+                "max_context": 8192,
+                "supports_json_mode": False,
+                "cost_per_1k_input": 0.001,
+                "cost_per_1k_output": 0.002,
+                "best_for": ["general"],
+            },
+        )
+
 
 # Singleton instance
 default_client = LLMClient()

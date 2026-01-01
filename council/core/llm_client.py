@@ -27,11 +27,13 @@ class LLMClient:
     Unified LLM Client for the Council Framework.
 
     Attributes:
-        default_model (str): The default model to use (e.g., "gemini-2.0-flash").
+        default_model (str): The default model to use.
         budget_limit (float): Optional daily budget limit in USD.
     """
 
-    def __init__(self, default_model: str = "gemini-2.0-flash", debug: bool = False):
+    def __init__(
+        self, default_model: str = "vertex_ai/gemini-2.0-flash", debug: bool = False
+    ):
         self.default_model = default_model
         self.debug = debug
 
@@ -111,16 +113,20 @@ class LLMClient:
 
             # 1. Append instructions if model doesn't support native structure
             # (Simplification for robustness)
-            system_msg = next((m for m in messages if m["role"] == "system"), None)
-            instruction = f"\n\nOutput MUST be valid JSON adhering to this schema:\n{json.dumps(json_schema, indent=2)}"
+            messages_copy = [m.copy() for m in messages]
+            system_msg = next((m for m in messages_copy if m["role"] == "system"), None)
+            instruction = (
+                "\n\nOutput MUST be valid JSON adhering to this schema:\n"
+                f"{json.dumps(json_schema, indent=2)}"
+            )
 
             if system_msg:
                 system_msg["content"] += instruction
             else:
-                messages.insert(0, {"role": "system", "content": instruction})
+                messages_copy.insert(0, {"role": "system", "content": instruction})
 
             content = self.completion(
-                messages=messages,
+                messages=messages_copy,
                 model=target_model,
                 temperature=temperature,
                 json_mode=True,
@@ -137,6 +143,136 @@ class LLMClient:
         """Helper for single-turn queries."""
         return self.completion(messages=[{"role": "user", "content": prompt}])
 
+    def completion_with_model(
+        self,
+        prompt: str,
+        model: str,
+        temperature: float = 0.7,
+        max_tokens: Optional[int] = None,
+    ) -> str:
+        """
+        Convenience method for single-prompt completion with explicit model.
+
+        Args:
+            prompt: The user prompt
+            model: Model to use (required)
+            temperature: Creativity control
+            max_tokens: Limit output length
+
+        Returns:
+            str: The model's response content
+        """
+        return self.completion(
+            messages=[{"role": "user", "content": prompt}],
+            model=model,
+            temperature=temperature,
+            max_tokens=max_tokens,
+        )
+
+    def batch_completion(
+        self,
+        prompts: List[str],
+        model: Optional[str] = None,
+        temperature: float = 0.7,
+        max_tokens: Optional[int] = None,
+    ) -> List[str]:
+        """
+        Execute multiple prompts in a single batch (sequential execution).
+
+        For true parallel execution, use MultiModelExecutor.
+
+        Args:
+            prompts: List of prompts to process
+            model: Model to use
+            temperature: Creativity control
+            max_tokens: Limit output length per prompt
+
+        Returns:
+            List[str]: List of responses
+        """
+        results = []
+        for prompt in prompts:
+            try:
+                result = self.completion(
+                    messages=[{"role": "user", "content": prompt}],
+                    model=model,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                )
+                results.append(result)
+            except Exception as e:
+                logger.error(f"Batch completion error for prompt: {e}")
+                results.append(f"Error: {str(e)}")
+        return results
+
+    def get_model_info(self, model: Optional[str] = None) -> Dict[str, any]:
+        """
+        Get information about a model.
+
+        Args:
+            model: Model identifier, defaults to default_model
+
+        Returns:
+            Dict with model information
+        """
+        target_model = model or self.default_model
+
+        # Model capabilities mapping
+        model_info = {
+            "vertex_ai/gemini-2.0-flash": {
+                "provider": "google",
+                "max_context": 1000000,
+                "supports_json_mode": True,
+                "cost_per_1k_input": 0.00015,
+                "cost_per_1k_output": 0.0006,
+                "best_for": ["fast_execution", "code_generation"],
+            },
+            "vertex_ai/gemini-2.0-pro": {
+                "provider": "google",
+                "max_context": 2000000,
+                "supports_json_mode": True,
+                "cost_per_1k_input": 0.00125,
+                "cost_per_1k_output": 0.005,
+                "best_for": ["complex_reasoning", "long_context"],
+            },
+            "claude-sonnet-4-20250514": {
+                "provider": "anthropic",
+                "max_context": 200000,
+                "supports_json_mode": True,
+                "cost_per_1k_input": 0.003,
+                "cost_per_1k_output": 0.015,
+                "best_for": ["planning", "analysis", "coding"],
+            },
+            "gpt-4o": {
+                "provider": "openai",
+                "max_context": 128000,
+                "supports_json_mode": True,
+                "cost_per_1k_input": 0.005,
+                "cost_per_1k_output": 0.015,
+                "best_for": ["general", "multimodal"],
+            },
+            "gpt-4o-mini": {
+                "provider": "openai",
+                "max_context": 128000,
+                "supports_json_mode": True,
+                "cost_per_1k_input": 0.00015,
+                "cost_per_1k_output": 0.0006,
+                "best_for": ["fast_tasks", "cost_effective"],
+            },
+        }
+
+        return model_info.get(
+            target_model,
+            {
+                "provider": "unknown",
+                "max_context": 8192,
+                "supports_json_mode": False,
+                "cost_per_1k_input": 0.001,
+                "cost_per_1k_output": 0.002,
+                "best_for": ["general"],
+            },
+        )
+
 
 # Singleton instance
 default_client = LLMClient()
@@ -145,13 +281,41 @@ default_client = LLMClient()
 class CachedLLMClient(LLMClient):
     """
     LLM Client with Automatic Context Caching (Gemini)
+
+    Note: Gemini caching requires Google Cloud credentials.
+    If not configured, falls back to standard completion.
     """
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        from council.context.gemini_cache import GeminiCacheManager
+        self.cache_mgr = None
+        self._gemini_available = self._check_gemini_credentials()
 
-        self.cache_mgr = GeminiCacheManager()
+        if self._gemini_available:
+            from council.context.gemini_cache import GeminiCacheManager
+
+            self.cache_mgr = GeminiCacheManager()
+
+    def _check_gemini_credentials(self) -> bool:
+        """Check if Gemini/Google Cloud credentials are available"""
+        import os
+
+        # Check for API key
+        if os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY"):
+            return True
+
+        # Check for Application Default Credentials
+        if os.environ.get("GOOGLE_APPLICATION_CREDENTIALS"):
+            return True
+
+        # Try to detect ADC
+        try:
+            from google.auth import default
+
+            default()
+            return True
+        except Exception:
+            return False
 
     def completion(
         self,
@@ -166,8 +330,12 @@ class CachedLLMClient(LLMClient):
         """
         target_model = model or self.default_model
 
-        # Determine if we should attempt caching (Gemini only)
-        if "gemini" in target_model.lower():
+        # Determine if we should attempt caching (Gemini only, requires credentials)
+        if (
+            "gemini" in target_model.lower()
+            and self._gemini_available
+            and self.cache_mgr
+        ):
             # Extract system prompt as potential cacheable content
             system_msg = next((m for m in messages if m["role"] == "system"), None)
 
@@ -182,8 +350,14 @@ class CachedLLMClient(LLMClient):
                 )
 
                 if cache_name:
-                    # Find user query (last message)
-                    user_query = messages[-1]["content"]
+                    # Preserve non-system context for multi-turn conversations
+                    non_system = [m for m in messages if m.get("role") != "system"]
+                    if non_system:
+                        user_query = "\n".join(
+                            f"{m.get('role')}: {m.get('content')}" for m in non_system
+                        )
+                    else:
+                        user_query = messages[-1].get("content", "") if messages else ""
 
                     logger.info(f"Using Gemini Cache: {cache_name}")
                     return self.cache_mgr.generate_with_cache(
@@ -195,4 +369,4 @@ class CachedLLMClient(LLMClient):
 
 
 # Replace default client if auto-caching is improved
-# default_client = CachedLLMClient()
+default_client = CachedLLMClient()

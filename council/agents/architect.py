@@ -10,6 +10,7 @@ from council.agents.base_agent import (
     VoteDecision,
     ThinkResult,
     ExecuteResult,
+    MODEL_ARCHITECT,
 )
 
 
@@ -48,7 +49,7 @@ class Architect(BaseAgent):
     """
 
     def __init__(
-        self, model: str = "gemini-2.0-flash", llm_client: Optional["LLMClient"] = None
+        self, model: str = MODEL_ARCHITECT, llm_client: Optional["LLMClient"] = None
     ):
         super().__init__(
             name="Architect",
@@ -193,7 +194,7 @@ Changes: [建议修改1, 建议修改2] (可选)
         if conf_match:
             try:
                 confidence = float(conf_match.group(1))
-            except:
+            except ValueError:
                 pass
 
         rationale_match = re.search(

@@ -34,7 +34,6 @@ def _ensure_httpx_limits() -> None:
 try:
     _ensure_httpx_limits()
     import chromadb
-    from chromadb.config import Settings
 
     HAS_CHROMADB = True
 except (ImportError, AttributeError):

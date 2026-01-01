@@ -8,10 +8,59 @@ from dataclasses import dataclass, field
 from typing import Optional, List, Dict, Any, Type
 from enum import Enum
 from datetime import datetime
+import os
 
 from pydantic import BaseModel
 
 from council.core.llm_client import LLMClient, default_client
+
+# 默认模型 - 2025 December 配置
+# vertex_ai/ 使用 Google Cloud ADC 凭证登录
+# anthropic/ 使用 Anthropic API Key
+# openai/ 使用 OpenAI API Key
+
+
+# 模型配置 (2025 最佳实践: 差异化模型分配)
+class ModelConfig:
+    """
+    Agent 专用模型配置 (账户 Auto 认证)
+    
+    使用策略:
+    - Claude: 深度推理、规划、架构设计
+    - Codex: 代码审计、安全分析
+    - Gemini: ⚠️ 大范围扫描读取或长上下文必须使用
+      - gemini-3-flash: 高频迭代 (80%调用, 成本敏感)
+      - gemini-3-pro: 长上下文研究 (2M tokens)
+    """
+
+    # Claude 4.5 Opus - 高级推理模型 (规划、架构)
+    CLAUDE_OPUS = "claude-4.5-opus"
+    
+    # Claude 4.5 Sonnet - 平衡模型 (可选替代)
+    CLAUDE_SONNET = "claude-4.5-sonnet"
+
+    # Codex 5.2 - 代码审计模型
+    CODEX = "codex-5.2"
+
+    # Gemini 3 Flash - 高频迭代模型 (成本敏感, 80%调用)
+    GEMINI_FLASH = "gemini-3-flash"
+
+    # Gemini 3 Pro - 网络研究模型 (长上下文)
+    GEMINI_PRO = "gemini-3-pro"
+
+    # 默认模型
+    DEFAULT = GEMINI_FLASH
+
+
+# 各 Agent 默认模型
+MODEL_ORCHESTRATOR = ModelConfig.CLAUDE_OPUS
+MODEL_ARCHITECT = ModelConfig.CLAUDE_OPUS
+MODEL_CODER = ModelConfig.GEMINI_FLASH
+MODEL_SECURITY_AUDITOR = ModelConfig.CODEX
+MODEL_WEB_SURFER = ModelConfig.GEMINI_PRO
+
+# 兼容旧代码
+DEFAULT_MODEL = ModelConfig.DEFAULT
 
 
 class VoteDecision(Enum):
@@ -71,7 +120,7 @@ class BaseAgent(ABC):
         self,
         name: str,
         system_prompt: str,
-        model: str = "gemini-2.0-flash",
+        model: str = DEFAULT_MODEL,
         allow_delegation: bool = False,
         allowed_agents: Optional[List[str]] = None,
         max_delegation_depth: int = 3,
@@ -102,6 +151,10 @@ class BaseAgent(ABC):
 
         # 2025 Core Upgrade: 使用统一的 LLMClient
         self.llm_client = llm_client or default_client
+        self._has_gemini = bool(
+            os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
+        )
+        self._has_openai = bool(os.environ.get("OPENAI_API_KEY"))
 
     def _call_llm(self, prompt: str, system_override: Optional[str] = None) -> str:
         """

@@ -110,33 +110,6 @@ class GeminiCacheManager:
         except Exception as e:
             print(f"⚠️ 保存缓存注册表失败: {e}")
 
-    def create(
-        self, name: str, content: str, ttl_hours: int = 1, model: str = "gemini-2.5-pro"
-    ) -> Optional[str]:
-        # ... (logic to check existing cache) ...
-        # [MODIFIED] Check local cache first (now populated from disk)
-
-        # Calculate hash first
-        content_hash = self._content_hash(content)
-
-        # Clean expired
-        self._clean_expired()
-
-        for cached_name, entry in self._local_cache.items():
-            if entry.content_hash == content_hash:
-                if entry.expires_at > datetime.now():
-                    print(f"✅ 复用已有缓存 (Persisted): {cached_name}")
-                    return cached_name
-
-        # ... (Create on server) ...
-
-        # After creating:
-        # self._local_cache[...] = ...
-        # self._save_registry() [NEW]
-
-        # Implementation details below in Tool Call
-        pass
-
     def _clean_expired(self):
         """清理过期缓存"""
         now = datetime.now()
@@ -156,6 +129,10 @@ class GeminiCacheManager:
 
                 if self._api_key:
                     genai.configure(api_key=self._api_key)
+                elif os.environ.get("GOOGLE_API_KEY"):
+                    genai.configure(api_key=os.environ["GOOGLE_API_KEY"])
+                elif os.environ.get("GEMINI_API_KEY"):
+                    genai.configure(api_key=os.environ["GEMINI_API_KEY"])
                 self._client = genai
             except ImportError:
                 raise ImportError(

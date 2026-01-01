@@ -24,7 +24,7 @@ class PatchGenerator:
         patch = generator.generate_patch(diagnosis)
     """
 
-    def __init__(self, model: str = "gemini-2.0-flash"):
+    def __init__(self, model: str = "vertex_ai/gemini-2.0-flash"):
         """
         Initialize the patch generator
 
@@ -32,8 +32,9 @@ class PatchGenerator:
             model: LLM model to use for analysis
         """
         self.model = model
-        self._has_gemini = bool(os.environ.get("GEMINI_API_KEY"))
+        self._has_gemini = bool(os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY"))
         self._has_openai = bool(os.environ.get("OPENAI_API_KEY"))
+        self._has_anthropic = bool(os.environ.get("ANTHROPIC_API_KEY"))
 
     def diagnose(self, error_output: str) -> Diagnosis:
         """

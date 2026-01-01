@@ -1,0 +1,14 @@
+Data file: {data_file}
+Goal: {goal}
+Output dir: {output_dir}
+
+Write a COMPLETE, STANDALONE Python script to analyze the data.
+Requirements:
+1. Read the data file (handle CSV/JSON).
+2. Perform analysis to achieve the goal.
+3. Generate a Markdown report and save it to '{{output_dir}}/report.md'.
+4. Generate a chart (using matplotlib/seaborn) and save it to '{{output_dir}}/chart.png'.
+5. Print key insights to stdout.
+6. Handle errors gracefully.
+
+Output ONLY the Python code.

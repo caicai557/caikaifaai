@@ -20,7 +20,7 @@ Usage:
 from typing import Any, Callable, Dict, List, Optional
 
 from council.memory.knowledge_graph import KnowledgeGraph
-from scripts.simulate import simulate_plan
+from council.mcp.simulate import simulate_plan
 
 
 # JSON-RPC 2.0 Error Codes

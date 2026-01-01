@@ -10,6 +10,7 @@ from council.agents.base_agent import (
     VoteDecision,
     ThinkResult,
     ExecuteResult,
+    MODEL_CODER,
 )
 from council.tools.file_system import FileTools
 import os
@@ -49,7 +50,7 @@ class Coder(BaseAgent):
     """
 
     def __init__(
-        self, model: str = "gemini-2.0-flash", llm_client: Optional["LLMClient"] = None
+        self, model: str = MODEL_CODER, llm_client: Optional["LLMClient"] = None
     ):
         super().__init__(
             name="Coder",
@@ -116,7 +117,7 @@ class Coder(BaseAgent):
             elif current_section == "confidence":
                 try:
                     confidence = float(line)
-                except:
+                except ValueError:
                     pass
 
         self.add_to_history({"action": "think", "task": task, "context": context})
@@ -173,7 +174,7 @@ Rationale: [理由]
         if conf_match:
             try:
                 confidence = float(conf_match.group(1))
-            except:
+            except ValueError:
                 pass
 
         rationale_match = re.search(

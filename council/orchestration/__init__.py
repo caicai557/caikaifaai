@@ -14,7 +14,14 @@ from council.orchestration.adaptive_router import (
 )
 from council.orchestration.events import Event, EventType
 from council.orchestration.hub import Hub
-from council.orchestration.graph import State, StateGraph
+from council.orchestration.graph import (
+    State,
+    StateGraph,
+    Checkpoint,
+    NodeType,
+    LoopConfig,
+    ParallelConfig,
+)
 from council.orchestration.agent_registry import (
     AgentRegistry,
     RegisteredAgent,
@@ -35,6 +42,17 @@ from council.orchestration.model_router import (
     ModelRouter,
     ModelConfig,
     RoutingResult,
+    ModelPerformanceStats,
+)
+from council.orchestration.multi_model_executor import (
+    MultiModelExecutor,
+    ModelTask,
+    ModelResult,
+    ModelRole,
+    ExecutionStats,
+    create_planner_task,
+    create_executor_task,
+    create_reviewer_task,
 )
 from council.orchestration.handoff import (
     AgentHandoff,
@@ -42,6 +60,21 @@ from council.orchestration.handoff import (
     HandoffManager,
     HandoffPriority,
     HandoffStatus,
+)
+from council.orchestration.health_check import (
+    HealthChecker,
+    HealthStatus,
+    HealthCheckResult,
+    ModelHealth,
+    default_checker,
+)
+from council.orchestration.collaboration import (
+    CollaborationMode,
+    CollaborationResult,
+    CollaborationOrchestrator,
+    Vote as CollabVote,
+    BrainstormIdea,
+    default_collaboration,
 )
 
 
@@ -61,9 +94,13 @@ __all__ = [
     "Hub",
     "Event",
     "EventType",
-    # StateGraph
+    # StateGraph (2026 Enhanced)
     "State",
     "StateGraph",
+    "Checkpoint",
+    "NodeType",
+    "LoopConfig",
+    "ParallelConfig",
     # Agent Registry & Delegation
     "AgentRegistry",
     "RegisteredAgent",
@@ -82,4 +119,31 @@ __all__ = [
     "HandoffManager",
     "HandoffPriority",
     "HandoffStatus",
+    # Model Router
+    "ModelRouter",
+    "ModelConfig",
+    "RoutingResult",
+    "ModelPerformanceStats",
+    # Multi-Model Executor
+    "MultiModelExecutor",
+    "ModelTask",
+    "ModelResult",
+    "ModelRole",
+    "ExecutionStats",
+    "create_planner_task",
+    "create_executor_task",
+    "create_reviewer_task",
+    # Health Check
+    "HealthChecker",
+    "HealthStatus",
+    "HealthCheckResult",
+    "ModelHealth",
+    "default_checker",
+    # 2026 Collaboration Patterns
+    "CollaborationMode",
+    "CollaborationResult",
+    "CollaborationOrchestrator",
+    "CollabVote",
+    "BrainstormIdea",
+    "default_collaboration",
 ]

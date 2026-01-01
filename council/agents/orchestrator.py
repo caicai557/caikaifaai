@@ -16,6 +16,7 @@ from council.agents.base_agent import (
     VoteDecision,
     ThinkResult,
     ExecuteResult,
+    MODEL_ORCHESTRATOR,
 )
 from council.orchestration.ledger import DualLedger
 from council.governance.gateway import DecisionType, GovernanceGateway
@@ -145,7 +146,7 @@ class Orchestrator(BaseAgent):
 
     def __init__(
         self,
-        model: str = "gemini-2.0-flash",
+        model: str = MODEL_ORCHESTRATOR,
         governance_gateway: Optional[GovernanceGateway] = None,
         llm_client: Optional["LLMClient"] = None,
     ):
@@ -298,7 +299,15 @@ class Orchestrator(BaseAgent):
         subtask.status = "in_progress"
 
         # 调用代理执行
-        result = agent.execute(subtask.description)
+        try:
+            result = agent.execute(subtask.description)
+        except Exception as exc:
+            error = f"{type(exc).__name__}: {exc}"
+            result = ExecuteResult(
+                success=False,
+                output=f"执行代理失败: {error}",
+                errors=[error],
+            )
 
         if result.success:
             subtask.status = "completed"

@@ -1,0 +1,8 @@
+原始任务: {original_task}
+当前代码:
+{current_code}
+
+错误信息:
+{error}
+
+请修复代码并返回完整的修复后代码。

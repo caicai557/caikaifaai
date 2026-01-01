@@ -9,10 +9,11 @@
       ]
     },
     "council": {
-      "command": "/home/dabah123/projects/caicai/.venv/bin/python",
+      "command": "python3",
       "args": [
-        "/home/dabah123/projects/caicai/scripts/start_council_server.py"
-      ]
+        "/home/zz113/Desktop/council/scripts/start_council_server.py"
+      ],
+      "env": {}
     },
     "sequential-thinking": {
       "command": "npx",

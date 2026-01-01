@@ -24,6 +24,11 @@ from council.orchestration.task_classifier import (
     ClassificationResult,
     RecommendedModel,
 )
+from council.orchestration.multi_model_executor import (
+    MultiModelExecutor,
+    ModelTask,
+    ModelRole,
+)
 from council.facilitator.wald_consensus import (
     WaldConsensus,
     WaldConfig,
@@ -43,6 +48,16 @@ from council.agents.coder import Coder
 from council.agents.security_auditor import SecurityAuditor
 from council.agents.web_surfer import WebSurfer
 from council.core.llm_client import LLMClient, default_client
+
+# 2026 改进: Hooks 机制集成
+from council.hooks import (
+    HookManager,
+    HookContext,
+    HookType,
+    SessionStartHook,
+    PreToolUseHook,
+    PostToolUseHook,
+)
 
 
 class DevStatus(Enum):
@@ -110,6 +125,7 @@ class DevOrchestrator:
         cost_sensitive: bool = True,
         llm_client: Optional[LLMClient] = None,
         verbose: bool = True,
+        enable_hooks: bool = True,
     ):
         """
         初始化编排器
@@ -121,6 +137,7 @@ class DevOrchestrator:
             cost_sensitive: 是否成本敏感（优先用便宜模型）
             llm_fn: LLM 调用函数 (prompt, model) -> response
             verbose: 输出详细日志
+            enable_hooks: 是否启用钩子机制
         """
         self.working_dir = working_dir
         self.test_command = test_command
@@ -154,9 +171,58 @@ class DevOrchestrator:
             "WebSurfer": WebSurfer(llm_client=self.llm_client),
         }
 
+        # 2026 改进: 多模型并行执行器
+        self.multi_executor = MultiModelExecutor(
+            llm_client=self.llm_client,
+            max_concurrent=3,
+            default_timeout=60.0,
+            retry_count=1,
+        )
+
+        # 模型映射：Agent 名称 -> 推荐模型
+        self.agent_model_mapping = {
+            "Architect": "claude-sonnet-4-20250514",
+            "Coder": "vertex_ai/gemini-2.0-flash",
+            "SecurityAuditor": "claude-sonnet-4-20250514",
+            "WebSurfer": "gpt-4o-mini",
+        }
+
         # 状态跟踪
         self._current_status = DevStatus.ANALYZING
         self._start_time: Optional[datetime] = None
+
+        # 2026 改进: Hooks 机制
+        self.enable_hooks = enable_hooks
+        self.hook_manager = HookManager()
+        if enable_hooks:
+            self._setup_hooks()
+
+    def _setup_hooks(self) -> None:
+        """设置默认钩子"""
+        # SessionStart: 环境初始化
+        self.hook_manager.register(
+            SessionStartHook(
+                working_dir=self.working_dir,
+                priority=10,
+            )
+        )
+        # PreToolUse: 安全拦截
+        self.hook_manager.register(
+            PreToolUseHook(
+                priority=50,
+            )
+        )
+        # PostToolUse: 质量门禁
+        self.hook_manager.register(
+            PostToolUseHook(
+                working_dir=self.working_dir,
+                enable_format=True,
+                enable_lint=True,
+                enable_test=False,  # 默认关闭，由自愈循环处理
+                priority=100,
+            )
+        )
+        self._log("🔗 Hooks 机制已启用")
 
     async def dev(self, task: str) -> DevResult:
         """
@@ -179,6 +245,18 @@ class DevOrchestrator:
         self._log(f"🎯 开始任务: {task}")
 
         try:
+            # 0. 触发 SessionStart 钩子 (2026 Hooks)
+            if self.enable_hooks:
+                session_ctx = HookContext(
+                    hook_type=HookType.SESSION_START,
+                    session_id=f"dev-{datetime.now().strftime('%Y%m%d%H%M%S')}",
+                    agent_name="DevOrchestrator",
+                    working_dir=self.working_dir,
+                )
+                hook_result = await self.hook_manager.trigger_session_start(session_ctx)
+                if not hook_result.is_success:
+                    self._log(f"⚠️ SessionStart 钩子警告: {hook_result.message}")
+
             # 1. 分析任务
             self._update_status(DevStatus.ANALYZING)
             classification = self.classifier.classify(task)
@@ -190,24 +268,42 @@ class DevOrchestrator:
             subtasks = await self._plan_subtasks(task, classification)
             self._log(f"📋 拆解为 {len(subtasks)} 个子任务")
 
-            # 3. 执行子任务
+            # 3. 执行子任务 (2026: 并行执行)
             self._update_status(DevStatus.EXECUTING)
-            for i, subtask in enumerate(subtasks):
-                self._log(f"🔄 [{i + 1}/{len(subtasks)}] {subtask.description[:50]}...")
-                result = await self._execute_subtask(subtask)
-                subtask.status = "done" if result else "failed"
-                subtask.result = result
+            self._log(f"🚀 并行执行 {len(subtasks)} 个子任务")
+            await self._execute_subtasks_parallel(subtasks)
 
             # 4. 运行测试 + 自愈
             self._update_status(DevStatus.HEALING)
             healing_report = self.healing_loop.run()
             self._log(f"🔧 自愈状态: {healing_report.status.value}")
 
-            # 5. 共识评估
+            # 5. 共识评估 (2026: Wald 实时早停)
             self._update_status(DevStatus.REVIEWING)
             votes = self._collect_votes(subtasks, healing_report)
-            consensus_result = self.consensus.evaluate(votes)
-            self._log(f"📊 共识概率 π={consensus_result.pi_approve:.3f}")
+
+            # 使用实时早停评估 - 每票后检查π是否达标
+            consensus_result = None
+            for i, vote in enumerate(votes):
+                if consensus_result is None:
+                    consensus_result = self.consensus.evaluate_realtime(
+                        vote, total_expected_votes=len(votes)
+                    )
+                else:
+                    consensus_result = self.consensus.evaluate_realtime(
+                        vote,
+                        current_state=consensus_result,
+                        total_expected_votes=len(votes),
+                    )
+
+                # 早停检查 - π达标立即返回
+                if consensus_result.early_stopped:
+                    self._log(f"⚡ 早停! {consensus_result.reason}")
+                    break
+
+            self._log(
+                f"📊 共识概率 π={consensus_result.pi_approve:.3f} (Token节省: {consensus_result.tokens_saved})"
+            )
 
             # 6. 决策
             if consensus_result.decision == ConsensusDecision.AUTO_COMMIT:
@@ -272,8 +368,68 @@ class DevOrchestrator:
 
         return subtasks
 
+    async def _execute_subtasks_parallel(self, subtasks: List[SubTask]) -> None:
+        """
+        并行执行多个子任务 (2026 改进)
+
+        使用 MultiModelExecutor 实现真正的并行执行。
+        """
+        if not subtasks:
+            return
+
+        # 构建 ModelTask 列表
+        model_tasks = []
+        for subtask in subtasks:
+            agent_name = getattr(subtask, "assigned_agent", "Coder")
+            model = self.agent_model_mapping.get(
+                agent_name, "vertex_ai/gemini-2.0-flash"
+            )
+
+            # 确定角色
+            role_mapping = {
+                "Architect": ModelRole.PLANNER,
+                "Coder": ModelRole.EXECUTOR,
+                "SecurityAuditor": ModelRole.REVIEWER,
+                "WebSurfer": ModelRole.GENERAL,
+            }
+            role = role_mapping.get(agent_name, ModelRole.EXECUTOR)
+
+            model_tasks.append(
+                ModelTask(
+                    model=model,
+                    prompt=subtask.description,
+                    role=role,
+                    timeout=60.0,
+                    metadata={"subtask_id": subtask.id, "agent": agent_name},
+                )
+            )
+
+        # 并行执行
+        results = await self.multi_executor.execute_parallel(model_tasks)
+
+        # 将结果映射回子任务
+        for subtask, result in zip(subtasks, results):
+            if result.success:
+                subtask.status = "done"
+                subtask.result = result.output
+                self._log(
+                    f"✅ [{subtask.assigned_agent}] 完成 ({result.latency_ms:.0f}ms)"
+                )
+            else:
+                subtask.status = "failed"
+                subtask.error = result.error or "执行失败"
+                self._log(f"❌ [{subtask.assigned_agent}] 失败: {result.error}")
+
+        # 记录统计信息
+        stats = self.multi_executor.get_stats()
+        self._log(
+            f"📊 并行执行统计: "
+            f"成功率={stats.success_rate:.1%}, "
+            f"平均延迟={stats.avg_latency_ms:.0f}ms"
+        )
+
     async def _execute_subtask(self, subtask: SubTask) -> Optional[str]:
-        """执行单个子任务 - 2025: 使用专业化 Agent"""
+        """执行单个子任务 - 2025: 使用专业化 Agent (保留用于单任务场景)"""
         agent_name = getattr(subtask, "assigned_agent", "Coder")
         agent = self.agents.get(agent_name)
 

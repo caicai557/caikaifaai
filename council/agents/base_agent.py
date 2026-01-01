@@ -22,7 +22,16 @@ from council.core.llm_client import LLMClient, default_client
 
 # 模型配置 (2025 最佳实践: 差异化模型分配)
 class ModelConfig:
-    """Agent 专用模型配置 (账户 Auto 认证)"""
+    """
+    Agent 专用模型配置 (账户 Auto 认证)
+    
+    使用策略:
+    - Claude: 深度推理、规划、架构设计
+    - Codex: 代码审计、安全分析
+    - Gemini: ⚠️ 大范围扫描读取或长上下文必须使用
+      - gemini-3-flash: 高频迭代 (80%调用, 成本敏感)
+      - gemini-3-pro: 长上下文研究 (2M tokens)
+    """
 
     # Claude 4.5 Opus - 高级推理模型 (规划、架构)
     CLAUDE_OPUS = "claude-4.5-opus"

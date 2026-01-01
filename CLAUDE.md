@@ -142,6 +142,53 @@ dangerous_commands:
 
 ---
 
+## 🤝 Git 协作流程 (Conventional Commits)
+
+> **YOU MUST** 遵循以下规范：
+
+### 分支命名
+
+```
+feat/<描述>      # 新功能
+fix/<描述>       # Bug修复
+docs/<描述>      # 文档更新
+refactor/<描述>  # 重构
+test/<描述>      # 测试
+```
+
+### Commit 消息格式
+
+```
+<type>(<scope>): <description>
+
+[可选 body]
+
+[可选 footer]
+```
+
+**类型 (type):**
+- `feat`: 新功能
+- `fix`: Bug修复
+- `docs`: 文档
+- `refactor`: 重构
+- `test`: 测试
+- `chore`: 构建/工具
+
+**示例:**
+```
+feat(agents): 添加SecurityAuditor硬化提示词
+fix(wald): 修复早停Token计算
+docs(claude): 更新分层治理架构
+```
+
+### 合并策略
+
+- ✅ **Squash Merge** - 默认策略
+- ✅ **Rebase** - 保持线性历史
+- ❌ **Merge Commit** - 仅用于重要里程碑
+
+---
+
 ## 📝 动态增量更新
 
 开发过程中使用 `#` 键记录决策到本文件：
@@ -151,5 +198,16 @@ dangerous_commands:
 
 ---
 
+## 📊 四大核心用途检查
+
+| 用途 | 覆盖 | 位置 |
+|------|------|------|
+| 工程标准与风格指南 | ✅ | 强制代码规范 |
+| 核心命令与自动化脚本 | ✅ | 构建命令 |
+| 项目架构与目录索引 | ✅ | 项目结构 |
+| Git协作流程 | ✅ | 本节 |
+
+---
+
 **最后更新**: 2026-01-01
-**版本**: 2.0 (分层治理)
+**版本**: 2.1 (四大核心用途完备)

@@ -239,8 +239,9 @@ class ToolSearchTool:
         }
 
 
-# 预定义常用工具
+# 预定义常用工具 (2026最佳实践)
 DEFAULT_TOOLS = [
+    # === 文件系统工具 ===
     ToolDefinition(
         name="read_file",
         description="读取文件内容",
@@ -263,12 +264,44 @@ DEFAULT_TOOLS = [
         token_cost=60,
     ),
     ToolDefinition(
+        name="delete_file",
+        description="删除文件或目录",
+        category=ToolCategory.FILESYSTEM,
+        keywords=["delete", "remove", "rm", "del", "删除"],
+        token_cost=70,
+    ),
+    ToolDefinition(
+        name="copy_file",
+        description="复制文件或目录",
+        category=ToolCategory.FILESYSTEM,
+        keywords=["copy", "cp", "duplicate", "复制"],
+        token_cost=60,
+    ),
+    
+    # === 搜索工具 ===
+    ToolDefinition(
         name="grep_search",
-        description="在文件中搜索文本",
+        description="在文件中搜索文本 (ripgrep)",
         category=ToolCategory.SEARCH,
-        keywords=["grep", "search", "find", "pattern", "搜索", "查找"],
+        keywords=["grep", "search", "find", "pattern", "rg", "搜索", "查找"],
         token_cost=120,
     ),
+    ToolDefinition(
+        name="find_files",
+        description="按名称搜索文件 (fd)",
+        category=ToolCategory.SEARCH,
+        keywords=["find", "locate", "fd", "文件搜索"],
+        token_cost=80,
+    ),
+    ToolDefinition(
+        name="web_search",
+        description="联网搜索信息 (带2026时效性)",
+        category=ToolCategory.SEARCH,
+        keywords=["web", "search", "google", "网络搜索", "联网"],
+        token_cost=150,
+    ),
+    
+    # === Git 版本控制 ===
     ToolDefinition(
         name="git_status",
         description="查看 Git 仓库状态",
@@ -278,11 +311,34 @@ DEFAULT_TOOLS = [
     ),
     ToolDefinition(
         name="git_commit",
-        description="提交 Git 变更",
+        description="提交 Git 变更 (Conventional Commits)",
         category=ToolCategory.GIT,
         keywords=["git", "commit", "save", "提交"],
         token_cost=90,
     ),
+    ToolDefinition(
+        name="git_diff",
+        description="查看文件差异",
+        category=ToolCategory.GIT,
+        keywords=["git", "diff", "changes", "差异", "对比"],
+        token_cost=100,
+    ),
+    ToolDefinition(
+        name="git_log",
+        description="查看提交历史",
+        category=ToolCategory.GIT,
+        keywords=["git", "log", "history", "历史", "记录"],
+        token_cost=80,
+    ),
+    ToolDefinition(
+        name="git_branch",
+        description="分支管理 (feat/fix/docs)",
+        category=ToolCategory.GIT,
+        keywords=["git", "branch", "checkout", "分支"],
+        token_cost=70,
+    ),
+    
+    # === 代码执行 ===
     ToolDefinition(
         name="run_command",
         description="执行终端命令",
@@ -291,10 +347,127 @@ DEFAULT_TOOLS = [
         token_cost=150,
     ),
     ToolDefinition(
+        name="run_python",
+        description="执行 Python 代码 (Docker 沙盒)",
+        category=ToolCategory.CODE,
+        keywords=["python", "run", "execute", "沙盒执行"],
+        token_cost=180,
+    ),
+    
+    # === 代码分析与 Lint ===
+    ToolDefinition(
+        name="lint_python",
+        description="Python Lint 检查 (ruff)",
+        category=ToolCategory.CODE,
+        keywords=["lint", "ruff", "flake8", "pylint", "代码检查"],
+        token_cost=100,
+    ),
+    ToolDefinition(
+        name="lint_js",
+        description="JavaScript/TypeScript Lint (ESLint)",
+        category=ToolCategory.CODE,
+        keywords=["eslint", "lint", "javascript", "typescript", "js", "ts"],
+        token_cost=100,
+    ),
+    ToolDefinition(
+        name="format_code",
+        description="代码格式化 (Prettier/Black)",
+        category=ToolCategory.CODE,
+        keywords=["format", "prettier", "black", "格式化"],
+        token_cost=80,
+    ),
+    ToolDefinition(
+        name="type_check",
+        description="类型检查 (mypy/tsc)",
+        category=ToolCategory.CODE,
+        keywords=["type", "check", "mypy", "tsc", "typescript", "类型检查"],
+        token_cost=120,
+    ),
+    
+    # === 测试工具 ===
+    ToolDefinition(
+        name="run_tests",
+        description="运行测试 (pytest/vitest/playwright)",
+        category=ToolCategory.CODE,
+        keywords=["test", "pytest", "vitest", "jest", "测试", "coverage"],
+        token_cost=200,
+    ),
+    ToolDefinition(
+        name="test_coverage",
+        description="测试覆盖率报告",
+        category=ToolCategory.CODE,
+        keywords=["coverage", "覆盖率", "test"],
+        token_cost=150,
+    ),
+    
+    # === 安全工具 ===
+    ToolDefinition(
         name="security_scan",
-        description="安全漏洞扫描",
+        description="安全漏洞扫描 (SAST)",
         category=ToolCategory.SECURITY,
-        keywords=["security", "scan", "vulnerability", "安全", "扫描"],
+        keywords=["security", "scan", "vulnerability", "sast", "安全", "扫描"],
+        token_cost=200,
+    ),
+    ToolDefinition(
+        name="dependency_audit",
+        description="依赖项安全审计 (npm audit/pip-audit)",
+        category=ToolCategory.SECURITY,
+        keywords=["audit", "dependency", "npm", "pip", "依赖审计"],
+        token_cost=150,
+    ),
+    ToolDefinition(
+        name="secret_scan",
+        description="敏感信息扫描 (API key/密码泄露)",
+        category=ToolCategory.SECURITY,
+        keywords=["secret", "credential", "password", "api_key", "密钥扫描"],
+        token_cost=120,
+    ),
+    
+    # === 网络与API ===
+    ToolDefinition(
+        name="http_request",
+        description="发送 HTTP 请求 (REST API)",
+        category=ToolCategory.NETWORK,
+        keywords=["http", "api", "request", "curl", "fetch", "网络请求"],
+        token_cost=100,
+    ),
+    ToolDefinition(
+        name="api_test",
+        description="API 测试 (Postman风格)",
+        category=ToolCategory.API,
+        keywords=["api", "test", "postman", "接口测试"],
+        token_cost=150,
+    ),
+    
+    # === 数据库 ===
+    ToolDefinition(
+        name="db_query",
+        description="执行数据库查询 (SQL)",
+        category=ToolCategory.DATABASE,
+        keywords=["database", "sql", "query", "数据库", "查询"],
+        token_cost=180,
+    ),
+    ToolDefinition(
+        name="db_migrate",
+        description="数据库迁移",
+        category=ToolCategory.DATABASE,
+        keywords=["migrate", "migration", "迁移", "schema"],
+        token_cost=150,
+    ),
+    
+    # === Docker/容器 ===
+    ToolDefinition(
+        name="docker_run",
+        description="Docker 容器运行",
+        category=ToolCategory.CODE,
+        keywords=["docker", "container", "容器", "run"],
+        token_cost=180,
+    ),
+    ToolDefinition(
+        name="docker_build",
+        description="Docker 镜像构建",
+        category=ToolCategory.CODE,
+        keywords=["docker", "build", "image", "构建"],
         token_cost=200,
     ),
 ]

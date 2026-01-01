@@ -171,8 +171,8 @@ class TripartiteOrchestrator:
         """
         Executor阶段: Claude精准执行
         
-        限制:
-        - 仅查看当前上下文
+        限制 (2026最佳实践):
+        - 仅查看当前上下文 (强制)
         - 不读取全库
         - 依据Oracle"手术方案"修改
         """
@@ -180,15 +180,36 @@ class TripartiteOrchestrator:
         
         for subtask in ledger.subtasks:
             if subtask["model"] == self.EXECUTOR_MODEL:
-                # 创建限制上下文
-                context = ExecutionContext(
-                    current_file="",
-                    line_range=(0, 0),
-                    task_description=subtask["desc"],
-                )
-                outputs.append(f"执行: {subtask['desc']}")
+                # 创建限制上下文 - 强制仅当前文件
+                context = self._create_restricted_context(subtask, audit)
+                
+                # 验证上下文限制
+                if not self._validate_context_restriction(context):
+                    raise ValueError(f"上下文超限: {context.current_file}")
+                
+                outputs.append(f"执行: {subtask['desc']} (限制: {context.line_range})")
         
         return outputs
+    
+    def _create_restricted_context(
+        self,
+        subtask: Dict[str, Any],
+        audit: AuditReport
+    ) -> ExecutionContext:
+        """创建限制上下文 - Executor仅可见当前文件"""
+        return ExecutionContext(
+            current_file=subtask.get("target_file", ""),
+            line_range=subtask.get("line_range", (0, 500)),  # 最大500行
+            task_description=subtask["desc"],
+        )
+    
+    def _validate_context_restriction(self, context: ExecutionContext) -> bool:
+        """验证上下文限制 - 防止Executor读取全库"""
+        max_lines = 500  # 最大行数限制
+        start, end = context.line_range
+        if end - start > max_lines:
+            return False
+        return True
     
     def _log(self, msg: str):
         if self.verbose:

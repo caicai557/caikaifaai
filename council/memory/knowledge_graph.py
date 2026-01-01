@@ -138,6 +138,7 @@ class KnowledgeGraph:
         # Hybrid Search: Initialize Vector Store BEFORE auto_load
         try:
             from council.memory.vector_store import VectorStore
+
             self.vector_store = VectorStore(use_fallback=True)
         except ImportError:
             self.vector_store = None
@@ -185,8 +186,6 @@ class KnowledgeGraph:
             return "json"
         return "unknown"
 
-        return entity
-
     def _sync_to_vector_store(self, entity: Entity):
         """Sync entity to vector store for semantic search."""
         if self.vector_store:
@@ -195,7 +194,7 @@ class KnowledgeGraph:
             self.vector_store.add_lesson(
                 lesson_id=entity.id,
                 text=text,
-                metadata={"type": entity.entity_type.value, "name": entity.name}
+                metadata={"type": entity.entity_type.value, "name": entity.name},
             )
 
     def add_entity(

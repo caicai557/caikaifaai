@@ -20,8 +20,12 @@ class FileTools:
 
     def _is_safe_path(self, path: str) -> bool:
         """检查路径是否在根目录下"""
+        abs_root = os.path.abspath(self.root_dir)
         abs_path = os.path.abspath(os.path.join(self.root_dir, path))
-        return abs_path.startswith(self.root_dir)
+        try:
+            return os.path.commonpath([abs_root, abs_path]) == abs_root
+        except ValueError:
+            return False
 
     def read_file(self, path: str) -> str:
         """读取文件内容"""

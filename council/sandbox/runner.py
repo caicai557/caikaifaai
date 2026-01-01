@@ -64,7 +64,7 @@ class LocalSandboxRunner(SandboxRunner):
                 text=True,
                 timeout=timeout,
                 cwd=self.working_dir,
-                env=self.env if self.env is not None else {},
+                env=self.env if self.env is not None else os.environ.copy(),
             )
 
             status = "success" if result.returncode == 0 else "failure"

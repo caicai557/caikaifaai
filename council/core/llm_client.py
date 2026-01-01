@@ -31,7 +31,9 @@ class LLMClient:
         budget_limit (float): Optional daily budget limit in USD.
     """
 
-    def __init__(self, default_model: str = "vertex_ai/gemini-2.0-flash", debug: bool = False):
+    def __init__(
+        self, default_model: str = "vertex_ai/gemini-2.0-flash", debug: bool = False
+    ):
         self.default_model = default_model
         self.debug = debug
 
@@ -111,16 +113,20 @@ class LLMClient:
 
             # 1. Append instructions if model doesn't support native structure
             # (Simplification for robustness)
-            system_msg = next((m for m in messages if m["role"] == "system"), None)
-            instruction = f"\n\nOutput MUST be valid JSON adhering to this schema:\n{json.dumps(json_schema, indent=2)}"
+            messages_copy = [m.copy() for m in messages]
+            system_msg = next((m for m in messages_copy if m["role"] == "system"), None)
+            instruction = (
+                "\n\nOutput MUST be valid JSON adhering to this schema:\n"
+                f"{json.dumps(json_schema, indent=2)}"
+            )
 
             if system_msg:
                 system_msg["content"] += instruction
             else:
-                messages.insert(0, {"role": "system", "content": instruction})
+                messages_copy.insert(0, {"role": "system", "content": instruction})
 
             content = self.completion(
-                messages=messages,
+                messages=messages_copy,
                 model=target_model,
                 temperature=temperature,
                 json_mode=True,
@@ -287,6 +293,7 @@ class CachedLLMClient(LLMClient):
 
         if self._gemini_available:
             from council.context.gemini_cache import GeminiCacheManager
+
             self.cache_mgr = GeminiCacheManager()
 
     def _check_gemini_credentials(self) -> bool:
@@ -304,6 +311,7 @@ class CachedLLMClient(LLMClient):
         # Try to detect ADC
         try:
             from google.auth import default
+
             default()
             return True
         except Exception:
@@ -323,7 +331,11 @@ class CachedLLMClient(LLMClient):
         target_model = model or self.default_model
 
         # Determine if we should attempt caching (Gemini only, requires credentials)
-        if "gemini" in target_model.lower() and self._gemini_available and self.cache_mgr:
+        if (
+            "gemini" in target_model.lower()
+            and self._gemini_available
+            and self.cache_mgr
+        ):
             # Extract system prompt as potential cacheable content
             system_msg = next((m for m in messages if m["role"] == "system"), None)
 
@@ -338,8 +350,14 @@ class CachedLLMClient(LLMClient):
                 )
 
                 if cache_name:
-                    # Find user query (last message)
-                    user_query = messages[-1]["content"]
+                    # Preserve non-system context for multi-turn conversations
+                    non_system = [m for m in messages if m.get("role") != "system"]
+                    if non_system:
+                        user_query = "\n".join(
+                            f"{m.get('role')}: {m.get('content')}" for m in non_system
+                        )
+                    else:
+                        user_query = messages[-1].get("content", "") if messages else ""
 
                     logger.info(f"Using Gemini Cache: {cache_name}")
                     return self.cache_mgr.generate_with_cache(

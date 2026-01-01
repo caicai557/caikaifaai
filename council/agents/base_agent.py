@@ -8,6 +8,7 @@ from dataclasses import dataclass, field
 from typing import Optional, List, Dict, Any, Type
 from enum import Enum
 from datetime import datetime
+import os
 
 from pydantic import BaseModel
 
@@ -106,6 +107,10 @@ class BaseAgent(ABC):
 
         # 2025 Core Upgrade: 使用统一的 LLMClient
         self.llm_client = llm_client or default_client
+        self._has_gemini = bool(
+            os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
+        )
+        self._has_openai = bool(os.environ.get("OPENAI_API_KEY"))
 
     def _call_llm(self, prompt: str, system_override: Optional[str] = None) -> str:
         """

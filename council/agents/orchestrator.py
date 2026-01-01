@@ -299,7 +299,15 @@ class Orchestrator(BaseAgent):
         subtask.status = "in_progress"
 
         # 调用代理执行
-        result = agent.execute(subtask.description)
+        try:
+            result = agent.execute(subtask.description)
+        except Exception as exc:
+            error = f"{type(exc).__name__}: {exc}"
+            result = ExecuteResult(
+                success=False,
+                output=f"执行代理失败: {error}",
+                errors=[error],
+            )
 
         if result.success:
             subtask.status = "completed"

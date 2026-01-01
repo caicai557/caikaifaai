@@ -10,7 +10,7 @@ from council.agents.base_agent import (
     VoteDecision,
     ThinkResult,
     ExecuteResult,
-    DEFAULT_MODEL,
+    MODEL_ARCHITECT,
 )
 
 
@@ -49,7 +49,7 @@ class Architect(BaseAgent):
     """
 
     def __init__(
-        self, model: str = DEFAULT_MODEL, llm_client: Optional["LLMClient"] = None
+        self, model: str = MODEL_ARCHITECT, llm_client: Optional["LLMClient"] = None
     ):
         super().__init__(
             name="Architect",

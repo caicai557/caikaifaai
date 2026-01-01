@@ -10,7 +10,7 @@ from council.agents.base_agent import (
     VoteDecision,
     ThinkResult,
     ExecuteResult,
-    DEFAULT_MODEL,
+    MODEL_SECURITY_AUDITOR,
 )
 
 
@@ -63,7 +63,7 @@ class SecurityAuditor(BaseAgent):
     """
 
     def __init__(
-        self, model: str = DEFAULT_MODEL, llm_client: Optional["LLMClient"] = None
+        self, model: str = MODEL_SECURITY_AUDITOR, llm_client: Optional["LLMClient"] = None
     ):
         super().__init__(
             name="SecurityAuditor",

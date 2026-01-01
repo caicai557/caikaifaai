@@ -10,7 +10,7 @@ from council.agents.base_agent import (
     VoteDecision,
     ThinkResult,
     ExecuteResult,
-    DEFAULT_MODEL,
+    MODEL_WEB_SURFER,
 )
 
 WEB_SURFER_SYSTEM_PROMPT = """你是一名专业的网络信息检索员 (WebSurfer)。
@@ -42,7 +42,7 @@ class WebSurfer(BaseAgent):
     """
 
     def __init__(
-        self, model: str = DEFAULT_MODEL, llm_client: Optional[Any] = None
+        self, model: str = MODEL_WEB_SURFER, llm_client: Optional[Any] = None
     ):
         super().__init__(
             name="WebSurfer",

@@ -16,7 +16,39 @@ from council.core.llm_client import LLMClient, default_client
 
 # 默认模型 - 2025 December 配置
 # vertex_ai/ 使用 Google Cloud ADC 凭证登录
-DEFAULT_MODEL = "vertex_ai/gemini-2.0-flash"
+# anthropic/ 使用 Anthropic API Key
+# openai/ 使用 OpenAI API Key
+
+
+# 模型配置 (2025 最佳实践: 差异化模型分配)
+class ModelConfig:
+    """Agent 专用模型配置"""
+
+    # 高级推理模型 (规划、架构)
+    CLAUDE_OPUS = "anthropic/claude-sonnet-4-20250514"  # Claude 4.5 Opus 替代
+
+    # 代码审计模型
+    CODEX = "openai/gpt-4o"  # Codex 5.2 替代 (使用 GPT-4o)
+
+    # 高频迭代模型 (成本敏感)
+    GEMINI_FLASH = "vertex_ai/gemini-2.0-flash"
+
+    # 网络研究模型 (长上下文)
+    GEMINI_PRO = "vertex_ai/gemini-2.0-flash"  # Pro 版本待配置
+
+    # 默认模型
+    DEFAULT = GEMINI_FLASH
+
+
+# 各 Agent 默认模型
+MODEL_ORCHESTRATOR = ModelConfig.CLAUDE_OPUS
+MODEL_ARCHITECT = ModelConfig.CLAUDE_OPUS
+MODEL_CODER = ModelConfig.GEMINI_FLASH
+MODEL_SECURITY_AUDITOR = ModelConfig.CODEX
+MODEL_WEB_SURFER = ModelConfig.GEMINI_PRO
+
+# 兼容旧代码
+DEFAULT_MODEL = ModelConfig.DEFAULT
 
 
 class VoteDecision(Enum):

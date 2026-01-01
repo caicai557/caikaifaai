@@ -16,7 +16,7 @@ from council.agents.base_agent import (
     VoteDecision,
     ThinkResult,
     ExecuteResult,
-    DEFAULT_MODEL,
+    MODEL_ORCHESTRATOR,
 )
 from council.orchestration.ledger import DualLedger
 from council.governance.gateway import DecisionType, GovernanceGateway
@@ -146,7 +146,7 @@ class Orchestrator(BaseAgent):
 
     def __init__(
         self,
-        model: str = DEFAULT_MODEL,
+        model: str = MODEL_ORCHESTRATOR,
         governance_gateway: Optional[GovernanceGateway] = None,
         llm_client: Optional["LLMClient"] = None,
     ):

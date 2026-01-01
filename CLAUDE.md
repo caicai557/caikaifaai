@@ -1,6 +1,21 @@
 # CLAUDE.md - Council 项目规范
 
-> **Strictly follow the rules in ./AGENTS.md**
+> **⚠️ IMPORTANT: Strictly follow the rules in ./AGENTS.md**
+> **🏛️ 宪法联动: 本文档与 AGENTS.md 权限矩阵深度绑定**
+
+---
+
+## 📊 分层治理架构
+
+本项目采用三层CLAUDE.md分层加载策略：
+
+| 层级 | 路径 | 职责 |
+|------|------|------|
+| **全局层** | `~/.claude/CLAUDE.md` | 个人偏好、通用设置 |
+| **项目层** | `./CLAUDE.md` (本文件) | 核心规范、构建命令 |
+| **模块层** | `./council/*/CLAUDE.md` | 模块细粒度指令 |
+
+---
 
 ## 📌 项目概述
 
@@ -24,29 +39,35 @@ council/
 ├── agents/          # Agent 实现
 ├── auth/            # RBAC 权限系统
 ├── governance/      # 治理网关
-├── facilitator.py   # Wald 共识引擎
-├── orchestration/   # 编排模块
+├── facilitator/     # Wald 共识引擎
+├── orchestration/   # 编排模块 (三权分立)
 ├── self_healing/    # 自愈循环
 ├── tools/           # PTC 工具
-└── sandbox/         # 沙盒执行
+├── skills/          # 技能模块
+├── workflow/        # 六步工作流
+└── sandbox/         # Docker 沙盒
 ```
 
-## 🎯 模型配置
+---
 
-| Agent | 模型 | 用途 |
-|-------|------|------|
-| Orchestrator | `claude-4.5-opus` | 规划、分发 |
-| Architect | `claude-4.5-opus` | 架构设计 |
-| Coder | `gemini-3-flash` | 代码实现 (80%) |
-| SecurityAuditor | `codex-5.2` | 安全审计 |
-| WebSurfer | `gemini-3-pro` | 长上下文研究 |
+## 🏛️ 三权分立模型配置
 
-> ⚠️ **大范围扫描或长上下文必须使用 Gemini**
+| 角色 | Agent | 模型 | 用途 |
+|------|-------|------|------|
+| **Orchestrator** | 规划者 | `codex-5.2` | 逻辑拆解 |
+| **Oracle** | 审计者 | `gemini-3-pro` | 200万Token全库扫描 |
+| **Executor** | 执行者 | `claude-4.5-sonnet` | 精准执行 (≤500行) |
+| **FastCoder** | 快速编码 | `gemini-3-flash` | 大量代码 (80%) |
+| **SecurityAuditor** | 怀疑论者 | `codex-5.2` | 安全审计 |
 
-## 🔧 构建命令
+> ⚠️ **IMPORTANT: 大范围扫描或长上下文 YOU MUST 使用 Gemini**
+
+---
+
+## 🔧 构建命令 (唯一裁决)
 
 ```bash
-# 验证门禁 (唯一裁决)
+# ⚠️ YOU MUST 运行验证门禁
 just verify          # compile + lint + test
 
 # 运行测试
@@ -57,33 +78,78 @@ ruff check .
 
 # 格式化
 ruff format .
+
+# CLI 命令
+council init          # 生成 CLAUDE.md
+council codemap       # 生成代码地图
+council tripartite    # 三权分立执行
 ```
 
-## 📋 代码规范
+---
+
+## 📋 强制代码规范 (NON-NEGOTIABLE)
+
+> **YOU MUST** 遵守以下规范，无例外：
 
 1. **类型注解必须** - 所有函数必须有类型注解
 2. **Small Diffs** - 每次改动 ≤200 行
 3. **TDD 优先** - 先写测试，后写实现
 4. **防御性编程** - 空值/异常/竞态必须处理
+5. **Vitest/pytest** - 新功能必须附带测试
+
+---
 
 ## 🔄 六步自愈循环
 
 ```
 1. Plan    → Codex 需求代码化
-2. Audit   → Gemini Pro 全库审计
+2. Audit   → Gemini Pro 全库审计 (200万Token)
 3. TDD     → Claude Sonnet 测试生成
 4. Impl    → Gemini Flash 代码实现
 5. Verify  → pytest/ruff 验证
-6. Review  → Wald 共识裁决
+6. Review  → Wald 共识裁决 (π ≥ 0.95 自动提交)
 ```
 
-## 🚫 禁止行为
+---
 
-- 不修改 `.env`, `secrets/` 等敏感路径
-- 不执行 `rm -rf`, `chmod -R` 等危险命令
-- 不在沙盒外执行 Agent 生成的代码
-- 不跳过测试直接提交
+## 🚫 禁止行为 (CRITICAL - 违反将触发 REJECT)
+
+> **YOU MUST NOT** 执行以下操作：
+
+- ❌ 修改 `.env`, `secrets/`, `.ssh/` 等敏感路径
+- ❌ 执行 `rm -rf`, `chmod -R 777` 等危险命令
+- ❌ 在沙盒外执行 Agent 生成的代码
+- ❌ 跳过测试直接提交
+- ❌ 使用过时信息 (2024年及以前的资料需标记)
+
+---
+
+## 🔒 安全边界
+
+```yaml
+sensitive_paths:
+  - .env*
+  - secrets/
+  - .ssh/
+  - **/credentials*
+
+dangerous_commands:
+  - rm -rf
+  - chmod -R
+  - dd if=
+  - mkfs.*
+```
+
+---
+
+## 📝 动态增量更新
+
+开发过程中使用 `#` 键记录决策到本文件：
+- 新发现的最佳实践
+- 项目特定约定
+- 模型调优参数
 
 ---
 
 **最后更新**: 2026-01-01
+**版本**: 2.0 (分层治理)

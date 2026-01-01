@@ -11,10 +11,13 @@ HAS_REDIS = importlib.util.find_spec("redis") is not None
 from council.persistence import Checkpoint  # noqa: E402
 
 # Mock redis module before importing RedisStateStore
+mock_redis = MagicMock()
+mock_redis.__spec__ = None  # Fix: pytest requires __spec__ to be set
 mock_redis_asyncio = MagicMock()
+mock_redis_asyncio.__spec__ = None
 mock_redis_client = AsyncMock()
 mock_redis_asyncio.Redis.from_url.return_value = mock_redis_client
-sys.modules["redis"] = MagicMock()
+sys.modules["redis"] = mock_redis
 sys.modules["redis.asyncio"] = mock_redis_asyncio
 
 

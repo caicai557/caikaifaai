@@ -155,15 +155,47 @@ class DevOrchestrator:
         # 2026 SOP Engine
         self.workflow_engine = WorkflowEngine()
 
-        # 2025 改进: 专业化 Agent 实例
-        # 注入 LLMClient 到 Agents
-        self.orchestrator_agent = Orchestrator(llm_client=self.llm_client)
+        # 2026 Hooks 机制 (先初始化，后注入到 Agents)
+        self.enable_hooks = enable_hooks
+        self.hook_manager = HookManager() if enable_hooks else None
+        if enable_hooks:
+            self._setup_hooks()
+
+        # 2026 A2A Discovery (Agent Registry)
+        from council.orchestration.a2a_adapter import (
+            AgentCard,
+            AgentCapability,
+            get_discovery,
+        )
+
+        self.discovery = get_discovery()
+
+        # 2025 改进: 专业化 Agent 实例 (注入 LLMClient + HookManager)
+        self.orchestrator_agent = Orchestrator(
+            llm_client=self.llm_client,
+            hook_manager=self.hook_manager,
+        )
         self.agents = {
-            "Architect": Architect(llm_client=self.llm_client),
-            "Coder": Coder(llm_client=self.llm_client),
-            "SecurityAuditor": SecurityAuditor(llm_client=self.llm_client),
-            "WebSurfer": WebSurfer(llm_client=self.llm_client),
+            "Architect": Architect(
+                llm_client=self.llm_client,
+                hook_manager=self.hook_manager,
+            ),
+            "Coder": Coder(
+                llm_client=self.llm_client,
+                hook_manager=self.hook_manager,
+            ),
+            "SecurityAuditor": SecurityAuditor(
+                llm_client=self.llm_client,
+                hook_manager=self.hook_manager,
+            ),
+            "WebSurfer": WebSurfer(
+                llm_client=self.llm_client,
+                hook_manager=self.hook_manager,
+            ),
         }
+
+        # 2026 A2A: 自动注册所有 Agents 到 Discovery
+        self._register_agents_to_a2a(AgentCard, AgentCapability)
 
         # 2026 改进: 多模型并行执行器
         self.multi_executor = MultiModelExecutor(
@@ -185,14 +217,77 @@ class DevOrchestrator:
         self._current_status = DevStatus.ANALYZING
         self._start_time: Optional[datetime] = None
 
-        # 2026 改进: Hooks 机制
-        self.enable_hooks = enable_hooks
-        self.hook_manager = HookManager()
-        if enable_hooks:
-            self._setup_hooks()
-
         # 2026 改进: 2025 最佳实践集成 (Claude Code style)
         self._setup_best_practices_2025()
+
+    def _register_agents_to_a2a(self, AgentCard, AgentCapability) -> None:
+        """
+        注册所有 Agents 到 A2A Discovery (2026 Best Practice)
+
+        Enables:
+        - Dynamic agent discovery by capability
+        - Task-based agent selection
+        - Load balancing (future)
+        """
+        agent_configs = [
+            {
+                "name": "Architect",
+                "description": "架构设计与代码审查专家",
+                "capabilities": [
+                    AgentCapability.ARCHITECTURE,
+                    AgentCapability.CODE_REVIEW,
+                ],
+                "keywords": [
+                    "architecture",
+                    "design",
+                    "review",
+                    "架构",
+                    "设计",
+                    "审查",
+                ],
+                "max_context_tokens": 200000,
+            },
+            {
+                "name": "Coder",
+                "description": "代码生成与重构专家",
+                "capabilities": [AgentCapability.CODE_GENERATION],
+                "keywords": ["code", "implement", "refactor", "代码", "实现", "重构"],
+                "max_context_tokens": 128000,
+            },
+            {
+                "name": "SecurityAuditor",
+                "description": "安全审计与漏洞扫描专家",
+                "capabilities": [AgentCapability.SECURITY_AUDIT],
+                "keywords": [
+                    "security",
+                    "audit",
+                    "vulnerability",
+                    "安全",
+                    "审计",
+                    "漏洞",
+                ],
+                "max_context_tokens": 128000,
+            },
+            {
+                "name": "WebSurfer",
+                "description": "网络搜索与信息收集专家",
+                "capabilities": [AgentCapability.WEB_RESEARCH],
+                "keywords": ["search", "web", "research", "搜索", "网络", "研究"],
+                "max_context_tokens": 128000,
+            },
+        ]
+
+        for config in agent_configs:
+            card = AgentCard(
+                name=config["name"],
+                description=config["description"],
+                capabilities=config["capabilities"],
+                keywords=config["keywords"],
+                max_context_tokens=config["max_context_tokens"],
+            )
+            self.discovery.register(card)
+
+        self._log(f"🔍 A2A Discovery: 已注册 {len(agent_configs)} 个 Agents")
 
     def _setup_hooks(self) -> None:
         """设置默认钩子"""

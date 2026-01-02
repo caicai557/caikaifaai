@@ -20,6 +20,8 @@ from council.agents.base_agent import (
 )
 from council.orchestration.ledger import DualLedger
 from council.governance.gateway import DecisionType, GovernanceGateway
+from council.core.task_manager import TaskManager
+from council.skills.task_management_skill import TaskManagementSkill
 
 
 ORCHESTRATOR_SYSTEM_PROMPT = """你是理事会主席 (Council Chairman)，负责统筹协调所有专家智能体。
@@ -160,6 +162,11 @@ class Orchestrator(BaseAgent):
         self.active_subtasks: List[SubTask] = []
         self.ledger: Optional[DualLedger] = None
 
+        # Initialize persistent task management
+        # Default to current directory for now
+        self.task_manager = TaskManager(".")
+        self.task_skill = TaskManagementSkill(self.task_manager)
+
     def decompose(
         self, goal: str, context: Optional[Dict[str, Any]] = None
     ) -> DecompositionResult:
@@ -202,6 +209,21 @@ class Orchestrator(BaseAgent):
             )
 
         self.active_subtasks = subtasks
+
+        # Sync to persistent task manager
+        # We check if tasks already exist to avoid duplicates if re-running
+        # For now, simple add
+        for st in subtasks:
+            # Check if task with this description already exists to avoid duplicates
+            existing = [
+                t for t in self.task_manager.list_tasks() if st.description in t.title
+            ]
+            if not existing:
+                self.task_skill.add_task(
+                    title=f"[{st.id}] {st.description}",
+                    description=st.description,
+                    priority=st.priority.lower() if st.priority else "medium",
+                )
 
         # Initialize DualLedger for this task
         self.ledger = DualLedger.create(

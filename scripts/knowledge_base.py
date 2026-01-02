@@ -4,16 +4,15 @@ import os
 import sqlite3
 import sys
 
-# Import Vector Store (Lazy import to avoid hard dependency if not installed)
+# Import VectorMemory (unified vector storage)
 try:
-    sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-    from vector_store import VectorStore
+    from council.memory.vector_memory import VectorMemory
 
     VECTOR_AVAILABLE = True
 except ImportError:
     VECTOR_AVAILABLE = False
     print(
-        "⚠️ Vector Store not available (chromadb missing). Running in SQL-only mode.",
+        "⚠️ VectorMemory not available. Running in SQL-only mode.",
         file=sys.stderr,
     )
 
@@ -52,14 +51,14 @@ def add_lesson(tags: str, problem: str, solution: str):
     # 2. Write to Vector Store
     if VECTOR_AVAILABLE:
         try:
-            vs = VectorStore()
+            vs = VectorMemory(persist_dir=".council/vectors", collection_name="lessons")
             # Combine problem and solution for embedding
             full_text = f"Problem: {problem}\nSolution: {solution}"
             metadata = {"tags": tags, "source": "user"}
-            if vs.add_lesson(str(lesson_id), full_text, metadata):
-                print(f"✅ Lesson added to Vector Store (ID: {lesson_id})")
+            vs.add(text=full_text, metadata=metadata, doc_id=str(lesson_id))
+            print(f"✅ Lesson added to VectorMemory (ID: {lesson_id})")
         except Exception as e:
-            print(f"⚠️ Failed to add to Vector Store: {e}", file=sys.stderr)
+            print(f"⚠️ Failed to add to VectorMemory: {e}", file=sys.stderr)
 
 
 def search_lessons(query: str):
@@ -87,29 +86,24 @@ def search_lessons(query: str):
     # 2. Vector Search (Semantic)
     if VECTOR_AVAILABLE:
         try:
-            vs = VectorStore()
-            vector_results = vs.search(query, n_results=3)
+            vs = VectorMemory(persist_dir=".council/vectors", collection_name="lessons")
+            vector_results = vs.search(query, k=3)
 
-            if vector_results and vector_results["ids"]:
-                ids = vector_results["ids"][0]
-                distances = vector_results["distances"][0]
-
-                # Fetch full details from SQL for these IDs
-                conn = sqlite3.connect(KB_FILE)
-                conn.row_factory = sqlite3.Row
-                c = conn.cursor()
-
-                for i, lid in enumerate(ids):
+            # VectorMemory returns list of dicts
+            for item in vector_results:
+                lid = item.get("id")
+                if lid:
                     lid_int = int(lid)
                     if lid_int not in results_map:
+                        c = conn.cursor()
                         c.execute("SELECT * FROM lessons WHERE id = ?", (lid_int,))
                         row = c.fetchone()
                         if row:
                             results_map[lid_int] = dict(row)
+                            distance = item.get("distance", 0)
                             results_map[lid_int]["source"] = (
-                                f"Vector (Dist: {distances[i]:.2f})"
+                                f"Vector (Dist: {distance:.2f})"
                             )
-                conn.close()
         except Exception as e:
             print(f"⚠️ Vector search failed: {e}", file=sys.stderr)
 

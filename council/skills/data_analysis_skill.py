@@ -182,12 +182,33 @@ class DataAnalysisSkill(BaseSkill):
     ) -> str:
         """生成分析代码"""
         if self.llm_client:
-            # 实际 LLM 调用
-            # 实际 LLM 调用
+            from council.skills.schemas import AnalysisCodeOutput
+
             prompt_template = load_prompt("data_analysis_skill")
             prompt = prompt_template.format(
                 data_file=data_file, goal=goal, output_dir=output_dir
             )
+
+            # 尝试使用 structured_completion 获取强类型输出
+            structured_completion = getattr(
+                self.llm_client, "structured_completion", None
+            )
+            if callable(structured_completion):
+                try:
+                    result = structured_completion(
+                        messages=[{"role": "user", "content": prompt}],
+                        response_model=AnalysisCodeOutput,
+                    )
+                    if asyncio.iscoroutine(result):
+                        result = await result
+                    logger.info("[DataAnalysisSkill] 使用 structured_completion 成功")
+                    return result.code
+                except Exception as e:
+                    logger.warning(
+                        f"structured_completion 失败，回退到 complete(): {e}"
+                    )
+
+            # 回退到普通 complete()
             complete = getattr(self.llm_client, "complete", None)
             if not callable(complete):
                 raise NotImplementedError("llm_client must provide complete()")

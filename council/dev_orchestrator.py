@@ -59,6 +59,13 @@ from council.hooks import (
     PostToolUseHook,
 )
 
+# 2026 改进: 2025 最佳实践集成 (Claude Code style)
+from council.memory.project_memory import ProjectMemory
+from council.memory.semantic_cache import SemanticCache
+from council.memory.memory_aggregator import MemoryAggregator
+from council.memory.vector_memory import TieredMemory, VectorMemory
+from council.context.context_manager import ContextManager, ContextLayer
+
 
 class DevStatus(Enum):
     """开发状态"""
@@ -197,6 +204,9 @@ class DevOrchestrator:
         if enable_hooks:
             self._setup_hooks()
 
+        # 2026 改进: 2025 最佳实践集成 (Claude Code style)
+        self._setup_best_practices_2025()
+
     def _setup_hooks(self) -> None:
         """设置默认钩子"""
         # SessionStart: 环境初始化
@@ -223,6 +233,68 @@ class DevOrchestrator:
             )
         )
         self._log("🔗 Hooks 机制已启用")
+
+    def _setup_best_practices_2025(self) -> None:
+        """
+        设置 2025 最佳实践模块 (Claude Code style)
+
+        - ProjectMemory: 自动加载 CLAUDE.md 项目配置
+        - SemanticCache: 减少重复 LLM 调用
+        - ContextManager: 上下文分层管理
+        - MemoryAggregator: 统一记忆层
+        """
+        try:
+            # 1. 加载项目配置 (类似 CLAUDE.md)
+            self.project_memory = ProjectMemory(self.working_dir)
+            project_context = self.project_memory.get_context()
+
+            # 2. 初始化上下文管理器
+            self.context_manager = ContextManager()
+            if project_context:
+                self.context_manager.add_layer(
+                    ContextLayer.DOCUMENT,
+                    project_context,
+                    is_cacheable=True,  # 可缓存，减少 token
+                )
+                self._log(
+                    f"📂 已加载项目配置: {self.project_memory.config.name or 'unnamed'}"
+                )
+
+            # 3. 初始化分层记忆
+            persist_dir = os.path.join(self.working_dir, ".council", "memory")
+            os.makedirs(persist_dir, exist_ok=True)
+
+            tiered_memory = TieredMemory(persist_dir=persist_dir)
+            long_term_memory = VectorMemory(
+                persist_dir=persist_dir, collection_name="long_term"
+            )
+
+            self.memory_aggregator = MemoryAggregator(
+                short_term=tiered_memory,
+                long_term=long_term_memory,
+            )
+
+            # 4. 初始化语义缓存
+            cache_memory = VectorMemory(
+                persist_dir=persist_dir, collection_name="semantic_cache"
+            )
+            self.semantic_cache = SemanticCache(
+                vector_memory=cache_memory,
+                similarity_threshold=0.85,
+                ttl_hours=24,
+            )
+
+            self._log(
+                "🧠 2025 最佳实践模块已启用 (ProjectMemory, SemanticCache, MemoryAggregator)"
+            )
+
+        except Exception as e:
+            # 降级: 如果初始化失败，使用空值
+            self.project_memory = None
+            self.context_manager = None
+            self.memory_aggregator = None
+            self.semantic_cache = None
+            self._log(f"⚠️ 2025 最佳实践模块初始化失败 (降级模式): {e}")
 
     async def dev(self, task: str) -> DevResult:
         """

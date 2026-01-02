@@ -1,5 +1,12 @@
-import pytest
+import sys
 from unittest.mock import MagicMock, AsyncMock
+import os
+
+# Mock litellm before any council imports
+sys.modules["litellm"] = MagicMock()
+os.environ["OPENAI_API_KEY"] = "dummy"
+
+import pytest
 from council.skills.coding_skill import CodingSkill
 from council.skills.design_skill import DesignSkill
 from council.skills.research_skill import ResearchSkill

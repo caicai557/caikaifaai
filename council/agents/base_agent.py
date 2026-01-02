@@ -24,7 +24,7 @@ from council.core.llm_client import LLMClient, default_client
 class ModelConfig:
     """
     Agent 专用模型配置 (账户 Auto 认证)
-    
+
     使用策略:
     - Claude: 深度推理、规划、架构设计
     - Codex: 代码审计、安全分析
@@ -35,7 +35,7 @@ class ModelConfig:
 
     # Claude 4.5 Opus - 高级推理模型 (规划、架构)
     CLAUDE_OPUS = "claude-4.5-opus"
-    
+
     # Claude 4.5 Sonnet - 平衡模型 (可选替代)
     CLAUDE_SONNET = "claude-4.5-sonnet"
 
@@ -126,6 +126,8 @@ class BaseAgent(ABC):
         max_delegation_depth: int = 3,
         governance_gateway: Optional["GovernanceGateway"] = None,
         llm_client: Optional[LLMClient] = None,
+        memory_aggregator=None,
+        context_manager=None,
     ):
         """
         初始化智能体
@@ -138,6 +140,8 @@ class BaseAgent(ABC):
             allowed_agents: 允许委托的 Agent 名称列表 (None = 允许所有)
             max_delegation_depth: 最大委托链深度
             governance_gateway: 可选的治理网关 (关键决策审批)
+            memory_aggregator: 可选的记忆聚合器 (MemoryAggregator 实例)
+            context_manager: 可选的上下文管理器 (ContextManager 实例)
         """
         self.name = name
         self.system_prompt = system_prompt
@@ -148,6 +152,10 @@ class BaseAgent(ABC):
         self.history: List[Dict[str, Any]] = []
         self._current_delegation_depth = 0
         self.governance_gateway = governance_gateway
+
+        # 2025 Advanced: Memory and Context integration
+        self.memory_aggregator = memory_aggregator
+        self.context_manager = context_manager
 
         # 2025 Core Upgrade: 使用统一的 LLMClient
         self.llm_client = llm_client or default_client
@@ -180,6 +188,52 @@ class BaseAgent(ABC):
     def _has_llm(self) -> bool:
         """检查是否有可用的 LLM API"""
         return self._has_gemini or self._has_openai
+
+    def _query_memory(self, query: str, max_chars: int = 2000) -> str:
+        """
+        查询记忆聚合器获取相关上下文
+
+        Args:
+            query: 查询文本
+            max_chars: 最大字符数
+
+        Returns:
+            格式化的记忆上下文，无记忆时返回空字符串
+        """
+        if not self.memory_aggregator:
+            return ""
+
+        try:
+            return self.memory_aggregator.get_context_for_llm(query, max_chars)
+        except Exception:
+            return ""
+
+    def _record_to_memory(
+        self,
+        content: str,
+        memory_type: str = "short_term",
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> Optional[str]:
+        """
+        记录重要信息到记忆系统
+
+        Args:
+            content: 要记录的内容
+            memory_type: 记忆类型 (short_term/long_term/working)
+            metadata: 可选元数据
+
+        Returns:
+            记忆 ID，失败时返回 None
+        """
+        if not self.memory_aggregator:
+            return None
+
+        try:
+            meta = metadata or {}
+            meta["agent"] = self.name
+            return self.memory_aggregator.remember(content, memory_type, meta)
+        except Exception:
+            return None
 
     def request_decision_approval(
         self,

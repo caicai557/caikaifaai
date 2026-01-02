@@ -137,9 +137,13 @@ class KnowledgeGraph:
 
         # Hybrid Search: Initialize Vector Store BEFORE auto_load
         try:
-            from council.memory.vector_store import VectorStore
+            from council.memory.vector_memory import VectorMemory
 
-            self.vector_store = VectorStore(use_fallback=True)
+            # Use VectorMemory (unified vector storage)
+            self.vector_store = VectorMemory(
+                persist_dir=str(self.storage_path.parent / "vectors"),
+                collection_name="knowledge_graph",
+            )
         except ImportError:
             self.vector_store = None
 
@@ -191,10 +195,11 @@ class KnowledgeGraph:
         if self.vector_store:
             # Create a rich text representation
             text = f"{entity.entity_type.value}: {entity.name}\\nProperties: {json.dumps(entity.properties, ensure_ascii=False)}"
-            self.vector_store.add_lesson(
-                lesson_id=entity.id,
+            # Use VectorMemory.add() API
+            self.vector_store.add(
                 text=text,
                 metadata={"type": entity.entity_type.value, "name": entity.name},
+                doc_id=entity.id,
             )
 
     def add_entity(
@@ -361,12 +366,13 @@ class KnowledgeGraph:
         """
         results = []
         if self.vector_store:
-            # Semantic search
-            search_res = self.vector_store.search(query_text, n_results=limit)
-            if search_res and search_res["ids"] and search_res["ids"][0]:
-                for eid in search_res["ids"][0]:
-                    if eid in self.entities:
-                        results.append(self.entities[eid])
+            # Semantic search using VectorMemory API
+            search_res = self.vector_store.search(query_text, k=limit)
+            # VectorMemory returns list of dicts with 'id' key
+            for item in search_res:
+                eid = item.get("id")
+                if eid and eid in self.entities:
+                    results.append(self.entities[eid])
         return results
 
     def record_decision(

@@ -1,7 +1,12 @@
+import sys
+from unittest.mock import MagicMock
+
+# Mock litellm before any council imports
+sys.modules["litellm"] = MagicMock()
+
 import pytest
 import os
 import shutil
-from unittest.mock import MagicMock
 from council.skills.data_analysis_skill import DataAnalysisSkill
 
 

@@ -99,6 +99,8 @@ class LLMSession:
         session_id: Optional[str] = None,
         storage_dir: str = "./.council_sessions",
         max_messages: int = 100,
+        window_size: int = 20,
+        llm_client=None,
     ):
         """
         初始化会话
@@ -107,12 +109,17 @@ class LLMSession:
             agent_name: 智能体名称
             session_id: 会话ID，默认自动生成
             storage_dir: 存储目录
-            max_messages: 最大消息数量
+            max_messages: 最大消息数量 (总容量)
+            window_size: 滑动窗口大小 (活跃上下文)
+            llm_client: LLM 客户端 (用于摘要)
         """
         self.storage_dir = Path(storage_dir)
         self.storage_dir.mkdir(parents=True, exist_ok=True)
 
         self.max_messages = max_messages
+        self.window_size = window_size
+        self.llm_client = llm_client
+        self._trimmed_summary: Optional[str] = None
 
         if session_id is None:
             session_id = f"{agent_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
@@ -154,16 +161,99 @@ class LLMSession:
             keep_count = self.max_messages - len(system_msgs)
             self.state.messages = system_msgs + other_msgs[-keep_count:]
 
-    def get_messages(self, limit: Optional[int] = None) -> List[Dict[str, Any]]:
+    def _trim_to_window(self) -> List[Message]:
+        """
+        获取滑动窗口内的消息
+
+        Returns:
+            滑动窗口内的消息列表
+        """
+        system_msgs = [m for m in self.state.messages if m.role == "system"]
+        other_msgs = [m for m in self.state.messages if m.role != "system"]
+
+        window_msgs = other_msgs[-self.window_size :]
+        return system_msgs + window_msgs
+
+    async def summarize_trimmed(self) -> Optional[str]:
+        """
+        使用 LLM 总结被裁剪掉的历史消息
+
+        Returns:
+            历史摘要，如果无需摘要返回 None
+        """
+        other_msgs = [m for m in self.state.messages if m.role != "system"]
+
+        if len(other_msgs) <= self.window_size:
+            return None
+
+        # 获取被裁剪的消息
+        trimmed_msgs = other_msgs[: -self.window_size]
+
+        if not trimmed_msgs:
+            return None
+
+        if not self.llm_client:
+            # 无 LLM 客户端时使用简单摘要
+            self._trimmed_summary = f"[历史摘要: {len(trimmed_msgs)} 条消息被归档]"
+            return self._trimmed_summary
+
+        # 构建摘要 prompt
+        history_text = "\n".join(
+            f"{m.role}: {m.content[:200]}..."
+            if len(m.content) > 200
+            else f"{m.role}: {m.content}"
+            for m in trimmed_msgs[-10:]  # 最多最近 10 条被裁剪的
+        )
+
+        prompt = f"""请简洁总结以下对话历史的关键信息 (最多 100 字):
+
+{history_text}
+
+摘要:"""
+
+        try:
+            import asyncio
+
+            complete = getattr(self.llm_client, "complete", None)
+            if callable(complete):
+                result = complete(prompt)
+                if asyncio.iscoroutine(result):
+                    result = await result
+                self._trimmed_summary = result.strip()
+                return self._trimmed_summary
+        except Exception:
+            pass
+
+        self._trimmed_summary = f"[历史摘要: {len(trimmed_msgs)} 条消息被归档]"
+        return self._trimmed_summary
+
+    def get_messages(
+        self, limit: Optional[int] = None, use_window: bool = False
+    ) -> List[Dict[str, Any]]:
         """
         获取消息列表（LLM格式）
 
         Args:
             limit: 限制数量
+            use_window: 是否使用滑动窗口
 
         Returns:
             消息列表
         """
+        if use_window:
+            msgs = self._trim_to_window()
+            # 如果有历史摘要，在开头添加
+            result = []
+            if self._trimmed_summary:
+                result.append(
+                    {
+                        "role": "system",
+                        "content": f"[会话历史摘要]\n{self._trimmed_summary}",
+                    }
+                )
+            result.extend([{"role": m.role, "content": m.content} for m in msgs])
+            return result
+
         msgs = self.state.messages[-limit:] if limit else self.state.messages
         return [{"role": m.role, "content": m.content} for m in msgs]
 

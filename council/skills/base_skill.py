@@ -56,5 +56,62 @@ class BaseSkill(ABC):
         if self.progress_callback:
             await self.progress_callback(message, current, total)
 
+    def to_tool_definition(self) -> "ToolDefinition":
+        """
+        将 Skill 转换为 MCP ToolDefinition (2026 Skill-Tool Unification)
+
+        自动从 execute 方法签名生成 JSON Schema。
+        """
+        import inspect
+        from council.mcp.tool_search import ToolDefinition, ToolCategory
+
+        # 获取 execute 方法的签名
+        sig = inspect.signature(self.execute)
+
+        # 构建 Schema
+        properties = {}
+        required = []
+
+        for name, param in sig.parameters.items():
+            if name == "self":
+                continue
+
+            param_schema = {"type": "string"}  # 默认
+
+            # 简单类型推断
+            if param.annotation is int:
+                param_schema = {"type": "integer"}
+            elif param.annotation is float:
+                param_schema = {"type": "number"}
+            elif param.annotation is bool:
+                param_schema = {"type": "boolean"}
+            elif (
+                param.annotation is list
+                or getattr(param.annotation, "__origin__", None) is list
+            ):
+                param_schema = {"type": "array", "items": {"type": "string"}}
+            elif (
+                param.annotation is dict
+                or getattr(param.annotation, "__origin__", None) is dict
+            ):
+                param_schema = {"type": "object"}
+
+            properties[name] = param_schema
+
+            if param.default == inspect.Parameter.empty:
+                required.append(name)
+
+        schema = {"type": "object", "properties": properties, "required": required}
+
+        return ToolDefinition(
+            name=self.name,
+            description=self.description,
+            category=ToolCategory.CODE,  # 默认为代码类
+            schema=schema,
+            keywords=["skill", self.name.lower()],
+            token_cost=500,  # Skill 通常较重
+            defer_loading=True,
+        )
+
     def __str__(self):
         return f"Skill(name={self.name})"

@@ -1,3 +1,9 @@
+import sys
+from unittest.mock import MagicMock
+
+# Mock litellm before any council imports
+sys.modules["litellm"] = MagicMock()
+
 import unittest
 from unittest.mock import patch
 import os

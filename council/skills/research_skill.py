@@ -162,7 +162,8 @@ class ResearchSkill(BaseSkill):
             return "No content available to summarize."
 
         if self.llm_client:
-            # 实际 LLM 调用逻辑
+            from council.skills.schemas import SummaryOutput
+
             # 限制每个来源的长度，防止 Token 爆炸
             truncated_contents = []
             total_chars = 0
@@ -184,6 +185,27 @@ class ResearchSkill(BaseSkill):
             prompt = prompt_template.format(
                 topic=topic, sources_str="\n".join(truncated_contents)
             )
+
+            # 尝试使用 structured_completion
+            structured_completion = getattr(
+                self.llm_client, "structured_completion", None
+            )
+            if callable(structured_completion):
+                try:
+                    result = structured_completion(
+                        messages=[{"role": "user", "content": prompt}],
+                        response_model=SummaryOutput,
+                    )
+                    if asyncio.iscoroutine(result):
+                        result = await result
+                    logger.info("[ResearchSkill] 使用 structured_completion 成功")
+                    return result.summary
+                except Exception as e:
+                    logger.warning(
+                        f"structured_completion 失败，回退到 complete(): {e}"
+                    )
+
+            # 回退到普通 complete()
             complete = getattr(self.llm_client, "complete", None)
             if not callable(complete):
                 raise NotImplementedError("llm_client must provide complete()")

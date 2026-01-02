@@ -12,6 +12,7 @@ from council.tools.orchestration_engine import (
     BUILTIN_TOOLS,
 )
 from council.tools.data_reducer import DataReducer, Anomaly, AnomalyType
+from council.tools.composite_tools import CompositeTools
 
 __all__ = [
     # Programmatic Tools
@@ -31,4 +32,6 @@ __all__ = [
     "DataReducer",
     "Anomaly",
     "AnomalyType",
+    # Composite Tools (2025 Best Practice)
+    "CompositeTools",
 ]

@@ -21,6 +21,8 @@ from typing import Any, Callable, Dict, List, Optional
 
 from council.memory.knowledge_graph import KnowledgeGraph
 from council.mcp.simulate import simulate_plan
+from council.core.task_manager import TaskManager
+from council.skills.task_management_skill import TaskManagementSkill
 
 
 # JSON-RPC 2.0 Error Codes
@@ -49,6 +51,8 @@ class MCPProtocolHandler:
             knowledge_graph: Optional KnowledgeGraph for simulate_plan tool.
         """
         self.knowledge_graph = knowledge_graph or KnowledgeGraph()
+        self.task_manager = TaskManager(".")
+        self.task_skill = TaskManagementSkill(self.task_manager)
         self._tools: Dict[str, Dict[str, Any]] = self._register_tools()
         self._resources: List[Dict[str, Any]] = self._register_resources()
 
@@ -85,6 +89,37 @@ class MCPProtocolHandler:
                     "required": ["plan"],
                 },
                 "handler": self._handle_simulate_plan,
+            },
+            "add_task": {
+                "name": "add_task",
+                "description": "Add a new task to the project",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "title": {"type": "string"},
+                        "description": {"type": "string"},
+                        "priority": {
+                            "type": "string",
+                            "enum": ["low", "medium", "high", "critical"],
+                        },
+                    },
+                    "required": ["title", "description"],
+                },
+                "handler": self._handle_add_task,
+            },
+            "list_tasks": {
+                "name": "list_tasks",
+                "description": "List all tasks",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "status": {
+                            "type": "string",
+                            "enum": ["pending", "in-progress", "completed", "blocked"],
+                        }
+                    },
+                },
+                "handler": self._handle_list_tasks,
             },
         }
 
@@ -228,6 +263,20 @@ class MCPProtocolHandler:
         plan = arguments.get("plan", [])
         warnings = simulate_plan(plan, self.knowledge_graph)
         return warnings
+
+    def _handle_add_task(self, arguments: Dict[str, Any]) -> str:
+        """Handle add_task tool execution."""
+        result = self.task_skill.add_task(
+            title=arguments["title"],
+            description=arguments["description"],
+            priority=arguments.get("priority", "medium"),
+        )
+        return str(result)
+
+    def _handle_list_tasks(self, arguments: Dict[str, Any]) -> str:
+        """Handle list_tasks tool execution."""
+        result = self.task_skill.list_tasks(status=arguments.get("status"))
+        return str(result)
 
 
 __all__ = ["MCPProtocolHandler"]

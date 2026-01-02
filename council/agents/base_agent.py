@@ -24,7 +24,7 @@ from council.core.llm_client import LLMClient, default_client
 class ModelConfig:
     """
     Agent 专用模型配置 (账户 Auto 认证)
-    
+
     使用策略:
     - Claude: 深度推理、规划、架构设计
     - Codex: 代码审计、安全分析
@@ -35,7 +35,7 @@ class ModelConfig:
 
     # Claude 4.5 Opus - 高级推理模型 (规划、架构)
     CLAUDE_OPUS = "claude-4.5-opus"
-    
+
     # Claude 4.5 Sonnet - 平衡模型 (可选替代)
     CLAUDE_SONNET = "claude-4.5-sonnet"
 
@@ -126,6 +126,10 @@ class BaseAgent(ABC):
         max_delegation_depth: int = 3,
         governance_gateway: Optional["GovernanceGateway"] = None,
         llm_client: Optional[LLMClient] = None,
+        memory_aggregator=None,
+        context_manager=None,
+        tool_search=None,
+        hook_manager=None,  # 2026 P0: Governance Hooks
     ):
         """
         初始化智能体
@@ -138,6 +142,10 @@ class BaseAgent(ABC):
             allowed_agents: 允许委托的 Agent 名称列表 (None = 允许所有)
             max_delegation_depth: 最大委托链深度
             governance_gateway: 可选的治理网关 (关键决策审批)
+            memory_aggregator: 可选的记忆聚合器 (MemoryAggregator 实例)
+            context_manager: 可选的上下文管理器 (ContextManager 实例)
+            tool_search: 可选的工具搜索工具 (ToolSearchTool 实例)
+            hook_manager: 可选的钩子管理器 (HookManager 实例)
         """
         self.name = name
         self.system_prompt = system_prompt
@@ -149,12 +157,102 @@ class BaseAgent(ABC):
         self._current_delegation_depth = 0
         self.governance_gateway = governance_gateway
 
+        # 2025 Advanced: Memory and Context integration
+        self.memory_aggregator = memory_aggregator
+        self.context_manager = context_manager
+
+        # 2026 Skill-Tool Unification
+        self.tool_search = tool_search
+
+        # 2026 P0: Governance Hooks
+        self.hook_manager = hook_manager
+
         # 2025 Core Upgrade: 使用统一的 LLMClient
         self.llm_client = llm_client or default_client
         self._has_gemini = bool(
             os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
         )
         self._has_openai = bool(os.environ.get("OPENAI_API_KEY"))
+
+    async def execute_tool(
+        self,
+        tool_name: str,
+        tool_args: Dict[str, Any],
+        tool_executor: Optional[Any] = None,
+    ) -> Dict[str, Any]:
+        """
+        执行工具 (2026 P0: 带治理 Hooks)
+
+        所有工具调用必须通过此方法，以确保 Pre/PostToolUse hooks 被触发。
+
+        Args:
+            tool_name: 工具名称
+            tool_args: 工具参数
+            tool_executor: 可选的工具执行器 (若不提供则返回模拟结果)
+
+        Returns:
+            工具执行结果
+        """
+        from council.hooks.base import HookContext, HookType, HookAction
+
+        result = {"success": False, "output": None, "error": None}
+
+        # 1. PreToolUse Hook
+        if self.hook_manager:
+            pre_ctx = HookContext(
+                hook_type=HookType.PRE_TOOL_USE,
+                agent_name=self.name,
+                tool_name=tool_name,
+                tool_args=tool_args,
+            )
+            pre_result = await self.hook_manager.trigger_pre_tool(pre_ctx)
+
+            if pre_result.action == HookAction.BLOCK:
+                result["error"] = (
+                    f"Tool blocked by PreToolUseHook: {pre_result.message}"
+                )
+                self.add_to_history(
+                    {
+                        "action": "tool_blocked",
+                        "tool": tool_name,
+                        "reason": pre_result.message,
+                    }
+                )
+                return result
+
+        # 2. Execute Tool
+        try:
+            if tool_executor:
+                output = await tool_executor(tool_name, tool_args)
+            else:
+                # 模拟执行
+                output = f"[Mock] Executed {tool_name} with {tool_args}"
+
+            result["success"] = True
+            result["output"] = output
+        except Exception as e:
+            result["error"] = str(e)
+
+        # 3. PostToolUse Hook
+        if self.hook_manager:
+            post_ctx = HookContext(
+                hook_type=HookType.POST_TOOL_USE,
+                agent_name=self.name,
+                tool_name=tool_name,
+                tool_args=tool_args,
+                tool_result=result,
+            )
+            await self.hook_manager.trigger_post_tool(post_ctx)
+
+        self.add_to_history(
+            {
+                "action": "tool_executed",
+                "tool": tool_name,
+                "success": result["success"],
+            }
+        )
+
+        return result
 
     def _call_llm(self, prompt: str, system_override: Optional[str] = None) -> str:
         """
@@ -180,6 +278,52 @@ class BaseAgent(ABC):
     def _has_llm(self) -> bool:
         """检查是否有可用的 LLM API"""
         return self._has_gemini or self._has_openai
+
+    def _query_memory(self, query: str, max_chars: int = 2000) -> str:
+        """
+        查询记忆聚合器获取相关上下文
+
+        Args:
+            query: 查询文本
+            max_chars: 最大字符数
+
+        Returns:
+            格式化的记忆上下文，无记忆时返回空字符串
+        """
+        if not self.memory_aggregator:
+            return ""
+
+        try:
+            return self.memory_aggregator.get_context_for_llm(query, max_chars)
+        except Exception:
+            return ""
+
+    def _record_to_memory(
+        self,
+        content: str,
+        memory_type: str = "short_term",
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> Optional[str]:
+        """
+        记录重要信息到记忆系统
+
+        Args:
+            content: 要记录的内容
+            memory_type: 记忆类型 (short_term/long_term/working)
+            metadata: 可选元数据
+
+        Returns:
+            记忆 ID，失败时返回 None
+        """
+        if not self.memory_aggregator:
+            return None
+
+        try:
+            meta = metadata or {}
+            meta["agent"] = self.name
+            return self.memory_aggregator.remember(content, memory_type, meta)
+        except Exception:
+            return None
 
     def request_decision_approval(
         self,

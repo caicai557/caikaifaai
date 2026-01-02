@@ -226,7 +226,8 @@ class CodingSkill(BaseSkill):
     ) -> Optional[str]:
         """生成代码 (模拟或 LLM)"""
         if self.llm_client:
-            # 实际 LLM 调用
+            from council.skills.schemas import GeneratedCodeOutput
+
             prompt_template = load_prompt("coding_skill_gen")
             context_str = chr(10).join(
                 f"--- {f} ---{chr(10)}{c[:4000]}" for f, c in context.items()
@@ -235,6 +236,26 @@ class CodingSkill(BaseSkill):
                 task=task, target_file=target_file, context_str=context_str
             )
 
+            # 尝试使用 structured_completion
+            structured_completion = getattr(
+                self.llm_client, "structured_completion", None
+            )
+            if callable(structured_completion):
+                try:
+                    result = structured_completion(
+                        messages=[{"role": "user", "content": prompt}],
+                        response_model=GeneratedCodeOutput,
+                    )
+                    if asyncio.iscoroutine(result):
+                        result = await result
+                    logger.info("[CodingSkill] 使用 structured_completion 成功")
+                    return result.code
+                except Exception as e:
+                    logger.warning(
+                        f"structured_completion 失败，回退到 complete(): {e}"
+                    )
+
+            # 回退到普通 complete()
             complete = getattr(self.llm_client, "complete", None)
             if not callable(complete):
                 raise NotImplementedError("llm_client must provide complete()")
@@ -302,13 +323,35 @@ if __name__ == "__main__":
             return None
 
         if self.llm_client:
-            # 实际 LLM 修复
+            from council.skills.schemas import CodeFixOutput
+
             prompt_template = load_prompt("coding_skill_fix")
             prompt = prompt_template.format(
                 original_task=original_task,
                 current_code=current_code[:4000],
                 error=error[:4000],
             )
+
+            # 尝试使用 structured_completion
+            structured_completion = getattr(
+                self.llm_client, "structured_completion", None
+            )
+            if callable(structured_completion):
+                try:
+                    result = structured_completion(
+                        messages=[{"role": "user", "content": prompt}],
+                        response_model=CodeFixOutput,
+                    )
+                    if asyncio.iscoroutine(result):
+                        result = await result
+                    logger.info("[CodingSkill] 使用 structured_completion 修复成功")
+                    return result.fixed_code
+                except Exception as e:
+                    logger.warning(
+                        f"structured_completion 失败，回退到 complete(): {e}"
+                    )
+
+            # 回退到普通 complete()
             complete = getattr(self.llm_client, "complete", None)
             if not callable(complete):
                 raise NotImplementedError("llm_client must provide complete()")

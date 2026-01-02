@@ -4,60 +4,69 @@ description: 多模型认证配置 - 账号登录和API密钥
 
 # /auth 认证配置
 
-## 🔐 认证方式 (2025 最佳实践)
+## 🔐 认证状态
 
-### 方式1: 账号登录 (推荐用于本地开发)
+| 模型 | CLI | 认证文件 | 状态 |
+|------|-----|----------|------|
+| **Gemini** | `gemini` | `~/.gemini/oauth_creds.json` | ✅ |
+| **Codex** | `codex` | `~/.codex/auth.json` | ✅ |
+| **Claude** | `claude` | `~/.claude/auth.json` | 检查 |
+
+## 🔑 账号登录命令
+
+### Gemini (Google)
 
 ```bash
-# 安装 Google Cloud CLI
-# https://cloud.google.com/sdk/docs/install
-
-# 账号登录 (会打开浏览器)
-gcloud auth application-default login
-
-# 设置项目
-gcloud config set project YOUR_PROJECT_ID
+# 已通过 gemini CLI 登录
+# 凭据: ~/.gemini/oauth_creds.json
 ```
 
-✅ 登录后无需 API Key，自动使用 ADC (Application Default Credentials)
-
-### 方式2: 服务账号 (推荐用于生产环境)
+### Codex (OpenAI)
 
 ```bash
-# 设置环境变量
-export GOOGLE_APPLICATION_CREDENTIALS="/path/to/service-account-key.json"
+# 方式1: ChatGPT 账号登录 (推荐)
+codex login
+
+# 方式2: 无头环境
+codex login --device-auth
 ```
 
-### 方式3: API 密钥
+### Claude (Anthropic)
 
 ```bash
-# Gemini API Key
-export GEMINI_API_KEY="your-key"
-# 或
-export GOOGLE_API_KEY="your-key"
+# 方式1: 账号登录
+claude login
 
-# Anthropic
+# 方式2: API Key
 export ANTHROPIC_API_KEY="your-key"
-
-# OpenAI
-export OPENAI_API_KEY="your-key"
 ```
 
-## 🔧 模型配置
+## 📁 凭据位置
 
-| 模型 | 标识符 | 用途 |
-|------|--------|------|
-| Gemini 2.0 Flash | `vertex_ai/gemini-2.0-flash` | 快速执行 |
-| Gemini 2.0 Pro | `vertex_ai/gemini-2.0-pro` | 长上下文 (200万) |
-| Claude Sonnet 4 | `claude-sonnet-4-20250514` | 精准编码 |
-| GPT-4o | `gpt-4o` | 通用 |
+```
+~/.gemini/oauth_creds.json     # Gemini OAuth
+~/.codex/auth.json             # Codex OAuth  
+~/.config/gcloud/application_default_credentials.json  # ADC (共享)
+```
 
-## ✅ 验证登录状态
+## ✅ 验证认证
 
 ```bash
-# 检查当前认证
-gcloud auth list
+# Gemini
+gemini --version
 
-# 测试 Vertex AI 访问
-gcloud ai models list --region=us-central1
+# Codex
+codex --version
+
+# Claude
+claude --version
 ```
+
+## 🔧 Council 项目配置
+
+Council 自动检测以下凭据 (优先级):
+
+1. `GEMINI_API_KEY` / `GOOGLE_API_KEY`
+2. `~/.config/gcloud/application_default_credentials.json`
+3. `OPENAI_API_KEY`
+4. `ANTHROPIC_API_KEY`

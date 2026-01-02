@@ -15,8 +15,17 @@ from council.skills.data_analysis_skill import DataAnalysisSkill
 
 @pytest.fixture
 def mock_llm():
+    """Create mock LLM that returns test response.
+
+    Note: Skills check for structured_completion first, so we need to
+    ensure it's not callable (returns None from getattr) so code falls
+    through to complete().
+    """
     llm = MagicMock()
-    llm.complete = AsyncMock(return_value="Mock LLM Response")
+    # Make structured_completion non-callable so code falls through to complete()
+    llm.structured_completion = None
+    # complete() should return string directly (may be called sync or async)
+    llm.complete = MagicMock(return_value="Mock LLM Response")
     return llm
 
 

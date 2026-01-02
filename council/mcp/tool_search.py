@@ -79,6 +79,22 @@ class ToolRegistry:
         """注册工具"""
         self.tools[tool.name] = tool
 
+    def register_skill(self, skill: Any) -> None:
+        """
+        注册 Skill 作为工具 (2026 Skill-Tool Unification)
+
+        Args:
+            skill: BaseSkill 实例
+        """
+        # Duck typing checks to avoid circular imports
+        if hasattr(skill, "to_tool_definition"):
+            tool_def = skill.to_tool_definition()
+            self.register(tool_def)
+        else:
+            raise ValueError(
+                f"Object {skill} is not a valid Skill (missing to_tool_definition)"
+            )
+
     def register_many(self, tools: List[ToolDefinition]) -> None:
         """批量注册工具"""
         for tool in tools:
@@ -277,7 +293,6 @@ DEFAULT_TOOLS = [
         keywords=["copy", "cp", "duplicate", "复制"],
         token_cost=60,
     ),
-    
     # === 搜索工具 ===
     ToolDefinition(
         name="grep_search",
@@ -300,7 +315,6 @@ DEFAULT_TOOLS = [
         keywords=["web", "search", "google", "网络搜索", "联网"],
         token_cost=150,
     ),
-    
     # === Git 版本控制 ===
     ToolDefinition(
         name="git_status",
@@ -337,7 +351,6 @@ DEFAULT_TOOLS = [
         keywords=["git", "branch", "checkout", "分支"],
         token_cost=70,
     ),
-    
     # === 代码执行 ===
     ToolDefinition(
         name="run_command",
@@ -353,7 +366,6 @@ DEFAULT_TOOLS = [
         keywords=["python", "run", "execute", "沙盒执行"],
         token_cost=180,
     ),
-    
     # === 代码分析与 Lint ===
     ToolDefinition(
         name="lint_python",
@@ -383,7 +395,6 @@ DEFAULT_TOOLS = [
         keywords=["type", "check", "mypy", "tsc", "typescript", "类型检查"],
         token_cost=120,
     ),
-    
     # === 测试工具 ===
     ToolDefinition(
         name="run_tests",
@@ -399,7 +410,6 @@ DEFAULT_TOOLS = [
         keywords=["coverage", "覆盖率", "test"],
         token_cost=150,
     ),
-    
     # === 安全工具 ===
     ToolDefinition(
         name="security_scan",
@@ -422,7 +432,6 @@ DEFAULT_TOOLS = [
         keywords=["secret", "credential", "password", "api_key", "密钥扫描"],
         token_cost=120,
     ),
-    
     # === 网络与API ===
     ToolDefinition(
         name="http_request",
@@ -438,7 +447,6 @@ DEFAULT_TOOLS = [
         keywords=["api", "test", "postman", "接口测试"],
         token_cost=150,
     ),
-    
     # === 数据库 ===
     ToolDefinition(
         name="db_query",
@@ -454,7 +462,6 @@ DEFAULT_TOOLS = [
         keywords=["migrate", "migration", "迁移", "schema"],
         token_cost=150,
     ),
-    
     # === Docker/容器 ===
     ToolDefinition(
         name="docker_run",

@@ -77,6 +77,16 @@ from council.orchestration.collaboration import (
     default_collaboration,
 )
 
+# 2026 A2A Protocol
+from council.orchestration.a2a_adapter import (
+    AgentCard as A2AAgentCard,
+    AgentCapability as A2ACapability,
+    AgentDiscovery,
+    TaskContract,
+    TaskStatus as A2ATaskStatus,
+    get_discovery,
+)
+
 
 __all__ = [
     # Ledger
@@ -146,4 +156,11 @@ __all__ = [
     "CollabVote",
     "BrainstormIdea",
     "default_collaboration",
+    # 2026 A2A Protocol
+    "A2AAgentCard",
+    "A2ACapability",
+    "AgentDiscovery",
+    "TaskContract",
+    "A2ATaskStatus",
+    "get_discovery",
 ]

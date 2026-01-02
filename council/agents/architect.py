@@ -7,7 +7,6 @@ from typing import Optional, Dict, Any
 from council.agents.base_agent import (
     BaseAgent,
     Vote,
-    VoteDecision,
     ThinkResult,
     ExecuteResult,
     MODEL_ARCHITECT,
@@ -60,177 +59,29 @@ class Architect(BaseAgent):
 
     def think(self, task: str, context: Optional[Dict[str, Any]] = None) -> ThinkResult:
         """
-        从架构角度分析任务
+        从架构角度分析任务 (Default to Structured for 2026 Compliance)
         """
-        # 构造 Prompt
-        prompt = f"""
-任务: {task}
-上下文: {context or {}}
+        # 使用结构化思考以节省 Token (~70% reduction)
+        result = self.think_structured(task, context)
 
-请从软件架构师的角度分析此任务。请提供：
-1. 架构分析 (Analysis)
-2. 担忧/风险 (Concerns) - 每行一个
-3. 建议 (Suggestions) - 每行一个
-4. 置信度 (Confidence) - 0.0 到 1.0
-
-请按以下格式返回：
-[Analysis]
-...分析内容...
-
-[Concerns]
-- 风险1
-- 风险2
-
-[Suggestions]
-- 建议1
-- 建议2
-
-[Confidence]
-0.8
-"""
-        # 调用 LLM
-        response = self._call_llm(prompt)
-
-        # 解析响应
-        analysis = ""
-        concerns = []
-        suggestions = []
-        confidence = 0.5
-
-        current_section = None
-        for line in response.split("\n"):
-            line = line.strip()
-            if not line:
-                continue
-
-            if line.startswith("[Analysis]"):
-                current_section = "analysis"
-            elif line.startswith("[Concerns]"):
-                current_section = "concerns"
-            elif line.startswith("[Suggestions]"):
-                current_section = "suggestions"
-            elif line.startswith("[Confidence]"):
-                current_section = "confidence"
-            elif current_section == "analysis":
-                analysis += line + "\n"
-            elif current_section == "concerns":
-                if line.startswith("-"):
-                    concerns.append(line[1:].strip())
-            elif current_section == "suggestions":
-                if line.startswith("-"):
-                    suggestions.append(line[1:].strip())
-            elif current_section == "confidence":
-                try:
-                    confidence = float(line)
-                except ValueError:
-                    pass
-
-        self.add_to_history(
-            {
-                "action": "think",
-                "task": task,
-                "context": context,
-                "response_length": len(response),
-            }
-        )
-
+        # 转换为传统的 ThinkResult 以保持兼容性
         return ThinkResult(
-            analysis=analysis.strip()
-            or response,  # Fallback to raw response if parsing fails
-            concerns=concerns,
-            suggestions=suggestions,
-            confidence=confidence,
-            context={"perspective": "architecture"},
+            analysis=result.summary,
+            concerns=result.concerns if hasattr(result, "concerns") else [],
+            suggestions=result.suggestions if hasattr(result, "suggestions") else [],
+            confidence=result.confidence,
+            context={"perspective": "architecture", "mode": "structured"},
         )
 
     def vote(self, proposal: str, context: Optional[Dict[str, Any]] = None) -> Vote:
         """
-        对提案进行架构评审投票
+        对提案进行架构评审投票 (Default to Structured for 2026 Compliance)
         """
-        prompt = f"""
-提案: {proposal}
-上下文: {context or {}}
+        # 使用结构化投票以节省 Token
+        result = self.vote_structured(proposal, context)
 
-作为架构师，请评估该提案。请投票：
-- APPROVE: 批准
-- APPROVE_WITH_CHANGES: 需要修改
-- HOLD: 暂缓（需要更多信息）
-- REJECT: 拒绝
-
-返回格式：
-Vote: [DECISION]
-Confidence: [0.0-1.0]
-Rationale: [理由]
-Changes: [建议修改1, 建议修改2] (可选)
-"""
-        response = self._call_llm(prompt)
-
-        # 默认值
-        decision = VoteDecision.HOLD
-        confidence = 0.5
-        rationale = response
-        suggested_changes = []
-
-        # 简单解析
-        import re
-
-        decision_match = re.search(
-            r"Vote:\s*(APPROVE_WITH_CHANGES|APPROVE|HOLD|REJECT)",
-            response,
-            re.IGNORECASE,
-        )
-        if decision_match:
-            d_str = decision_match.group(1).upper()
-            if d_str == "APPROVE":
-                decision = VoteDecision.APPROVE
-            elif d_str == "APPROVE_WITH_CHANGES":
-                decision = VoteDecision.APPROVE_WITH_CHANGES
-            elif d_str == "HOLD":
-                decision = VoteDecision.HOLD
-            elif d_str == "REJECT":
-                decision = VoteDecision.REJECT
-
-        conf_match = re.search(r"Confidence:\s*(\d*\.?\d+)", response)
-        if conf_match:
-            try:
-                confidence = float(conf_match.group(1))
-            except ValueError:
-                pass
-
-        rationale_match = re.search(
-            r"Rationale:\s*(.+?)(?:\nChanges:|$)", response, re.DOTALL | re.IGNORECASE
-        )
-        if rationale_match:
-            rationale = rationale_match.group(1).strip()
-
-        changes_match = re.search(
-            r"Changes:\s*(.+)", response, re.DOTALL | re.IGNORECASE
-        )
-        if changes_match:
-            changes_str = changes_match.group(1).strip()
-            # 尝试分割
-            if "[" in changes_str:
-                # 简单处理列表格式
-                suggested_changes = [c.strip(" '\"[]") for c in changes_str.split(",")]
-            else:
-                suggested_changes = [changes_str]
-
-        self.add_to_history(
-            {
-                "action": "vote",
-                "proposal": proposal,
-                "context": context,
-                "decision": decision.value,
-            }
-        )
-
-        return Vote(
-            agent_name=self.name,
-            decision=decision,
-            confidence=confidence,
-            rationale=rationale,
-            suggested_changes=suggested_changes,
-        )
+        # 转换为传统的 Vote 对象
+        return result.vote
 
     def execute(
         self, task: str, plan: Optional[Dict[str, Any]] = None

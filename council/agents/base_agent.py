@@ -128,6 +128,8 @@ class BaseAgent(ABC):
         llm_client: Optional[LLMClient] = None,
         memory_aggregator=None,
         context_manager=None,
+        tool_search=None,
+        hook_manager=None,  # 2026 P0: Governance Hooks
     ):
         """
         初始化智能体
@@ -142,6 +144,8 @@ class BaseAgent(ABC):
             governance_gateway: 可选的治理网关 (关键决策审批)
             memory_aggregator: 可选的记忆聚合器 (MemoryAggregator 实例)
             context_manager: 可选的上下文管理器 (ContextManager 实例)
+            tool_search: 可选的工具搜索工具 (ToolSearchTool 实例)
+            hook_manager: 可选的钩子管理器 (HookManager 实例)
         """
         self.name = name
         self.system_prompt = system_prompt
@@ -157,12 +161,98 @@ class BaseAgent(ABC):
         self.memory_aggregator = memory_aggregator
         self.context_manager = context_manager
 
+        # 2026 Skill-Tool Unification
+        self.tool_search = tool_search
+
+        # 2026 P0: Governance Hooks
+        self.hook_manager = hook_manager
+
         # 2025 Core Upgrade: 使用统一的 LLMClient
         self.llm_client = llm_client or default_client
         self._has_gemini = bool(
             os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
         )
         self._has_openai = bool(os.environ.get("OPENAI_API_KEY"))
+
+    async def execute_tool(
+        self,
+        tool_name: str,
+        tool_args: Dict[str, Any],
+        tool_executor: Optional[Any] = None,
+    ) -> Dict[str, Any]:
+        """
+        执行工具 (2026 P0: 带治理 Hooks)
+
+        所有工具调用必须通过此方法，以确保 Pre/PostToolUse hooks 被触发。
+
+        Args:
+            tool_name: 工具名称
+            tool_args: 工具参数
+            tool_executor: 可选的工具执行器 (若不提供则返回模拟结果)
+
+        Returns:
+            工具执行结果
+        """
+        from council.hooks.base import HookContext, HookType, HookAction
+
+        result = {"success": False, "output": None, "error": None}
+
+        # 1. PreToolUse Hook
+        if self.hook_manager:
+            pre_ctx = HookContext(
+                hook_type=HookType.PRE_TOOL_USE,
+                agent_name=self.name,
+                tool_name=tool_name,
+                tool_args=tool_args,
+            )
+            pre_result = await self.hook_manager.trigger_pre_tool(pre_ctx)
+
+            if pre_result.action == HookAction.BLOCK:
+                result["error"] = (
+                    f"Tool blocked by PreToolUseHook: {pre_result.message}"
+                )
+                self.add_to_history(
+                    {
+                        "action": "tool_blocked",
+                        "tool": tool_name,
+                        "reason": pre_result.message,
+                    }
+                )
+                return result
+
+        # 2. Execute Tool
+        try:
+            if tool_executor:
+                output = await tool_executor(tool_name, tool_args)
+            else:
+                # 模拟执行
+                output = f"[Mock] Executed {tool_name} with {tool_args}"
+
+            result["success"] = True
+            result["output"] = output
+        except Exception as e:
+            result["error"] = str(e)
+
+        # 3. PostToolUse Hook
+        if self.hook_manager:
+            post_ctx = HookContext(
+                hook_type=HookType.POST_TOOL_USE,
+                agent_name=self.name,
+                tool_name=tool_name,
+                tool_args=tool_args,
+                tool_result=result,
+            )
+            await self.hook_manager.trigger_post_tool(post_ctx)
+
+        self.add_to_history(
+            {
+                "action": "tool_executed",
+                "tool": tool_name,
+                "success": result["success"],
+            }
+        )
+
+        return result
 
     def _call_llm(self, prompt: str, system_override: Optional[str] = None) -> str:
         """

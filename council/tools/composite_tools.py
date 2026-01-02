@@ -212,7 +212,6 @@ class CompositeTools:
                 logger.warning(f"Complexity analysis failed: {e}")
 
         # Step 4: 生成摘要
-        issues_count = len(result["security_issues"]) + len(result["quality_issues"])
         result["summary"] = (
             f"分析完成: 发现 {len(result['security_issues'])} 个安全问题, "
             f"{len(result['quality_issues'])} 个质量问题"

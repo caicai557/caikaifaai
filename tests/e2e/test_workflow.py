@@ -8,6 +8,12 @@ E2E Tests - End-to-End Workflow Tests
 4. WaldConsensus → 共识裁决
 """
 
+import sys
+from unittest.mock import MagicMock
+
+# Mock litellm before any council imports
+sys.modules["litellm"] = MagicMock()
+
 import pytest
 from council.orchestration import (
     AgentRegistry,

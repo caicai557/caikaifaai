@@ -2,6 +2,12 @@
 Tests for council/mcp/a2a_bridge.py
 """
 
+import sys
+from unittest.mock import MagicMock
+
+# Mock litellm before any council imports
+sys.modules["litellm"] = MagicMock()
+
 from council.mcp.a2a_bridge import (
     A2ABridge,
     A2AMessage,

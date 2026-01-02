@@ -1,5 +1,10 @@
-import pytest
+import sys
 from unittest.mock import MagicMock, patch
+
+# Mock litellm before any council imports
+sys.modules["litellm"] = MagicMock()
+
+import pytest
 from council.tools.enhanced_ptc import EnhancedPTCExecutor, PTCResult
 
 

@@ -91,4 +91,5 @@ async def test_data_analysis_skill(tmp_path):
     )
 
     assert os.path.exists(tmp_path / "output" / "report.md")
-    assert "chart.png" in result["charts"]
+    # Check that at least one chart path ends with chart.png
+    assert any("chart.png" in chart for chart in result["charts"])

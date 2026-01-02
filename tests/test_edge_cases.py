@@ -46,9 +46,9 @@ class TestProjectMemoryEdgeCases:
         """Test with malformed markdown"""
         from council.memory.project_memory import ProjectMemory
 
-        malformed = """# 
+        malformed = """#
 ## Style Guide
-- 
+-
 ## No closing section
 """
         (Path(temp_dir) / "CLAUDE.md").write_text(malformed)

@@ -1,3 +1,9 @@
+import sys
+from unittest.mock import MagicMock
+
+# Mock litellm before any council imports
+sys.modules["litellm"] = MagicMock()
+
 import pytest
 from council.tools.orchestration_engine import OrchestrationEngine, Tool
 

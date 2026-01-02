@@ -11,7 +11,7 @@ sys.modules["litellm"] = MagicMock()
 os.environ["OPENAI_API_KEY"] = "dummy"
 
 import pytest
-from council.memory.project_memory import ProjectMemory, ProjectConfig
+from council.memory.project_memory import ProjectMemory
 
 
 @pytest.fixture

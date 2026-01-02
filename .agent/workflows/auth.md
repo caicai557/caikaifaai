@@ -8,9 +8,9 @@ description: 多模型认证配置 - 账号登录和API密钥
 
 | 模型 | CLI | 认证文件 | 状态 |
 |------|-----|----------|------|
-| **Gemini** | `gemini` | `~/.gemini/oauth_creds.json` | ✅ |
-| **Codex** | `codex` | `~/.codex/auth.json` | ✅ |
-| **Claude** | `claude` | `~/.claude/auth.json` | 检查 |
+| Gemini | gemini | ~/.gemini/oauth_credentials.json | ✅ |
+| Codex | codex | ~/.codex/auth.json | ✅ |
+| Claude | claude | ~/.claude/auth.json | 检查 |
 
 ## 🔑 账号登录命令
 
@@ -18,7 +18,7 @@ description: 多模型认证配置 - 账号登录和API密钥
 
 ```bash
 # 已通过 gemini CLI 登录
-# 凭据: ~/.gemini/oauth_creds.json
+# 凭据: ~/.gemini/oauth_credentials.json
 ```
 
 ### Codex (OpenAI)
@@ -43,10 +43,10 @@ export ANTHROPIC_API_KEY="your-key"
 
 ## 📁 凭据位置
 
-```
-~/.gemini/oauth_creds.json     # Gemini OAuth
-~/.codex/auth.json             # Codex OAuth  
-~/.config/gcloud/application_default_credentials.json  # ADC (共享)
+```text
+~/.gemini/oauth_credentials.json
+~/.codex/auth.json
+~/.config/gcloud/application_default_credentials.json
 ```
 
 ## ✅ 验证认证
@@ -66,7 +66,7 @@ claude --version
 
 Council 自动检测以下凭据 (优先级):
 
-1. `GEMINI_API_KEY` / `GOOGLE_API_KEY`
-2. `~/.config/gcloud/application_default_credentials.json`
-3. `OPENAI_API_KEY`
-4. `ANTHROPIC_API_KEY`
+1. GEMINI_API_KEY / GOOGLE_API_KEY
+2. ~/.config/gcloud/application_default_credentials.json
+3. OPENAI_API_KEY
+4. ANTHROPIC_API_KEY
